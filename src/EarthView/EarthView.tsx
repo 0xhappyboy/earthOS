@@ -1,4 +1,3 @@
-// EarthView/EarthView.tsx
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import Map from "@arcgis/core/Map";
 import MapView from "@arcgis/core/views/MapView";
@@ -46,7 +45,7 @@ export const EarthView: React.FC<EarthViewProps> = ({
   const mapRef = useRef<Map | null>(null);
   const layerManagerRef = useRef<LayerManager | null>(null);
   const circleDrawLayerRef = useRef<CircleDrawLayer | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isMapLoading, setIsMapLoading] = useState(true);
   const [isChangingBasemap, setIsChangingBasemap] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -117,20 +116,20 @@ export const EarthView: React.FC<EarthViewProps> = ({
   }, [isChangingBasemap]);
 
   const handleZoomIn = useCallback(() => {
-    if (viewRef.current && !isLoading && !isChangingBasemap) {
+    if (viewRef.current && !isMapLoading && !isChangingBasemap) {
       const newZoom = (viewRef.current.zoom || 12) + 1;
       viewRef.current.zoom = newZoom;
       setTimeout(updateScale, 100);
     }
-  }, [updateScale, isLoading, isChangingBasemap]);
+  }, [updateScale, isMapLoading, isChangingBasemap]);
 
   const handleZoomOut = useCallback(() => {
-    if (viewRef.current && !isLoading && !isChangingBasemap) {
+    if (viewRef.current && !isMapLoading && !isChangingBasemap) {
       const newZoom = (viewRef.current.zoom || 12) - 1;
       viewRef.current.zoom = newZoom;
       setTimeout(updateScale, 100);
     }
-  }, [updateScale, isLoading, isChangingBasemap]);
+  }, [updateScale, isMapLoading, isChangingBasemap]);
 
   const toggleLayerVisibility = useCallback((layerId: string) => {
     const layer = layerManagerRef.current?.getLayer(layerId);
@@ -157,16 +156,12 @@ export const EarthView: React.FC<EarthViewProps> = ({
 
   const switchBasemap = useCallback((newBasemap: BasemapTypeEnum) => {
     if (!mapRef.current) return;
-
     setIsChangingBasemap(true);
     setError(null);
-
     try {
       mapRef.current.basemap = newBasemap as any;
       setCurrentBasemap(newBasemap);
       setActivePopup(null);
-
-      // 底图切换后延迟隐藏加载状态
       setTimeout(() => {
         setIsChangingBasemap(false);
       }, 500);
@@ -176,9 +171,8 @@ export const EarthView: React.FC<EarthViewProps> = ({
       setIsChangingBasemap(false);
     }
   }, []);
-
   const handleDrawCircle = useCallback(() => {
-    if (circleDrawLayerRef.current && !isLoading && !isChangingBasemap) {
+    if (circleDrawLayerRef.current && !isMapLoading && !isChangingBasemap) {
       setIsDrawing(true);
       circleDrawLayerRef.current.startDraw((data) => {
         setIsDrawing(false);
@@ -186,46 +180,37 @@ export const EarthView: React.FC<EarthViewProps> = ({
         setActivePopup(null);
       });
     }
-  }, [onCircleDrawn, isLoading, isChangingBasemap]);
-
+  }, [onCircleDrawn, isMapLoading, isChangingBasemap]);
   const handleStartEdit = useCallback(() => {
     const circles = circleDrawLayerRef.current?.getAllCircles();
-    if (circles && circles.length > 0 && !isLoading && !isChangingBasemap) {
+    if (circles && circles.length > 0 && !isMapLoading && !isChangingBasemap) {
       circleDrawLayerRef.current?.startEdit(circles[0].id, (data) => {
         console.log("Edit complete:", data);
         setActivePopup(null);
       });
-    } else if (!isLoading && !isChangingBasemap) {
+    } else if (!isMapLoading && !isChangingBasemap) {
       alert(t.noCirclesToEdit);
     }
-  }, [t, isLoading, isChangingBasemap]);
-
-  // 初始化地图
+  }, [t, isMapLoading, isChangingBasemap]);
   useEffect(() => {
-    isMountedRef.current = true;
     if (!containerRef.current) return;
-
+    if (viewRef.current) return;
+    isMountedRef.current = true;
     const internalCenter = getInternalCenter();
-
     const initMap = async () => {
       try {
-        destroyMap();
-        setIsLoading(true);
+        setIsMapLoading(true);
         setError(null);
-
         const map = new Map({ basemap: currentBasemap });
         mapRef.current = map;
-
         layerManagerRef.current = new LayerManager(map);
-
         layers.forEach((layer) => {
           layerManagerRef.current?.addLayer(layer);
         });
-
         if (enableDrawing) {
           const circleDrawLayer = new CircleDrawLayer({
             id: "circle-draw",
-            name: t.drawCircle,
+            name: "圆形绘图",
             defaultFillColor: [255, 0, 0, 0.3],
             defaultOutlineColor: [255, 0, 0, 1],
             defaultOutlineWidth: 3,
@@ -233,7 +218,6 @@ export const EarthView: React.FC<EarthViewProps> = ({
           circleDrawLayerRef.current = circleDrawLayer;
           layerManagerRef.current?.addLayer(circleDrawLayer);
         }
-
         const view = new MapView({
           container: containerRef.current!,
           map: map,
@@ -251,12 +235,9 @@ export const EarthView: React.FC<EarthViewProps> = ({
           } as any,
           ui: { components: [] },
         } as any);
-
         viewRef.current = view;
-
         view.watch("scale", () => updateScale());
         view.watch("zoom", () => setTimeout(updateScale, 100));
-
         if (onMapClick) {
           view.on("click", (event) => {
             const { longitude, latitude } = event.mapPoint;
@@ -270,9 +251,7 @@ export const EarthView: React.FC<EarthViewProps> = ({
             }
           });
         }
-
         await view.when();
-
         if (isMountedRef.current) {
           setTimeout(() => {
             if (circleDrawLayerRef.current && viewRef.current) {
@@ -280,7 +259,7 @@ export const EarthView: React.FC<EarthViewProps> = ({
             }
             updateLayerList();
             updateScale();
-            setIsLoading(false);
+            setIsMapLoading(false);
           }, 100);
 
           window.dispatchEvent(new CustomEvent("EarthView-loaded"));
@@ -292,34 +271,19 @@ export const EarthView: React.FC<EarthViewProps> = ({
           setError(
             err instanceof Error ? err.message : "Failed to initialize map",
           );
-          setIsLoading(false);
+          setIsMapLoading(false);
         }
       }
     };
-
-    const timer = setTimeout(initMap, 100);
+    initMap();
     return () => {
-      clearTimeout(timer);
       isMountedRef.current = false;
       destroyMap();
     };
-  }, [
-    currentBasemap,
-    zoom,
-    getInternalCenter,
-    layers,
-    onLoad,
-    onMapClick,
-    enableDrawing,
-    destroyMap,
-    updateLayerList,
-    updateScale,
-    t,
-  ]);
-
+  }, []);
   useEffect(() => {
     const handleLocate = (event: CustomEvent) => {
-      if (!viewRef.current || isLoading || isChangingBasemap) return;
+      if (!viewRef.current || isMapLoading || isChangingBasemap) return;
       const { center: newCenter, zoom: newZoom, system } = event.detail;
       if (newCenter && newCenter.length === 2) {
         const systemToUse = system || coordinateSystem;
@@ -340,7 +304,6 @@ export const EarthView: React.FC<EarthViewProps> = ({
           .catch((err: Error) => console.warn("GoTo failed:", err));
       }
     };
-
     window.addEventListener("EarthView-locate", handleLocate as EventListener);
     return () => {
       window.removeEventListener(
@@ -348,9 +311,7 @@ export const EarthView: React.FC<EarthViewProps> = ({
         handleLocate as EventListener,
       );
     };
-  }, [coordinateSystem, isLoading, isChangingBasemap]);
-
-  // 加载状态组件
+  }, [coordinateSystem, isMapLoading, isChangingBasemap]);
   const LoadingOverlay = ({ message }: { message: string }) => (
     <div
       style={{
@@ -398,7 +359,6 @@ export const EarthView: React.FC<EarthViewProps> = ({
       `}</style>
     </div>
   );
-
   const basemapOptions: {
     value: BasemapTypeEnum;
     label: string;
@@ -421,27 +381,20 @@ export const EarthView: React.FC<EarthViewProps> = ({
     { value: BasemapTypeEnum.IMAGERY, label: t.imagery, icon: "📷" },
     { value: BasemapTypeEnum.PHYSICAL, label: t.physical, icon: "🌎" },
   ];
-
   const containerStyle: React.CSSProperties = {
     width: width,
     height: height,
     position: "relative",
     overflow: "hidden",
+    userSelect: "none",
     ...style,
   };
-
-  // 判断是否显示加载中
-  const showLoading = isLoading || isChangingBasemap;
-  const loadingMessage = isLoading ? t.loading : t.changingBasemap;
-
+  const showLoading = isMapLoading || isChangingBasemap;
+  const loadingMessage = isMapLoading ? t.loading : t.changingBasemap;
   return (
     <div className={className} style={containerStyle}>
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
-
-      {/* 加载遮罩层 */}
       {showLoading && <LoadingOverlay message={loadingMessage} />}
-
-      {/* 错误提示 */}
       {error && !showLoading && (
         <div
           style={{
@@ -463,9 +416,7 @@ export const EarthView: React.FC<EarthViewProps> = ({
           {error}
         </div>
       )}
-
-      {/* 弹窗和工具栏 - 只在非加载状态下显示 */}
-      {!showLoading && (
+      {!isMapLoading && (
         <>
           {activePopup === "layers" && (
             <PopupPanel
