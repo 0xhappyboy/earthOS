@@ -2,12 +2,10 @@ import React from "react";
 
 interface LoadingOverlayProps {
   message: string;
-  theme: "light" | "dark";
+  theme?: "light" | "dark";
 }
 
-export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ message, theme }) => {
-  const isDark = theme === "dark";
-
+export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ message }) => {
   return (
     <div
       style={{
@@ -17,7 +15,7 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ message, theme }
         right: 0,
         bottom: 0,
         zIndex: 1000,
-        background: isDark ? "rgba(0,0,0,0.7)" : "rgba(255,255,255,0.7)",
+        background: "rgba(0,0,0,0.7)",
         backdropFilter: "blur(4px)",
         display: "flex",
         alignItems: "center",
@@ -30,17 +28,17 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ message, theme }
         style={{
           width: "40px",
           height: "40px",
-          border: `3px solid ${isDark ? "#444" : "#ddd"}`,
-          borderTop: `3px solid #00aaff`,
+          border: "3px solid #444",
+          borderTop: "3px solid #00aaff",
           borderRadius: "50%",
           animation: "spin 1s linear infinite",
         }}
       />
       <span
         style={{
-          color: isDark ? "#fff" : "#333",
+          color: "#fff",
           fontSize: "13px",
-          background: isDark ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.8)",
+          background: "rgba(0,0,0,0.5)",
           padding: "4px 12px",
           borderRadius: "4px",
         }}

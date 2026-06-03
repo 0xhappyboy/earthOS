@@ -38,6 +38,8 @@ export interface Translations {
     closeTitle: string;
     solidLine: string;
     dashedLine: string;
+    drawingCircle: string;
+    editingCircle: string;
 }
 
 const zh: Translations = {
@@ -78,6 +80,8 @@ const zh: Translations = {
     close: "关闭",
     zoomInTitle: "放大",
     zoomOutTitle: "缩小",
+    drawingCircle: "正在绘制圆形...",
+    editingCircle: "正在编辑圆形...",
 };
 
 const en: Translations = {
@@ -118,6 +122,8 @@ const en: Translations = {
     close: "Close",
     zoomInTitle: "Zoom In",
     zoomOutTitle: "Zoom Out",
+    drawingCircle: "Drawing circle...",
+    editingCircle: "Editing circle...",
 };
 
 export const getTranslation = (locale: Locale): Translations => {
