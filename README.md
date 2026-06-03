@@ -1,3 +1,9 @@
-# earthOS
-
-The global AI-powered information decision-making operating system built on ArcGIS enables users to view global data from a god-like perspective, including rich information such as population and real-time events, as well as custom geographic annotations for the data.
+<h1 align="center">
+    EarthView
+</h1>
+<h4 align="center">
+A geographic information graphics system based on ArcGIS.
+</h4>
+<p align="center">
+<a href="./README_zh-CN.md">简体中文</a> | <a href="./README.md">English</a>
+</p>
