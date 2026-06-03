@@ -222,15 +222,28 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
         <button
           onClick={handleColorClick}
           title={t.colorTitle}
-          style={buttonColorStyle}
+          style={{
+            ...buttonStyle,
+            background: "transparent",
+            border: `1px solid ${isDark ? "#444" : "#ddd"}`,
+            padding: "2px",
+          }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.opacity = "0.8";
+            e.currentTarget.style.background = isDark ? "#3d3d3d" : "#e8e8e8";
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.opacity = "1";
+            e.currentTarget.style.background = "transparent";
           }}
         >
-          <ColorIcon size={16} />
+          <div
+            style={{
+              width: "20px",
+              height: "20px",
+              background: `rgba(${currentColor[0]}, ${currentColor[1]}, ${currentColor[2]}, ${currentColor[3] || 1})`,
+              borderRadius: "4px",
+              border: `1px solid ${isDark ? "#666" : "#ccc"}`,
+            }}
+          />
         </button>
 
         <button
@@ -303,6 +316,7 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
         theme={theme}
         t={t}
         currentColor={currentColor}
+        containerRef={containerRef}
       />
 
       <StrokeStylePicker
@@ -313,6 +327,7 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
         theme={theme}
         t={t}
         currentStyle={currentStrokeStyle}
+        containerRef={containerRef}
       />
 
       <StrokeWidthPicker
@@ -323,6 +338,7 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
         theme={theme}
         t={t}
         currentWidth={currentStrokeWidth}
+        containerRef={containerRef}
       />
     </>
   );
