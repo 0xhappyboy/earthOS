@@ -7,25 +7,31 @@ import Point from "@arcgis/core/geometry/Point";
 import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
 import Expand from "@arcgis/core/widgets/Expand";
 import Zoom from "@arcgis/core/widgets/Zoom";
+import { toWGS84 } from "./CoordTransform";
+import { BasemapTypeEnum, CoordinateSystemTypeEnum } from "./types";
 
-export interface EarthOSProps {
+export interface EarthViewProps {
   width?: string | number;
   height?: string | number;
   style?: React.CSSProperties;
   className?: string;
-  basemap?: string;
+  basemap?: BasemapTypeEnum;
+  // Longitude, Latitude
   center?: [number, number];
   zoom?: number;
+  /** The input coordinate system is WGS84 by default. */
+  coordinateSystem?: CoordinateSystemTypeEnum;
 }
 
-export const EarthOS: React.FC<EarthOSProps> = ({
+export const EarthView: React.FC<EarthViewProps> = ({
   width = "100%",
   height = "100%",
   style,
-  className,
+  className = BasemapTypeEnum.SATELLITE,
   basemap = "satellite",
   center = [0, 0],
-  zoom = 2,
+  zoom = 12,
+  coordinateSystem = CoordinateSystemTypeEnum.WGS84,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<MapView | null>(null);
@@ -33,6 +39,16 @@ export const EarthOS: React.FC<EarthOSProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const isMountedRef = useRef(true);
+  const getInternalCenter = useCallback((): [number, number] => {
+    if (!center || center.length !== 2) return [0, 0];
+    const [lng, lat] = center;
+    if (coordinateSystem === CoordinateSystemTypeEnum.WGS84) {
+      return [lng, lat];
+    }
+    const [convertedLng, convertedLat] = toWGS84(lng, lat, coordinateSystem);
+    return [convertedLng, convertedLat];
+  }, [center, coordinateSystem]);
+
   const destroyMap = useCallback(() => {
     try {
       if (viewRef.current) {
@@ -46,6 +62,7 @@ export const EarthOS: React.FC<EarthOSProps> = ({
       console.warn("Error destroying map:", err);
     }
   }, []);
+
   const addMarker = useCallback(
     (longitude: number, latitude: number, color?: number[]) => {
       if (!viewRef.current || !graphicsLayerRef.current) return;
@@ -65,26 +82,40 @@ export const EarthOS: React.FC<EarthOSProps> = ({
     },
     [],
   );
+
   const goToLocation = useCallback(
-    (longitude: number, latitude: number, targetZoom?: number) => {
+    (
+      longitude: number,
+      latitude: number,
+      targetZoom?: number,
+      inputSystem?: CoordinateSystemTypeEnum,
+    ) => {
       if (!viewRef.current) return;
+      const system = inputSystem || coordinateSystem;
+      let wgs84Lng = longitude;
+      let wgs84Lat = latitude;
+      if (system !== CoordinateSystemTypeEnum.WGS84) {
+        [wgs84Lng, wgs84Lat] = toWGS84(longitude, latitude, system);
+      }
       try {
         viewRef.current
           .goTo(
-            { target: [longitude, latitude], zoom: targetZoom || 12 },
+            { target: [wgs84Lng, wgs84Lat], zoom: targetZoom || 12 },
             { duration: 1000 },
           )
           .catch((err: Error) => console.warn("GoTo failed:", err));
-        addMarker(longitude, latitude);
+        addMarker(wgs84Lng, wgs84Lat);
       } catch (err) {
         console.warn("GoTo error:", err);
       }
     },
-    [addMarker],
+    [addMarker, coordinateSystem],
   );
+
   useEffect(() => {
     isMountedRef.current = true;
     if (!containerRef.current) return;
+    const internalCenter = getInternalCenter();
     const initMap = async () => {
       try {
         destroyMap();
@@ -95,7 +126,7 @@ export const EarthOS: React.FC<EarthOSProps> = ({
         const view = new MapView({
           container: containerRef.current!,
           map: map,
-          center: center,
+          center: internalCenter,
           zoom: zoom,
           constraints: {
             rotationEnabled: true,
@@ -115,6 +146,7 @@ export const EarthOS: React.FC<EarthOSProps> = ({
         await view.when();
         if (isMountedRef.current) {
           setIsLoading(false);
+          window.dispatchEvent(new CustomEvent("EarthView-loaded"));
         }
       } catch (err) {
         console.error("Failed to initialize map:", err);
@@ -132,34 +164,72 @@ export const EarthOS: React.FC<EarthOSProps> = ({
       isMountedRef.current = false;
       destroyMap();
     };
-  }, [basemap, center, zoom, destroyMap]);
+  }, [basemap, zoom, destroyMap, getInternalCenter]);
+
   useEffect(() => {
     const handleLocate = (event: CustomEvent) => {
-      const { center: newCenter, zoom: newZoom } = event.detail;
+      const { center: newCenter, zoom: newZoom, system } = event.detail;
       if (newCenter && newCenter.length === 2) {
-        goToLocation(newCenter[0], newCenter[1], newZoom);
+        goToLocation(newCenter[0], newCenter[1], newZoom, system);
       }
     };
     const handleAddMarker = (event: CustomEvent) => {
-      const { lng, lat, color } = event.detail;
-      addMarker(lng, lat, color);
+      const { lng, lat, color, system } = event.detail;
+      let wgs84Lng = lng;
+      let wgs84Lat = lat;
+      if (system && system !== CoordinateSystemTypeEnum.WGS84) {
+        [wgs84Lng, wgs84Lat] = toWGS84(lng, lat, system);
+      } else if (coordinateSystem !== CoordinateSystemTypeEnum.WGS84) {
+        [wgs84Lng, wgs84Lat] = toWGS84(lng, lat, coordinateSystem);
+      }
+      addMarker(wgs84Lng, wgs84Lat, color);
     };
-    window.addEventListener("earthos-locate", handleLocate as EventListener);
+    window.addEventListener("EarthView-locate", handleLocate as EventListener);
     window.addEventListener(
-      "earthos-add-marker",
+      "EarthView-add-marker",
       handleAddMarker as EventListener,
     );
     return () => {
       window.removeEventListener(
-        "earthos-locate",
+        "EarthView-locate",
         handleLocate as EventListener,
       );
       window.removeEventListener(
-        "earthos-add-marker",
+        "EarthView-add-marker",
         handleAddMarker as EventListener,
       );
     };
-  }, [goToLocation, addMarker]);
+  }, [goToLocation, addMarker, coordinateSystem]);
+
+  useEffect(() => {
+    const handleGetCenter = (event: CustomEvent) => {
+      if (viewRef.current && event.detail?.callbackId) {
+        const center = viewRef.current.center;
+        const { longitude, latitude } = center;
+        window.dispatchEvent(
+          new CustomEvent(
+            `EarthView-center-response-${event.detail.callbackId}`,
+            {
+              detail: {
+                center: [longitude, latitude],
+                zoom: viewRef.current.zoom,
+              },
+            },
+          ),
+        );
+      }
+    };
+    window.addEventListener(
+      "EarthView-get-center",
+      handleGetCenter as EventListener,
+    );
+    return () => {
+      window.removeEventListener(
+        "EarthView-get-center",
+        handleGetCenter as EventListener,
+      );
+    };
+  }, []);
 
   const containerStyle: React.CSSProperties = {
     width: width,
@@ -168,6 +238,7 @@ export const EarthOS: React.FC<EarthOSProps> = ({
     overflow: "hidden",
     ...style,
   };
+
   return (
     <div className={className} style={containerStyle}>
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
@@ -213,4 +284,4 @@ export const EarthOS: React.FC<EarthOSProps> = ({
   );
 };
 
-export default EarthOS;
+export default EarthView;
