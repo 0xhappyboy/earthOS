@@ -13,15 +13,12 @@ import { EarthViewProps } from "./types";
 import { PopupPanel } from "./components/PopupPanel";
 import { Toolbar } from "./components/Toolbar";
 import { ScaleBar } from "./components/ScaleBar";
+import { LoadingOverlay } from "./components/LoadingOverlay";
+import { BasemapOptions } from "./components/BasemapOptions";
+import { LayersPanel } from "./components/LayersPanel";
+import { DrawToolsPanel } from "./components/DrawToolsPanel";
+import { FloatingToolbar } from "./components/FloatingToolbar";
 import { getTranslation } from "../i18n";
-import {
-  EyeIcon,
-  EyeOffIcon,
-  DeleteIcon,
-  CheckIcon,
-  CircleIcon,
-  EditIcon,
-} from "../icons";
 
 export const EarthView: React.FC<EarthViewProps> = ({
   width = "100%",
@@ -59,6 +56,15 @@ export const EarthView: React.FC<EarthViewProps> = ({
   const [layerList, setLayerList] = useState<
     { id: string; name: string; visible: boolean }[]
   >([]);
+
+  const [showFloatingToolbar, setShowFloatingToolbar] = useState(false);
+  const [floatingToolbarPosition, setFloatingToolbarPosition] = useState({
+    x: 100,
+    y: 100,
+  });
+  const [selectedGraphicId, setSelectedGraphicId] = useState<string | null>(
+    null,
+  );
 
   const t = getTranslation(i18n);
   const isDark = theme === "dark";
@@ -171,6 +177,7 @@ export const EarthView: React.FC<EarthViewProps> = ({
       setIsChangingBasemap(false);
     }
   }, []);
+
   const handleDrawCircle = useCallback(() => {
     if (circleDrawLayerRef.current && !isMapLoading && !isChangingBasemap) {
       setIsDrawing(true);
@@ -181,6 +188,7 @@ export const EarthView: React.FC<EarthViewProps> = ({
       });
     }
   }, [onCircleDrawn, isMapLoading, isChangingBasemap]);
+
   const handleStartEdit = useCallback(() => {
     const circles = circleDrawLayerRef.current?.getAllCircles();
     if (circles && circles.length > 0 && !isMapLoading && !isChangingBasemap) {
@@ -192,6 +200,55 @@ export const EarthView: React.FC<EarthViewProps> = ({
       alert(t.noCirclesToEdit);
     }
   }, [t, isMapLoading, isChangingBasemap]);
+
+  useEffect(() => {
+    if (!viewRef.current) return;
+    const view = viewRef.current;
+    const handleImmediateClick = (event: any) => {
+      if (event.button !== 2) return;
+      event.stopPropagation();
+      view
+        .hitTest(event)
+        .then((response: any) => {
+          const results = response.results;
+          const graphicHit = results.find((hit: any) => {
+            return hit.graphic && hit.graphic.layer?.id === "circle-draw";
+          });
+          if (graphicHit && graphicHit.graphic) {
+            const graphic = graphicHit.graphic;
+            const id = graphic.attributes?.id;
+            if (id) {
+              setSelectedGraphicId(id);
+              setFloatingToolbarPosition({ x: event.x, y: event.y });
+              setShowFloatingToolbar(true);
+            }
+          } else {
+            setShowFloatingToolbar(false);
+            setSelectedGraphicId(null);
+          }
+        })
+        .catch((err: any) => {
+          console.warn("HitTest error:", err);
+          setShowFloatingToolbar(false);
+          setSelectedGraphicId(null);
+        });
+    };
+    const handleClick = () => {
+      setShowFloatingToolbar(false);
+      setSelectedGraphicId(null);
+    };
+    view.on("immediate-click", handleImmediateClick);
+    view.on("click", handleClick);
+    return () => {
+      if (view) {
+        try {
+          (view as any).remove?.("immediate-click", handleImmediateClick);
+          (view as any).remove?.("click", handleClick);
+        } catch (e) {}
+      }
+    };
+  }, [viewRef.current]);
+
   useEffect(() => {
     if (!containerRef.current) return;
     if (viewRef.current) return;
@@ -210,7 +267,7 @@ export const EarthView: React.FC<EarthViewProps> = ({
         if (enableDrawing) {
           const circleDrawLayer = new CircleDrawLayer({
             id: "circle-draw",
-            name: "圆形绘图",
+            name: "Circle Draw",
             defaultFillColor: [255, 0, 0, 0.3],
             defaultOutlineColor: [255, 0, 0, 1],
             defaultOutlineWidth: 3,
@@ -261,7 +318,6 @@ export const EarthView: React.FC<EarthViewProps> = ({
             updateScale();
             setIsMapLoading(false);
           }, 100);
-
           window.dispatchEvent(new CustomEvent("EarthView-loaded"));
           onLoad?.(layerManagerRef.current!, view);
         }
@@ -281,6 +337,7 @@ export const EarthView: React.FC<EarthViewProps> = ({
       destroyMap();
     };
   }, []);
+
   useEffect(() => {
     const handleLocate = (event: CustomEvent) => {
       if (!viewRef.current || isMapLoading || isChangingBasemap) return;
@@ -312,75 +369,7 @@ export const EarthView: React.FC<EarthViewProps> = ({
       );
     };
   }, [coordinateSystem, isMapLoading, isChangingBasemap]);
-  const LoadingOverlay = ({ message }: { message: string }) => (
-    <div
-      style={{
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        zIndex: 1000,
-        background: isDark ? "rgba(0,0,0,0.7)" : "rgba(255,255,255,0.7)",
-        backdropFilter: "blur(4px)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexDirection: "column",
-        gap: "12px",
-      }}
-    >
-      <div
-        style={{
-          width: "40px",
-          height: "40px",
-          border: `3px solid ${isDark ? "#444" : "#ddd"}`,
-          borderTop: `3px solid #00aaff`,
-          borderRadius: "50%",
-          animation: "spin 1s linear infinite",
-        }}
-      />
-      <span
-        style={{
-          color: isDark ? "#fff" : "#333",
-          fontSize: "13px",
-          background: isDark ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.8)",
-          padding: "4px 12px",
-          borderRadius: "4px",
-        }}
-      >
-        {message}
-      </span>
-      <style>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
-    </div>
-  );
-  const basemapOptions: {
-    value: BasemapTypeEnum;
-    label: string;
-    icon: string;
-  }[] = [
-    { value: BasemapTypeEnum.SATELLITE, label: t.satellite, icon: "🛰️" },
-    { value: BasemapTypeEnum.STREETS, label: t.streets, icon: "🗺️" },
-    { value: BasemapTypeEnum.TOPO, label: t.topographic, icon: "⛰️" },
-    { value: BasemapTypeEnum.DARK_GRAY, label: t.darkGray, icon: "🌙" },
-    { value: BasemapTypeEnum.GRAY, label: t.lightGray, icon: "☀️" },
-    { value: BasemapTypeEnum.HYBRID, label: t.hybrid, icon: "🔄" },
-    { value: BasemapTypeEnum.TERRAIN, label: t.terrain, icon: "🗻" },
-    { value: BasemapTypeEnum.OCEANS, label: t.oceans, icon: "🌊" },
-    {
-      value: BasemapTypeEnum.NATIONAL_GEOGRAPHIC,
-      label: t.nationalGeographic,
-      icon: "📰",
-    },
-    { value: BasemapTypeEnum.LIGHT_GRAY, label: t.lightGray, icon: "⬜" },
-    { value: BasemapTypeEnum.IMAGERY, label: t.imagery, icon: "📷" },
-    { value: BasemapTypeEnum.PHYSICAL, label: t.physical, icon: "🌎" },
-  ];
+
   const containerStyle: React.CSSProperties = {
     width: width,
     height: height,
@@ -389,12 +378,16 @@ export const EarthView: React.FC<EarthViewProps> = ({
     userSelect: "none",
     ...style,
   };
+
   const showLoading = isMapLoading || isChangingBasemap;
   const loadingMessage = isMapLoading ? t.loading : t.changingBasemap;
+
   return (
     <div className={className} style={containerStyle}>
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
-      {showLoading && <LoadingOverlay message={loadingMessage} />}
+
+      {showLoading && <LoadingOverlay message={loadingMessage} theme={theme} />}
+
       {error && !showLoading && (
         <div
           style={{
@@ -416,6 +409,7 @@ export const EarthView: React.FC<EarthViewProps> = ({
           {error}
         </div>
       )}
+
       {!isMapLoading && (
         <>
           {activePopup === "layers" && (
@@ -425,94 +419,13 @@ export const EarthView: React.FC<EarthViewProps> = ({
               theme={theme}
               t={t}
             >
-              {layerList.length === 0 ? (
-                <div
-                  style={{
-                    padding: "16px",
-                    textAlign: "center",
-                    color: isDark ? "#888" : "#999",
-                    fontSize: "12px",
-                  }}
-                >
-                  {t.noLayers}
-                </div>
-              ) : (
-                layerList.map((layer) => (
-                  <div
-                    key={layer.id}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "6px 12px",
-                      borderBottom: `1px solid ${isDark ? "#333" : "#eee"}`,
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        flex: 1,
-                      }}
-                    >
-                      <button
-                        onClick={() => toggleLayerVisibility(layer.id)}
-                        title={layer.visible ? t.hideLayer : t.showLayer}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          padding: "2px",
-                          color: layer.visible
-                            ? isDark
-                              ? "#00aaff"
-                              : "#0077cc"
-                            : isDark
-                              ? "#888"
-                              : "#ccc",
-                        }}
-                      >
-                        {layer.visible ? (
-                          <EyeIcon size={14} />
-                        ) : (
-                          <EyeOffIcon size={14} />
-                        )}
-                      </button>
-                      <span
-                        style={{
-                          color: isDark ? "#fff" : "#333",
-                          fontSize: "12px",
-                          flex: 1,
-                        }}
-                      >
-                        {layer.name}
-                      </span>
-                    </div>
-                    {layer.id !== "circle-draw" && (
-                      <button
-                        onClick={() => removeLayer(layer.id)}
-                        title={t.deleteLayerTitle}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          padding: "2px",
-                          color: "#f44336",
-                        }}
-                      >
-                        <DeleteIcon size={12} />
-                      </button>
-                    )}
-                  </div>
-                ))
-              )}
+              <LayersPanel
+                layerList={layerList}
+                onToggleVisibility={toggleLayerVisibility}
+                onRemoveLayer={removeLayer}
+                isDark={isDark}
+                t={t}
+              />
             </PopupPanel>
           )}
 
@@ -523,53 +436,12 @@ export const EarthView: React.FC<EarthViewProps> = ({
               theme={theme}
               t={t}
             >
-              {basemapOptions.map((option) => (
-                <div
-                  key={option.value}
-                  onClick={() => switchBasemap(option.value)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                    padding: "8px 12px",
-                    cursor: "pointer",
-                    background:
-                      currentBasemap === option.value
-                        ? isDark
-                          ? "#2a2a2a"
-                          : "#f0f0f0"
-                        : "transparent",
-                    borderLeft:
-                      currentBasemap === option.value
-                        ? `3px solid #00aaff`
-                        : "3px solid transparent",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (currentBasemap !== option.value) {
-                      e.currentTarget.style.background = isDark
-                        ? "#2a2a2a"
-                        : "#f5f5f5";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (currentBasemap !== option.value) {
-                      e.currentTarget.style.background = "transparent";
-                    }
-                  }}
-                >
-                  <span style={{ fontSize: "14px" }}>{option.icon}</span>
-                  <span
-                    style={{
-                      color: isDark ? "#fff" : "#333",
-                      fontSize: "12px",
-                      flex: 1,
-                    }}
-                  >
-                    {option.label}
-                  </span>
-                  {currentBasemap === option.value && <CheckIcon size={12} />}
-                </div>
-              ))}
+              <BasemapOptions
+                currentBasemap={currentBasemap}
+                onSelect={switchBasemap}
+                isDark={isDark}
+                t={t}
+              />
             </PopupPanel>
           )}
 
@@ -580,63 +452,12 @@ export const EarthView: React.FC<EarthViewProps> = ({
               theme={theme}
               t={t}
             >
-              <div
-                onClick={() => {
-                  handleDrawCircle();
-                  setActivePopup(null);
-                }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  padding: "8px 12px",
-                  cursor: "pointer",
-                  borderBottom: `1px solid ${isDark ? "#333" : "#eee"}`,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = isDark
-                    ? "#2a2a2a"
-                    : "#f5f5f5";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "transparent";
-                }}
-              >
-                <CircleIcon size={14} />
-                <span
-                  style={{ color: isDark ? "#fff" : "#333", fontSize: "12px" }}
-                >
-                  {t.drawCircle}
-                </span>
-              </div>
-              <div
-                onClick={() => {
-                  handleStartEdit();
-                  setActivePopup(null);
-                }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  padding: "8px 12px",
-                  cursor: "pointer",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = isDark
-                    ? "#2a2a2a"
-                    : "#f5f5f5";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "transparent";
-                }}
-              >
-                <EditIcon size={14} />
-                <span
-                  style={{ color: isDark ? "#fff" : "#333", fontSize: "12px" }}
-                >
-                  {t.editCircle}
-                </span>
-              </div>
+              <DrawToolsPanel
+                onDrawCircle={handleDrawCircle}
+                onEditCircle={handleStartEdit}
+                isDark={isDark}
+                t={t}
+              />
             </PopupPanel>
           )}
 
@@ -649,6 +470,35 @@ export const EarthView: React.FC<EarthViewProps> = ({
             t={t}
           />
           <ScaleBar scale={currentScale} theme={theme} />
+
+          <FloatingToolbar
+            visible={showFloatingToolbar}
+            position={floatingToolbarPosition}
+            onPositionChange={setFloatingToolbarPosition}
+            onColorChange={() => {
+              console.log("Change color for:", selectedGraphicId);
+            }}
+            onStrokeWidthChange={() => {
+              console.log("Change stroke width for:", selectedGraphicId);
+            }}
+            onStrokeStyleChange={() => {
+              console.log("Change stroke style for:", selectedGraphicId);
+            }}
+            onDelete={() => {
+              if (selectedGraphicId && circleDrawLayerRef.current) {
+                circleDrawLayerRef.current.removeCircle(selectedGraphicId);
+              }
+              setShowFloatingToolbar(false);
+              setSelectedGraphicId(null);
+            }}
+            onClose={() => {
+              setShowFloatingToolbar(false);
+              setSelectedGraphicId(null);
+            }}
+            theme={theme}
+            t={t}
+            containerRef={containerRef}
+          />
         </>
       )}
     </div>

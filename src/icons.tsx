@@ -198,3 +198,72 @@ export const EditIcon: React.FC<{ size?: number }> = ({ size = 20 }) => (
     <path d="M12 7L4 15v4h4l8-8" />
   </svg>
 );
+
+export const DragHandleIcon: React.FC<{ size?: number }> = ({ size = 20 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <circle cx="9" cy="12" r="1" />
+    <circle cx="9" cy="8" r="1" />
+    <circle cx="9" cy="16" r="1" />
+    <circle cx="15" cy="12" r="1" />
+    <circle cx="15" cy="8" r="1" />
+    <circle cx="15" cy="16" r="1" />
+  </svg>
+);
+
+export const ColorIcon: React.FC<{ size?: number }> = ({ size = 20 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+
+export const StrokeWidthIcon: React.FC<{ size?: number }> = ({ size = 20 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <line x1="3" y1="6" x2="21" y2="6" />
+    <line x1="3" y1="12" x2="21" y2="12" strokeWidth="3" />
+    <line x1="3" y1="18" x2="21" y2="18" strokeWidth="4" />
+  </svg>
+);
+
+export const StrokeStyleIcon: React.FC<{ size?: number }> = ({ size = 20 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <line x1="3" y1="12" x2="21" y2="12" />
+    <line x1="3" y1="12" x2="21" y2="12" strokeDasharray="4 4" />
+  </svg>
+);

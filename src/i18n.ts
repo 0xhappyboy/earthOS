@@ -31,9 +31,23 @@ export interface Translations {
     close: string;
     zoomInTitle: string;
     zoomOutTitle: string;
+    colorTitle: string;
+    strokeWidthTitle: string;
+    strokeStyleTitle: string;
+    deleteTitle: string;
+    closeTitle: string;
+    solidLine: string;
+    dashedLine: string;
 }
 
 const zh: Translations = {
+    colorTitle: "切换颜色",
+    strokeWidthTitle: "调整线宽",
+    strokeStyleTitle: "切换线型",
+    deleteTitle: "删除图形",
+    closeTitle: "关闭",
+    solidLine: "实线",
+    dashedLine: "虚线",
     loading: "加载地图中...",
     changingBasemap: "切换底图中...",
     layers: "图层管理",
@@ -67,6 +81,13 @@ const zh: Translations = {
 };
 
 const en: Translations = {
+    colorTitle: "Change Color",
+    strokeWidthTitle: "Stroke Width",
+    strokeStyleTitle: "Stroke Style",
+    deleteTitle: "Delete",
+    closeTitle: "Close",
+    solidLine: "Solid",
+    dashedLine: "Dashed",
     loading: "Loading Map...",
     changingBasemap: "Changing basemap...",
     layers: "Layers",
