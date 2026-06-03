@@ -137,6 +137,7 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
         onMouseDown={handleMouseDown}
         style={{
           ...buttonStyle,
+          width: "20px",
           cursor: "grab",
           background: isDark ? "#3d3d3d" : "#e8e8e8",
         }}
