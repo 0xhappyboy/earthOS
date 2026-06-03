@@ -378,4 +378,82 @@ export class CircleDrawLayer extends BaseLayer {
     }
     super.destroy();
   }
+
+  /**
+   * Update the fill and border colors of the circle.
+   */
+  public updateCircleColor(id: string, fillColor: number[], outlineColor: number[]): void {
+    const graphic = this.circles.get(id);
+    if (graphic && this.graphicsLayer) {
+      const symbol = graphic.symbol as SimpleFillSymbol;
+      if (symbol) {
+        symbol.color = fillColor;
+        if (symbol.outline) {
+          symbol.outline.color = outlineColor;
+        }
+        this.graphicsLayer.remove(graphic);
+        this.graphicsLayer.add(graphic);
+      }
+    }
+  }
+
+  /**
+   * Update the border thickness of the circle
+   */
+  public updateCircleStrokeWidth(id: string, width: number): void {
+    const graphic = this.circles.get(id);
+    if (graphic && this.graphicsLayer) {
+      const symbol = graphic.symbol as SimpleFillSymbol;
+      if (symbol && symbol.outline) {
+        symbol.outline.width = width;
+        this.graphicsLayer.remove(graphic);
+        this.graphicsLayer.add(graphic);
+      }
+    }
+  }
+
+  /**
+   * Update the border style of the circle (solid/dashed).
+   */
+  public updateCircleStrokeStyle(id: string, style: "solid" | "dashed"): void {
+    const graphic = this.circles.get(id);
+    if (graphic && this.graphicsLayer) {
+      const symbol = graphic.symbol as SimpleFillSymbol;
+      if (symbol && symbol.outline) {
+        if (style === "dashed") {
+          (symbol.outline as any).style = "dash";
+        } else {
+          (symbol.outline as any).style = "solid";
+        }
+        this.graphicsLayer.remove(graphic);
+        this.graphicsLayer.add(graphic);
+      }
+    }
+  }
+
+  /**
+   * Update the complete style of the circle
+   */
+  public updateCircleStyle(
+    id: string,
+    fillColor: number[],
+    outlineColor: number[],
+    outlineWidth: number,
+    outlineStyle: "solid" | "dashed"
+  ): void {
+    const graphic = this.circles.get(id);
+    if (graphic && this.graphicsLayer) {
+      const newSymbol = new SimpleFillSymbol({
+        color: fillColor,
+        outline: new SimpleLineSymbol({
+          color: outlineColor,
+          width: outlineWidth,
+          style: outlineStyle === "dashed" ? "dash" : "solid"
+        })
+      });
+      graphic.symbol = newSymbol;
+      this.graphicsLayer.remove(graphic);
+      this.graphicsLayer.add(graphic);
+    }
+  }
 }

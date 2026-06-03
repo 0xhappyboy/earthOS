@@ -37,6 +37,11 @@ export const EarthView: React.FC<EarthViewProps> = ({
   i18n = "zh",
   theme = "dark",
 }) => {
+  const [currentColor, setCurrentColor] = useState<number[]>([255, 0, 0, 1]);
+  const [currentStrokeWidth, setCurrentStrokeWidth] = useState<number>(3);
+  const [currentStrokeStyle, setCurrentStrokeStyle] = useState<
+    "solid" | "dashed"
+  >("solid");
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<MapView | null>(null);
   const mapRef = useRef<Map | null>(null);
@@ -457,7 +462,6 @@ export const EarthView: React.FC<EarthViewProps> = ({
               />
             </PopupPanel>
           )}
-
           {activePopup === "basemap" && (
             <PopupPanel
               title={t.basemap}
@@ -473,7 +477,6 @@ export const EarthView: React.FC<EarthViewProps> = ({
               />
             </PopupPanel>
           )}
-
           {activePopup === "draw" && (
             <PopupPanel
               title={t.drawTools}
@@ -489,7 +492,6 @@ export const EarthView: React.FC<EarthViewProps> = ({
               />
             </PopupPanel>
           )}
-
           <Toolbar
             activePopup={activePopup}
             onTogglePopup={setActivePopup}
@@ -499,19 +501,45 @@ export const EarthView: React.FC<EarthViewProps> = ({
             t={t}
           />
           <ScaleBar scale={currentScale} theme={theme} />
-
           <FloatingToolbar
             visible={showFloatingToolbar}
             position={floatingToolbarPosition}
             onPositionChange={setFloatingToolbarPosition}
-            onColorChange={() => {
-              console.log("Change color for:", selectedGraphicId);
+            onColorChange={(color) => {
+              setCurrentColor(color);
+              if (selectedGraphicId && circleDrawLayerRef.current) {
+                circleDrawLayerRef.current.updateCircleStyle(
+                  selectedGraphicId,
+                  [color[0], color[1], color[2], 0.3],
+                  [color[0], color[1], color[2], 1],
+                  currentStrokeWidth,
+                  currentStrokeStyle,
+                );
+              }
             }}
-            onStrokeWidthChange={() => {
-              console.log("Change stroke width for:", selectedGraphicId);
+            onStrokeWidthChange={(width) => {
+              setCurrentStrokeWidth(width);
+              if (selectedGraphicId && circleDrawLayerRef.current) {
+                circleDrawLayerRef.current.updateCircleStyle(
+                  selectedGraphicId,
+                  [currentColor[0], currentColor[1], currentColor[2], 0.3],
+                  [currentColor[0], currentColor[1], currentColor[2], 1],
+                  width,
+                  currentStrokeStyle,
+                );
+              }
             }}
-            onStrokeStyleChange={() => {
-              console.log("Change stroke style for:", selectedGraphicId);
+            onStrokeStyleChange={(style) => {
+              setCurrentStrokeStyle(style);
+              if (selectedGraphicId && circleDrawLayerRef.current) {
+                circleDrawLayerRef.current.updateCircleStyle(
+                  selectedGraphicId,
+                  [currentColor[0], currentColor[1], currentColor[2], 0.3],
+                  [currentColor[0], currentColor[1], currentColor[2], 1],
+                  currentStrokeWidth,
+                  style,
+                );
+              }
             }}
             onDelete={() => {
               if (selectedGraphicId && circleDrawLayerRef.current) {
@@ -527,6 +555,9 @@ export const EarthView: React.FC<EarthViewProps> = ({
             theme={theme}
             t={t}
             containerRef={containerRef}
+            currentColor={currentColor}
+            currentStrokeWidth={currentStrokeWidth}
+            currentStrokeStyle={currentStrokeStyle}
           />
         </>
       )}
