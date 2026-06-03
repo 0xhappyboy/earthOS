@@ -1,2 +1,2 @@
-export { EarthOS } from './components/EarthOS';
-export type { EarthOSProps } from './components/EarthOS';
+export { EarthOS } from './EarthOS';
+export type { EarthOSProps } from './EarthOS';
