@@ -1,9 +1,16 @@
-import React, { useRef, useState, useCallback } from "react";
+import React, {
+  useRef,
+  useState,
+  useCallback,
+  useEffect,
+  useMemo,
+} from "react";
 import Map from "@arcgis/core/Map";
 import MapView from "@arcgis/core/views/MapView";
 import { toWGS84 } from "../CoordTransform";
 import { BasemapTypeEnum, CoordinateSystemTypeEnum } from "../types";
 import { LayerManager, ILayer, CircleDrawData } from "../LayerManager";
+import { PopupMarkerLayer } from "../LayerManager/DataLayers/PopupMarkerLayer";
 import { EarthViewProps } from "./types";
 import { PopupPanel } from "./components/PopupPanel";
 import { Toolbar } from "./components/Toolbar";
@@ -64,9 +71,23 @@ export const EarthView: React.FC<EarthViewProps> = ({
   >(null);
   const [currentBasemap, setCurrentBasemap] =
     useState<BasemapTypeEnum>(basemap);
-
   const t = getTranslation(i18n);
   const isDark = theme === "dark";
+  const [normalLayers, setNormalLayers] = useState<ILayer[]>([]);
+
+  useEffect(() => {
+    const normals: ILayer[] = [];
+    const popups: PopupMarkerLayer[] = [];
+    for (const layer of layers) {
+      if (layer instanceof PopupMarkerLayer) {
+        popups.push(layer);
+      } else {
+        normals.push(layer);
+      }
+    }
+    setNormalLayers(normals);
+    setPopupMarkerLayers(popups);
+  }, [layers]);
 
   const getInternalCenter = useCallback((): [number, number] => {
     if (!center || center.length !== 2) return [0, 0];
@@ -104,6 +125,47 @@ export const EarthView: React.FC<EarthViewProps> = ({
     t,
     onCircleDrawn,
   });
+
+  const [popupMarkerLayers, setPopupMarkerLayers] = useState<
+    PopupMarkerLayer[]
+  >([]);
+
+  const allLayerList = useMemo(() => {
+    const normalLayers = layerList;
+    const popupLayers = popupMarkerLayers.map((layer) => ({
+      id: layer.id,
+      name: layer.name,
+      visible: layer.visible,
+    }));
+    return [...normalLayers, ...popupLayers];
+  }, [layerList, popupMarkerLayers]);
+
+  const handleToggleVisibility = useCallback(
+    (layerId: string) => {
+      const popupLayer = popupMarkerLayers.find((l) => l.id === layerId);
+      if (popupLayer) {
+        popupLayer.setVisible(!popupLayer.visible);
+        setPopupMarkerLayers([...popupMarkerLayers]);
+        return;
+      }
+      toggleLayerVisibility(layerId);
+    },
+    [popupMarkerLayers, toggleLayerVisibility],
+  );
+
+  const handleRemoveLayer = useCallback(
+    (layerId: string) => {
+      const popupLayer = popupMarkerLayers.find((l) => l.id === layerId);
+      if (popupLayer) {
+        popupLayer.destroy();
+        const newPopups = popupMarkerLayers.filter((l) => l.id !== layerId);
+        setPopupMarkerLayers(newPopups);
+        return;
+      }
+      removeLayer(layerId);
+    },
+    [popupMarkerLayers, removeLayer],
+  );
 
   const {
     isMeasuring,
@@ -163,29 +225,64 @@ export const EarthView: React.FC<EarthViewProps> = ({
     }
   }, []);
 
-  useMapInitialization({
-    containerRef,
-    viewRef,
-    mapRef,
-    layerManagerRef,
-    circleDrawLayerRef,
-    distanceLayerRef,
-    areaLayerRef,
-    isMountedRef,
-    currentBasemap,
-    layers,
-    enableDrawing,
-    zoom,
-    t,
-    onMapClick,
-    onLoad,
-    updateLayerList,
-    updateScale,
-    setIsMapLoading,
-    setError,
-    destroyMap,
-    getInternalCenter,
-  });
+  useEffect(() => {
+    if (!viewRef.current) return;
+
+    const popupLayers = layers.filter(
+      (l) => l.constructor.name === "PopupMarkerLayer",
+    );
+    if (popupLayers.length === 0) return;
+
+    viewRef.current.when().then(() => {
+      setTimeout(() => {
+        for (const layer of popupLayers) {
+          if (!(layer as any)._earthViewInitialized) {
+            (layer as PopupMarkerLayer).init(viewRef.current!);
+            (layer as any)._earthViewInitialized = true;
+          }
+        }
+      }, 100);
+    });
+  }, [layers, viewRef.current]);
+
+  try {
+    useMapInitialization({
+      containerRef,
+      viewRef,
+      mapRef,
+      layerManagerRef,
+      circleDrawLayerRef,
+      distanceLayerRef,
+      areaLayerRef,
+      isMountedRef,
+      currentBasemap,
+      layers: [],
+      enableDrawing,
+      zoom,
+      t,
+      onMapClick,
+      onLoad,
+      updateLayerList,
+      updateScale,
+      setIsMapLoading,
+      setError,
+      destroyMap,
+      getInternalCenter,
+    });
+  } catch (err) {
+    console.error("init error");
+    console.error(err);
+  }
+
+  useEffect(() => {
+    if (!layerManagerRef.current) return;
+    if (normalLayers.length === 0) return;
+    for (const layer of normalLayers) {
+      if (!layerManagerRef.current.getLayer(layer.id)) {
+        layerManagerRef.current.addLayer(layer);
+      }
+    }
+  }, [normalLayers, layerManagerRef.current]);
 
   useMapEvents({
     viewRef,
@@ -194,6 +291,25 @@ export const EarthView: React.FC<EarthViewProps> = ({
     coordinateSystem,
     updateScale,
   });
+
+  useEffect(() => {
+    if (!viewRef.current) return;
+    const popupLayers = layers.filter(
+      (l) => l.constructor.name === "PopupMarkerLayer",
+    );
+    if (popupLayers.length === 0) return;
+    viewRef.current.when().then(() => {
+      setTimeout(() => {
+        for (const layer of popupLayers) {
+          if (!(layer as any)._earthViewInitialized) {
+            (layer as PopupMarkerLayer).init(viewRef.current!);
+            (layer as any)._earthViewInitialized = true;
+            console.log("PopupMarkerLayer initialized:", layer.id);
+          }
+        }
+      }, 100);
+    });
+  }, [layers, viewRef.current]);
 
   const handleZoomIn = useCallback(() => {
     if (viewRef.current && !isMapLoading && !isChangingBasemap) {
@@ -213,7 +329,6 @@ export const EarthView: React.FC<EarthViewProps> = ({
 
   const handleLocate = useCallback(() => {
     if (!viewRef.current || isMapLoading || isChangingBasemap) return;
-
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
@@ -257,10 +372,8 @@ export const EarthView: React.FC<EarthViewProps> = ({
     userSelect: "none",
     ...style,
   };
-
   const showLoading = isMapLoading || isChangingBasemap;
   const loadingMessage = isMapLoading ? t.loading : t.changingBasemap;
-
   return (
     <div className={className} style={containerStyle}>
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
@@ -298,7 +411,6 @@ export const EarthView: React.FC<EarthViewProps> = ({
           </span>
         </div>
       )}
-
       {measureStatus && !showLoading && (
         <div
           style={{
@@ -333,9 +445,7 @@ export const EarthView: React.FC<EarthViewProps> = ({
           </span>
         </div>
       )}
-
       {showLoading && <LoadingOverlay message={loadingMessage} theme={theme} />}
-
       {error && !showLoading && (
         <div
           style={{
@@ -357,7 +467,6 @@ export const EarthView: React.FC<EarthViewProps> = ({
           {error}
         </div>
       )}
-
       {!isMapLoading && (
         <>
           {activePopup === "layers" && (
@@ -368,15 +477,14 @@ export const EarthView: React.FC<EarthViewProps> = ({
               t={t}
             >
               <LayersPanel
-                layerList={layerList}
-                onToggleVisibility={toggleLayerVisibility}
-                onRemoveLayer={removeLayer}
+                layerList={allLayerList}
+                onToggleVisibility={handleToggleVisibility}
+                onRemoveLayer={handleRemoveLayer}
                 isDark={isDark}
                 t={t}
               />
             </PopupPanel>
           )}
-
           {activePopup === "basemap" && (
             <PopupPanel
               title={t.basemap}

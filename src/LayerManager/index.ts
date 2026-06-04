@@ -34,6 +34,5 @@ export type { BarChartData, BarChartLayerConfig } from "./DataLayers/BarChartLay
 export { PopupMarkerLayer } from "./DataLayers/PopupMarkerLayer";
 export type { PopupMarkerData, PopupMarkerLayerConfig } from "./DataLayers/PopupMarkerLayer";
 
-// 绘图图层
 export { CircleDrawLayer } from "./DrawLayers/CircleDrawLayer";
 export type { CircleDrawData, CircleDrawLayerConfig } from "./DrawLayers/CircleDrawLayer";

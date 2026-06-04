@@ -40,7 +40,6 @@ export interface Translations {
     dashedLine: string;
     drawingCircle: string;
     editingCircle: string;
-    // 新增 - 定位和工具
     locateMe: string;
     tools: string;
     toolsTitle: string;

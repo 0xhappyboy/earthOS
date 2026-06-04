@@ -1,10 +1,9 @@
 import Graphic from "@arcgis/core/Graphic";
 import Point from "@arcgis/core/geometry/Point";
 import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
-import { BaseLayer } from "../BaseLayer";
-import { LayerConfig } from "../types";
 import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
 import MapView from "@arcgis/core/views/MapView";
+import Map from "@arcgis/core/Map";
 
 export interface PopupMarkerData {
     id: string;
@@ -17,20 +16,29 @@ export interface PopupMarkerData {
     size?: number;
 }
 
-export interface PopupMarkerLayerConfig extends LayerConfig {
+export interface PopupMarkerLayerConfig {
+    id: string;
+    name: string;
     markers?: PopupMarkerData[];
     defaultColor?: number[];
     defaultSize?: number;
     popupWidth?: number;
     coverImageHeight?: number;
+    visible?: boolean;
+    opacity?: number;
 }
 
-export class PopupMarkerLayer extends BaseLayer {
-    private markers: Map<string, Graphic> = new Map();
+export class PopupMarkerLayer {
+    public id: string;
+    public name: string;
+    public visible: boolean;
+    public opacity: number;
+    private markers: globalThis.Map<string, Graphic> = new globalThis.Map();
     private pendingMarkers: PopupMarkerData[] = [];
     private defaultColor: number[];
     private defaultSize: number;
     private view: MapView | null = null;
+    private graphicsLayer: GraphicsLayer | null = null;
     private currentPopupDiv: HTMLDivElement | null = null;
     private currentPopupGraphic: Graphic | null = null;
     private eventsAttached: boolean = false;
@@ -41,7 +49,10 @@ export class PopupMarkerLayer extends BaseLayer {
     private coverImageHeight: number;
 
     constructor(config: PopupMarkerLayerConfig) {
-        super(config);
+        this.id = config.id;
+        this.name = config.name;
+        this.visible = config.visible ?? true;
+        this.opacity = config.opacity ?? 1;
         this.defaultColor = config.defaultColor ?? [255, 0, 0, 0.8];
         this.defaultSize = config.defaultSize ?? 12;
         this.popupWidth = config.popupWidth ?? 260;
@@ -52,26 +63,22 @@ export class PopupMarkerLayer extends BaseLayer {
         }
     }
 
-    public createLayer(): GraphicsLayer {
-        super.createLayer();
-        return this.graphicsLayer!;
+    public getLayer(): GraphicsLayer | null {
+        return this.graphicsLayer;
     }
 
-    public setView(view: MapView): void {
+    public init(view: MapView): void {
+        if (this.view) return;
         this.view = view;
         this.mapContainer = view.container as HTMLElement;
-        if (!this.graphicsLayer) {
-            this.graphicsLayer = new GraphicsLayer({
-                id: this.id,
-                title: this.name,
-                visible: this.visible,
-                opacity: this.opacity,
-            });
 
-            if (view.map) {
-                view.map.add(this.graphicsLayer);
-            }
-        }
+        this.graphicsLayer = new GraphicsLayer({
+            id: this.id,
+            title: this.name,
+            visible: this.visible,
+            opacity: this.opacity,
+        });
+        view.map?.add(this.graphicsLayer);
 
         this.attachClickEvent();
 
@@ -86,17 +93,12 @@ export class PopupMarkerLayer extends BaseLayer {
         this.eventsAttached = true;
         this.view.on("click", (event) => {
             this.view?.hitTest(event).then((response) => {
-                let hitMarker = false;
                 for (let i = 0; i < response.results.length; i++) {
                     const hit: any = response.results[i];
-                    if (hit.graphic && hit.graphic.layer && hit.graphic.layer.id === this.id) {
-                        hitMarker = true;
+                    if (hit.graphic && hit.graphic.layer === this.graphicsLayer) {
                         this.showPopupForGraphic(hit.graphic);
                         return;
                     }
-                }
-                if (!hitMarker) {
-                    this.hidePopup();
                 }
             }).catch(() => { });
         });
@@ -145,9 +147,7 @@ export class PopupMarkerLayer extends BaseLayer {
         const FIXED_CARD_HEIGHT = 260;
         const IMAGE_HEIGHT = hasCover ? this.coverImageHeight : 0;
         const CONTENT_AREA_HEIGHT = FIXED_CARD_HEIGHT - IMAGE_HEIGHT - 24;
-        const theme = document.body.getAttribute("data-theme") ||
-            document.documentElement.getAttribute("data-theme") ||
-            "dark";
+        const theme = document.body.getAttribute("data-theme") || "dark";
         const isDark = theme === "dark";
         const bgColor = isDark ? "#1e1e1e" : "#ffffff";
         const borderColor = isDark ? "#333" : "#e0e0e0";
@@ -301,7 +301,6 @@ export class PopupMarkerLayer extends BaseLayer {
             this.currentPopupDiv = null;
         }
         this.currentPopupGraphic = null;
-
         if (this.extentWatchHandle) {
             this.extentWatchHandle.remove();
             this.extentWatchHandle = null;
@@ -378,7 +377,7 @@ export class PopupMarkerLayer extends BaseLayer {
 
     public updateData(data: { markers?: PopupMarkerData[] }): void {
         if (data.markers) {
-            this.clear();
+            this.clearAllMarkers();
             this.pendingMarkers = [...data.markers];
             if (this.graphicsLayer) {
                 this.pendingMarkers.forEach((marker) => this.addMarker(marker));
@@ -387,8 +386,24 @@ export class PopupMarkerLayer extends BaseLayer {
         }
     }
 
+    public setVisible(visible: boolean): void {
+        this.visible = visible;
+        if (this.graphicsLayer) {
+            this.graphicsLayer.visible = visible;
+        }
+        if (!visible) {
+            this.hidePopup();
+        }
+    }
+
     public destroy(): void {
         this.hidePopup();
-        super.destroy();
+        if (this.graphicsLayer && this.view?.map) {
+            this.view.map.remove(this.graphicsLayer);
+        }
+        if (this.graphicsLayer) {
+            this.graphicsLayer.destroy();
+            this.graphicsLayer = null;
+        }
     }
 }

@@ -1,4 +1,4 @@
-import { LayerManager } from "../LayerManager";
+import { LayerManager, PopupMarkerLayer } from "../LayerManager";
 import MapView from "@arcgis/core/views/MapView";
 import { CircleDrawData } from "../LayerManager/DrawLayers/CircleDrawLayer";
 import { BasemapTypeEnum, CoordinateSystemTypeEnum } from "../types";
@@ -12,7 +12,7 @@ export interface EarthViewProps {
   center?: [number, number];
   zoom?: number;
   coordinateSystem?: CoordinateSystemTypeEnum;
-  layers?: ILayer[];
+  layers?: (ILayer | PopupMarkerLayer)[];
   onLoad?: (layerManager: LayerManager, view: MapView) => void;
   onMapClick?: (event: { longitude: number; latitude: number }) => void;
   enableDrawing?: boolean;

@@ -1,7 +1,7 @@
 import { useEffect, useRef, MutableRefObject } from "react";
 import Map from "@arcgis/core/Map";
 import MapView from "@arcgis/core/views/MapView";
-import { LayerManager, CircleDrawLayer, ILayer } from "../../LayerManager";
+import { LayerManager, CircleDrawLayer, ILayer, PopupMarkerLayer } from "../../LayerManager";
 import { AreaMeasurementLayer } from "../../LayerManager/ToolLayers/AreaMeasurementLayer";
 import { DistanceMeasurementLayer } from "../../LayerManager/ToolLayers/DistanceMeasurementLayer";
 import { BasemapTypeEnum } from "../../types";
@@ -16,7 +16,7 @@ interface UseMapInitializationProps {
   areaLayerRef: MutableRefObject<AreaMeasurementLayer | null>;
   isMountedRef: MutableRefObject<boolean>;
   currentBasemap: BasemapTypeEnum;
-  layers: ILayer[];
+  layers?: (ILayer | PopupMarkerLayer)[];
   enableDrawing: boolean;
   zoom: number;
   t: any;
@@ -72,9 +72,7 @@ export const useMapInitialization = (props: UseMapInitializationProps) => {
         mapRef.current = map;
         layerManagerRef.current = new LayerManager(map);
 
-        layers.forEach((layer) => {
-          layerManagerRef.current?.addLayer(layer);
-        });
+       
 
         if (enableDrawing) {
           const circleDrawLayer = new CircleDrawLayer({
