@@ -113,6 +113,8 @@ export const useMapInitialization = (props: UseMapInitializationProps) => {
           map: map,
           center: internalCenter,
           zoom: zoom,
+          viewingMode: "local",
+          ground: "world-elevation",
           constraints: {
             rotationEnabled: true,
             snapToZoom: false,
@@ -153,6 +155,9 @@ export const useMapInitialization = (props: UseMapInitializationProps) => {
             }
             if (areaLayerRef.current && viewRef.current) {
               areaLayerRef.current.setView(viewRef.current);
+            }
+            if (layerManagerRef.current && viewRef.current) {
+              layerManagerRef.current.setView(viewRef.current);
             }
             updateLayerList();
             updateScale();

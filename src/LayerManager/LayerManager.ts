@@ -1,4 +1,5 @@
 import Map from "@arcgis/core/Map";
+import MapView from "@arcgis/core/views/MapView";
 import { ILayer } from "./types";
 
 /**
@@ -6,6 +7,7 @@ import { ILayer } from "./types";
  */
 export class LayerManager {
   private map: Map | null = null;
+  private mapView: MapView | null = null;
   private layers: Record<string, ILayer> = {};
   private layerOrder: string[] = [];
 
@@ -13,9 +15,6 @@ export class LayerManager {
     this.map = map;
   }
 
-  /**
-   * Set map instance
-   */
   public setMap(map: Map): void {
     this.map = map;
     this.layerOrder.forEach((id) => {
@@ -27,35 +26,41 @@ export class LayerManager {
     });
   }
 
-  /**
-   * Add layer
-   * @param layer Layer instance
-   * @param index Insert position, undefined adds to top
-   */
+  public setView(view: MapView): void {
+    this.mapView = view;
+    Object.values(this.layers).forEach((layer) => {
+      if ((layer as any).setView) {
+        (layer as any).setView(view);
+      }
+    });
+  }
+
   public addLayer(layer: ILayer, index?: number): void {
     if (this.layers[layer.id]) {
       console.warn(`Layer with id ${layer.id} already exists`);
       return;
     }
-
     this.layers[layer.id] = layer;
-
     if (index !== undefined && index >= 0 && index <= this.layerOrder.length) {
       this.layerOrder.splice(index, 0, layer.id);
     } else {
       this.layerOrder.push(layer.id);
     }
-
+    if (this.mapView && (layer as any).setView) {
+      (layer as any).setView(this.mapView);
+    }
     if (this.map) {
       const arcgisLayer = layer.createLayer();
       const layerIndex = this.layerOrder.indexOf(layer.id);
-      this.map.add(arcgisLayer, layerIndex);
+      if ((layer as any).setMap) {
+        (layer as any).setMap(this.map);
+      } else {
+        this.map.add(arcgisLayer, layerIndex);
+      }
     }
   }
 
-  /**
-   * Remove layer
-   */
+
   public removeLayer(id: string): void {
     const layer = this.layers[id];
     if (layer) {
@@ -68,40 +73,24 @@ export class LayerManager {
     }
   }
 
-  /**
-   * Get layer by id
-   */
   public getLayer(id: string): ILayer | undefined {
     return this.layers[id];
   }
 
-  /**
-   * Get all layers
-   */
   public getAllLayers(): ILayer[] {
     return this.layerOrder.map((id) => this.layers[id]);
   }
 
-  /**
-   * Move layer to new position
-   * @param id Layer ID
-   * @param newIndex New position, 0 is bottom
-   */
   public moveLayer(id: string, newIndex: number): void {
     const currentIndex = this.layerOrder.indexOf(id);
     if (currentIndex === -1 || newIndex < 0 || newIndex >= this.layerOrder.length) {
       return;
     }
-
     this.layerOrder.splice(currentIndex, 1);
     this.layerOrder.splice(newIndex, 0, id);
-
     this.reorderLayers();
   }
 
-  /**
-   * Bring layer to top
-   */
   public bringToTop(id: string): void {
     const currentIndex = this.layerOrder.indexOf(id);
     if (currentIndex !== -1) {
@@ -111,9 +100,6 @@ export class LayerManager {
     }
   }
 
-  /**
-   * Send layer to bottom
-   */
   public sendToBottom(id: string): void {
     const currentIndex = this.layerOrder.indexOf(id);
     if (currentIndex !== -1) {
@@ -123,12 +109,8 @@ export class LayerManager {
     }
   }
 
-  /**
-   * Reorder all layers
-   */
   private reorderLayers(): void {
     if (!this.map) return;
-
     this.layerOrder.forEach((id, index) => {
       const layer = this.layers[id];
       if (layer && this.map) {
@@ -140,9 +122,6 @@ export class LayerManager {
     });
   }
 
-  /**
-   * Clear all layers
-   */
   public clearAll(): void {
     Object.values(this.layers).forEach((layer) => {
       layer.destroy();
@@ -151,9 +130,6 @@ export class LayerManager {
     this.layerOrder = [];
   }
 
-  /**
-   * Get layer count
-   */
   public getLayerCount(): number {
     return Object.keys(this.layers).length;
   }

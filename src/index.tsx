@@ -37,3 +37,20 @@ export type {
   CircleDrawData,
   CircleDrawLayerConfig,
 } from "./LayerManager/DrawLayers/CircleDrawLayer";
+export {
+  HeatmapLayer,
+  GeoJSONLayer,
+  TileLayer,
+  ClusterLayer,
+  BarChartLayer,
+} from "./LayerManager";
+export type {
+  HeatmapData,
+  HeatmapLayerConfig,
+  GeoJSONLayerConfig,
+  TileLayerConfig,
+  ClusterData,
+  ClusterLayerConfig,
+  BarChartData,
+  BarChartLayerConfig,
+} from "./LayerManager";

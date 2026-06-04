@@ -18,9 +18,6 @@ export abstract class BaseLayer implements ILayer {
     this.opacity = config.opacity ?? 1;
   }
 
-  /**
-   * Create ArcGIS GraphicsLayer instance
-   */
   public createLayer(): GraphicsLayer {
     this.graphicsLayer = new GraphicsLayer({
       id: this.id,
@@ -31,16 +28,10 @@ export abstract class BaseLayer implements ILayer {
     return this.graphicsLayer;
   }
 
-  /**
-   * Get layer instance
-   */
   public getLayer(): GraphicsLayer | null {
     return this.graphicsLayer;
   }
 
-  /**
-   * Set visibility
-   */
   public setVisible(visible: boolean): void {
     this.visible = visible;
     if (this.graphicsLayer) {
@@ -48,9 +39,6 @@ export abstract class BaseLayer implements ILayer {
     }
   }
 
-  /**
-   * Set opacity
-   */
   public setOpacity(opacity: number): void {
     this.opacity = opacity;
     if (this.graphicsLayer) {
@@ -58,18 +46,12 @@ export abstract class BaseLayer implements ILayer {
     }
   }
 
-  /**
-   * Clear all graphics from layer
-   */
   public clear(): void {
     if (this.graphicsLayer) {
       this.graphicsLayer.removeAll();
     }
   }
 
-  /**
-   * Destroy layer
-   */
   public destroy(): void {
     if (this.graphicsLayer) {
       this.graphicsLayer.destroy();
@@ -77,8 +59,5 @@ export abstract class BaseLayer implements ILayer {
     }
   }
 
-  /**
-   * Update layer data - Must be implemented by subclasses
-   */
   public abstract updateData(data: any): void;
 }
