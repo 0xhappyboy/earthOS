@@ -40,6 +40,28 @@ export interface Translations {
     dashedLine: string;
     drawingCircle: string;
     editingCircle: string;
+    // 新增 - 定位和工具
+    locateMe: string;
+    tools: string;
+    toolsTitle: string;
+    distanceMeasure: string;
+    areaMeasure: string;
+    clearMeasurements: string;
+    measureDistance: string;
+    measureArea: string;
+    measuring: string;
+    distance: string;
+    area: string;
+    squareMeters: string;
+    squareKilometers: string;
+    meters: string;
+    kilometers: string;
+    clickToStartMeasure: string;
+    doubleClickToFinish: string;
+    measurementLayer: string;
+    noMeasurements: string;
+    delete: string;
+    cancel: string;
 }
 
 const zh: Translations = {
@@ -82,6 +104,27 @@ const zh: Translations = {
     zoomOutTitle: "缩小",
     drawingCircle: "正在绘制圆形...",
     editingCircle: "正在编辑圆形...",
+    locateMe: "定位到我",
+    tools: "工具",
+    toolsTitle: "测量工具",
+    distanceMeasure: "距离测量",
+    areaMeasure: "面积测量",
+    clearMeasurements: "清除测量",
+    measureDistance: "测量距离",
+    measureArea: "测量面积",
+    measuring: "测量中...",
+    distance: "距离",
+    area: "面积",
+    squareMeters: "平方米",
+    squareKilometers: "平方公里",
+    meters: "米",
+    kilometers: "公里",
+    clickToStartMeasure: "点击开始测量",
+    doubleClickToFinish: "双击完成测量",
+    measurementLayer: "测量图层",
+    noMeasurements: "暂无测量数据",
+    delete: "删除",
+    cancel: "取消",
 };
 
 const en: Translations = {
@@ -124,6 +167,27 @@ const en: Translations = {
     zoomOutTitle: "Zoom Out",
     drawingCircle: "Drawing circle...",
     editingCircle: "Editing circle...",
+    locateMe: "Locate Me",
+    tools: "Tools",
+    toolsTitle: "Measure Tools",
+    distanceMeasure: "Distance Measure",
+    areaMeasure: "Area Measure",
+    clearMeasurements: "Clear Measurements",
+    measureDistance: "Measure Distance",
+    measureArea: "Measure Area",
+    measuring: "Measuring...",
+    distance: "Distance",
+    area: "Area",
+    squareMeters: "m²",
+    squareKilometers: "km²",
+    meters: "m",
+    kilometers: "km",
+    clickToStartMeasure: "Click to start measuring",
+    doubleClickToFinish: "Double click to finish",
+    measurementLayer: "Measurement Layer",
+    noMeasurements: "No measurements",
+    delete: "Delete",
+    cancel: "Cancel",
 };
 
 export const getTranslation = (locale: Locale): Translations => {

@@ -1,14 +1,9 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useRef, useState, useCallback } from "react";
 import Map from "@arcgis/core/Map";
 import MapView from "@arcgis/core/views/MapView";
 import { toWGS84 } from "../CoordTransform";
 import { BasemapTypeEnum, CoordinateSystemTypeEnum } from "../types";
-import {
-  LayerManager,
-  ILayer,
-  CircleDrawLayer,
-  CircleDrawData,
-} from "../LayerManager";
+import { LayerManager, ILayer, CircleDrawData } from "../LayerManager";
 import { EarthViewProps } from "./types";
 import { PopupPanel } from "./components/PopupPanel";
 import { Toolbar } from "./components/Toolbar";
@@ -17,8 +12,18 @@ import { LoadingOverlay } from "./components/LoadingOverlay";
 import { BasemapOptions } from "./components/BasemapOptions";
 import { LayersPanel } from "./components/LayersPanel";
 import { DrawToolsPanel } from "./components/DrawToolsPanel";
+import { ToolsPanel } from "./components/ToolsPanel";
 import { FloatingToolbar } from "./components/FloatingToolbar";
+import { MeasurementFloatingToolbar } from "./components/MeasurementFloatingToolbar";
 import { getTranslation } from "../i18n";
+import {
+  useMapInitialization,
+  useMapEvents,
+  useMeasurement,
+  useDrawing,
+  useLayerManagement,
+  useRightClickMenu,
+} from "./hooks";
 
 export const EarthView: React.FC<EarthViewProps> = ({
   width = "100%",
@@ -46,33 +51,23 @@ export const EarthView: React.FC<EarthViewProps> = ({
   const viewRef = useRef<MapView | null>(null);
   const mapRef = useRef<Map | null>(null);
   const layerManagerRef = useRef<LayerManager | null>(null);
-  const circleDrawLayerRef = useRef<CircleDrawLayer | null>(null);
+  const circleDrawLayerRef = useRef<any>(null);
+  const distanceLayerRef = useRef<any>(null);
+  const areaLayerRef = useRef<any>(null);
   const [isMapLoading, setIsMapLoading] = useState(true);
   const [isChangingBasemap, setIsChangingBasemap] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
   const isMountedRef = useRef(true);
   const [currentScale, setCurrentScale] = useState<string>("");
   const [activePopup, setActivePopup] = useState<
-    "layers" | "basemap" | "draw" | null
+    "layers" | "basemap" | "draw" | "tools" | null
   >(null);
   const [currentBasemap, setCurrentBasemap] =
     useState<BasemapTypeEnum>(basemap);
-  const [layerList, setLayerList] = useState<
-    { id: string; name: string; visible: boolean }[]
-  >([]);
-  const [showFloatingToolbar, setShowFloatingToolbar] = useState(false);
-  const [floatingToolbarPosition, setFloatingToolbarPosition] = useState({
-    x: 100,
-    y: 100,
-  });
-  const [selectedGraphicId, setSelectedGraphicId] = useState<string | null>(
-    null,
-  );
 
-  const [drawingStatus, setDrawingStatus] = useState<string | null>(null);
   const t = getTranslation(i18n);
   const isDark = theme === "dark";
+
   const getInternalCenter = useCallback((): [number, number] => {
     if (!center || center.length !== 2) return [0, 0];
     const [lng, lat] = center;
@@ -82,6 +77,76 @@ export const EarthView: React.FC<EarthViewProps> = ({
     const [convertedLng, convertedLat] = toWGS84(lng, lat, coordinateSystem);
     return [convertedLng, convertedLat];
   }, [center, coordinateSystem]);
+
+  const updateScale = useCallback(() => {
+    if (viewRef.current && !isChangingBasemap) {
+      const scale = viewRef.current.scale;
+      if (scale) {
+        if (scale >= 1000) {
+          setCurrentScale(`1:${Math.round(scale / 1000)}K`);
+        } else {
+          setCurrentScale(`1:${Math.round(scale)}`);
+        }
+      }
+    }
+  }, [isChangingBasemap]);
+
+  const { layerList, updateLayerList, toggleLayerVisibility, removeLayer } =
+    useLayerManagement({
+      layerManagerRef,
+      t,
+    });
+
+  const { drawingStatus, handleDrawCircle, handleStartEdit } = useDrawing({
+    circleDrawLayerRef,
+    isMapLoading,
+    isChangingBasemap,
+    t,
+    onCircleDrawn,
+  });
+
+  const {
+    isMeasuring,
+    setIsMeasuring,
+    currentMeasureType,
+    setCurrentMeasureType,
+    measurePreview,
+    setMeasurePreview,
+    measureStatus,
+    setMeasureStatus,
+    handleDistanceMeasure,
+    handleAreaMeasure,
+    handleClearMeasurements,
+  } = useMeasurement({
+    distanceLayerRef,
+    areaLayerRef,
+    viewRef,
+    isMapLoading,
+    isChangingBasemap,
+    t,
+  });
+
+  const {
+    showFloatingToolbar,
+    setShowFloatingToolbar,
+    floatingToolbarPosition,
+    setFloatingToolbarPosition,
+    selectedGraphicId,
+    setSelectedGraphicId,
+    showMeasurementToolbar,
+    setShowMeasurementToolbar,
+    measurementToolbarPosition,
+    setMeasurementToolbarPosition,
+    selectedMeasurementId,
+    setSelectedMeasurementId,
+    handleDeleteMeasurement,
+  } = useRightClickMenu({
+    viewRef,
+    circleDrawLayerRef,
+    distanceLayerRef,
+    areaLayerRef,
+  });
+
   const destroyMap = useCallback(() => {
     try {
       if (viewRef.current) {
@@ -97,30 +162,39 @@ export const EarthView: React.FC<EarthViewProps> = ({
       console.warn("Error destroying map:", err);
     }
   }, []);
-  const updateLayerList = useCallback(() => {
-    if (layerManagerRef.current) {
-      const allLayers = layerManagerRef.current.getAllLayers();
-      setLayerList(
-        allLayers.map((layer) => ({
-          id: layer.id,
-          name: layer.name,
-          visible: layer.visible,
-        })),
-      );
-    }
-  }, []);
-  const updateScale = useCallback(() => {
-    if (viewRef.current && !isChangingBasemap) {
-      const scale = viewRef.current.scale;
-      if (scale) {
-        if (scale >= 1000) {
-          setCurrentScale(`1:${Math.round(scale / 1000)}K`);
-        } else {
-          setCurrentScale(`1:${Math.round(scale)}`);
-        }
-      }
-    }
-  }, [isChangingBasemap]);
+
+  useMapInitialization({
+    containerRef,
+    viewRef,
+    mapRef,
+    layerManagerRef,
+    circleDrawLayerRef,
+    distanceLayerRef,
+    areaLayerRef,
+    isMountedRef,
+    currentBasemap,
+    layers,
+    enableDrawing,
+    zoom,
+    t,
+    onMapClick,
+    onLoad,
+    updateLayerList,
+    updateScale,
+    setIsMapLoading,
+    setError,
+    destroyMap,
+    getInternalCenter,
+  });
+
+  useMapEvents({
+    viewRef,
+    isMapLoading,
+    isChangingBasemap,
+    coordinateSystem,
+    updateScale,
+  });
+
   const handleZoomIn = useCallback(() => {
     if (viewRef.current && !isMapLoading && !isChangingBasemap) {
       const newZoom = (viewRef.current.zoom || 12) + 1;
@@ -128,6 +202,7 @@ export const EarthView: React.FC<EarthViewProps> = ({
       setTimeout(updateScale, 100);
     }
   }, [updateScale, isMapLoading, isChangingBasemap]);
+
   const handleZoomOut = useCallback(() => {
     if (viewRef.current && !isMapLoading && !isChangingBasemap) {
       const newZoom = (viewRef.current.zoom || 12) - 1;
@@ -135,27 +210,27 @@ export const EarthView: React.FC<EarthViewProps> = ({
       setTimeout(updateScale, 100);
     }
   }, [updateScale, isMapLoading, isChangingBasemap]);
-  const toggleLayerVisibility = useCallback((layerId: string) => {
-    const layer = layerManagerRef.current?.getLayer(layerId);
-    if (layer) {
-      const newVisible = !layer.visible;
-      layer.setVisible?.(newVisible);
-      setLayerList((prev) =>
-        prev.map((l) => (l.id === layerId ? { ...l, visible: newVisible } : l)),
-      );
-    }
-  }, []);
-  const removeLayer = useCallback(
-    (layerId: string) => {
-      if (layerId === "circle-draw") {
-        alert(t.cannotRemoveDrawingLayer);
-        return;
-      }
-      layerManagerRef.current?.removeLayer(layerId);
-      updateLayerList();
-    },
-    [updateLayerList, t],
-  );
+
+  const handleLocate = useCallback(() => {
+    if (!viewRef.current || isMapLoading || isChangingBasemap) return;
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        viewRef.current
+          ?.goTo(
+            { target: [longitude, latitude], zoom: 15 },
+            { duration: 1000 },
+          )
+          .catch((err: Error) => console.warn("GoTo failed:", err));
+      },
+      (error) => {
+        console.warn("Geolocation error:", error);
+        alert("Unable to get your location. Please check browser permissions.");
+      },
+    );
+  }, [isMapLoading, isChangingBasemap]);
+
   const switchBasemap = useCallback((newBasemap: BasemapTypeEnum) => {
     if (!mapRef.current) return;
     setIsChangingBasemap(true);
@@ -173,201 +248,7 @@ export const EarthView: React.FC<EarthViewProps> = ({
       setIsChangingBasemap(false);
     }
   }, []);
-  const handleDrawCircle = useCallback(() => {
-    if (circleDrawLayerRef.current && !isMapLoading && !isChangingBasemap) {
-      setIsDrawing(true);
-      setDrawingStatus(t.drawingCircle || "Drawing...");
-      circleDrawLayerRef.current.startDraw((data) => {
-        setIsDrawing(false);
-        setDrawingStatus(null);
-        onCircleDrawn?.(data);
-        setActivePopup(null);
-      });
-    }
-  }, [onCircleDrawn, isMapLoading, isChangingBasemap, t]);
 
-  const handleStartEdit = useCallback(() => {
-    const circles = circleDrawLayerRef.current?.getAllCircles();
-    if (circles && circles.length > 0 && !isMapLoading && !isChangingBasemap) {
-      setDrawingStatus(t.editingCircle || "Editing Circle...");
-      circleDrawLayerRef.current?.startEdit(circles[0].id, (data) => {
-        console.log("Edit complete:", data);
-        setDrawingStatus(null);
-        setActivePopup(null);
-      });
-    } else if (!isMapLoading && !isChangingBasemap) {
-      alert(t.noCirclesToEdit);
-    }
-  }, [t, isMapLoading, isChangingBasemap]);
-
-  useEffect(() => {
-    if (!viewRef.current) return;
-    const view = viewRef.current;
-    const handleImmediateClick = (event: any) => {
-      if (event.button !== 2) return;
-      event.stopPropagation();
-      view
-        .hitTest(event)
-        .then((response: any) => {
-          const results = response.results;
-          const graphicHit = results.find((hit: any) => {
-            return hit.graphic && hit.graphic.layer?.id === "circle-draw";
-          });
-          if (graphicHit && graphicHit.graphic) {
-            const graphic = graphicHit.graphic;
-            const id = graphic.attributes?.id;
-            if (id) {
-              setSelectedGraphicId(id);
-              setFloatingToolbarPosition({ x: event.x, y: event.y });
-              setShowFloatingToolbar(true);
-            }
-          } else {
-            setShowFloatingToolbar(false);
-            setSelectedGraphicId(null);
-          }
-        })
-        .catch((err: any) => {
-          console.warn("HitTest error:", err);
-          setShowFloatingToolbar(false);
-          setSelectedGraphicId(null);
-        });
-    };
-    const handleClick = () => {
-      setShowFloatingToolbar(false);
-      setSelectedGraphicId(null);
-    };
-    view.on("immediate-click", handleImmediateClick);
-    view.on("click", handleClick);
-    return () => {
-      if (view) {
-        try {
-          (view as any).remove?.("immediate-click", handleImmediateClick);
-          (view as any).remove?.("click", handleClick);
-        } catch (e) {}
-      }
-    };
-  }, [viewRef.current]);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-    if (viewRef.current) return;
-    isMountedRef.current = true;
-    const internalCenter = getInternalCenter();
-    const initMap = async () => {
-      try {
-        setIsMapLoading(true);
-        setError(null);
-        const map = new Map({ basemap: currentBasemap });
-        mapRef.current = map;
-        layerManagerRef.current = new LayerManager(map);
-        layers.forEach((layer) => {
-          layerManagerRef.current?.addLayer(layer);
-        });
-        if (enableDrawing) {
-          const circleDrawLayer = new CircleDrawLayer({
-            id: "circle-draw",
-            name: "Circle Draw",
-            defaultFillColor: [255, 0, 0, 0.3],
-            defaultOutlineColor: [255, 0, 0, 1],
-            defaultOutlineWidth: 3,
-          });
-          circleDrawLayerRef.current = circleDrawLayer;
-          layerManagerRef.current?.addLayer(circleDrawLayer);
-        }
-        const view = new MapView({
-          container: containerRef.current!,
-          map: map,
-          center: internalCenter,
-          zoom: zoom,
-          constraints: {
-            rotationEnabled: true,
-            snapToZoom: false,
-            minZoom: 1,
-            maxZoom: 20,
-          } as any,
-          navigation: {
-            mouseWheelZoomEnabled: true,
-            browserTouchPanEnabled: true,
-          } as any,
-          ui: { components: [] },
-        } as any);
-        viewRef.current = view;
-        view.watch("scale", () => updateScale());
-        view.watch("zoom", () => setTimeout(updateScale, 100));
-        if (onMapClick) {
-          view.on("click", (event) => {
-            const { longitude, latitude } = event.mapPoint;
-            if (
-              longitude !== null &&
-              longitude !== undefined &&
-              latitude !== null &&
-              latitude !== undefined
-            ) {
-              onMapClick({ longitude, latitude });
-            }
-          });
-        }
-        await view.when();
-        if (isMountedRef.current) {
-          setTimeout(() => {
-            if (circleDrawLayerRef.current && viewRef.current) {
-              circleDrawLayerRef.current.setView(viewRef.current);
-            }
-            updateLayerList();
-            updateScale();
-            setIsMapLoading(false);
-          }, 100);
-          window.dispatchEvent(new CustomEvent("EarthView-loaded"));
-          onLoad?.(layerManagerRef.current!, view);
-        }
-      } catch (err) {
-        console.error("Failed to initialize map:", err);
-        if (isMountedRef.current) {
-          setError(
-            err instanceof Error ? err.message : "Failed to initialize map",
-          );
-          setIsMapLoading(false);
-        }
-      }
-    };
-    initMap();
-    return () => {
-      isMountedRef.current = false;
-      destroyMap();
-    };
-  }, []);
-
-  useEffect(() => {
-    const handleLocate = (event: CustomEvent) => {
-      if (!viewRef.current || isMapLoading || isChangingBasemap) return;
-      const { center: newCenter, zoom: newZoom, system } = event.detail;
-      if (newCenter && newCenter.length === 2) {
-        const systemToUse = system || coordinateSystem;
-        let wgs84Lng = newCenter[0];
-        let wgs84Lat = newCenter[1];
-        if (systemToUse !== CoordinateSystemTypeEnum.WGS84) {
-          [wgs84Lng, wgs84Lat] = toWGS84(
-            newCenter[0],
-            newCenter[1],
-            systemToUse,
-          );
-        }
-        viewRef.current
-          .goTo(
-            { target: [wgs84Lng, wgs84Lat], zoom: newZoom || 12 },
-            { duration: 1000 },
-          )
-          .catch((err: Error) => console.warn("GoTo failed:", err));
-      }
-    };
-    window.addEventListener("EarthView-locate", handleLocate as EventListener);
-    return () => {
-      window.removeEventListener(
-        "EarthView-locate",
-        handleLocate as EventListener,
-      );
-    };
-  }, [coordinateSystem, isMapLoading, isChangingBasemap]);
   const containerStyle: React.CSSProperties = {
     width: width,
     height: height,
@@ -376,11 +257,14 @@ export const EarthView: React.FC<EarthViewProps> = ({
     userSelect: "none",
     ...style,
   };
+
   const showLoading = isMapLoading || isChangingBasemap;
   const loadingMessage = isMapLoading ? t.loading : t.changingBasemap;
+
   return (
     <div className={className} style={containerStyle}>
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
+
       {drawingStatus && !showLoading && (
         <div
           style={{
@@ -409,13 +293,43 @@ export const EarthView: React.FC<EarthViewProps> = ({
               animation: "spin 0.8s linear infinite",
             }}
           />
-          <span
-            style={{
-              color: isDark ? "#fff" : "#333",
-              fontSize: "12px",
-            }}
-          >
+          <span style={{ color: isDark ? "#fff" : "#333", fontSize: "12px" }}>
             {drawingStatus}
+          </span>
+        </div>
+      )}
+
+      {measureStatus && !showLoading && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: "60px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 200,
+            background: isDark ? "rgba(0,0,0,0.85)" : "rgba(255,255,255,0.95)",
+            border: `1px solid ${isDark ? "#444" : "#ddd"}`,
+            borderRadius: "8px",
+            padding: "6px 12px",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+            pointerEvents: "none",
+          }}
+        >
+          <div
+            style={{
+              width: "8px",
+              height: "8px",
+              background: "#00aaff",
+              borderRadius: "50%",
+              animation: "pulse 1s infinite",
+            }}
+          />
+          <span style={{ color: isDark ? "#fff" : "#333", fontSize: "12px" }}>
+            {measureStatus}
           </span>
         </div>
       )}
@@ -462,6 +376,7 @@ export const EarthView: React.FC<EarthViewProps> = ({
               />
             </PopupPanel>
           )}
+
           {activePopup === "basemap" && (
             <PopupPanel
               title={t.basemap}
@@ -477,6 +392,7 @@ export const EarthView: React.FC<EarthViewProps> = ({
               />
             </PopupPanel>
           )}
+
           {activePopup === "draw" && (
             <PopupPanel
               title={t.drawTools}
@@ -492,15 +408,42 @@ export const EarthView: React.FC<EarthViewProps> = ({
               />
             </PopupPanel>
           )}
+
+          {activePopup === "tools" && (
+            <PopupPanel
+              title={t.tools}
+              onClose={() => {
+                setMeasureStatus(null);
+                setActivePopup(null);
+              }}
+              theme={theme}
+              t={t}
+            >
+              <ToolsPanel
+                onDistanceMeasure={handleDistanceMeasure}
+                onAreaMeasure={handleAreaMeasure}
+                onClearMeasurements={handleClearMeasurements}
+                isMeasuring={isMeasuring}
+                currentMeasureType={currentMeasureType}
+                measurePreview={measurePreview}
+                isDark={isDark}
+                t={t}
+              />
+            </PopupPanel>
+          )}
+
           <Toolbar
             activePopup={activePopup}
             onTogglePopup={setActivePopup}
             onZoomIn={handleZoomIn}
             onZoomOut={handleZoomOut}
+            onLocate={handleLocate}
             theme={theme}
             t={t}
           />
+
           <ScaleBar scale={currentScale} theme={theme} />
+
           <FloatingToolbar
             visible={showFloatingToolbar}
             position={floatingToolbarPosition}
@@ -559,8 +502,33 @@ export const EarthView: React.FC<EarthViewProps> = ({
             currentStrokeWidth={currentStrokeWidth}
             currentStrokeStyle={currentStrokeStyle}
           />
+
+          <MeasurementFloatingToolbar
+            visible={showMeasurementToolbar}
+            position={measurementToolbarPosition}
+            onPositionChange={setMeasurementToolbarPosition}
+            onDelete={handleDeleteMeasurement}
+            onClose={() => {
+              setShowMeasurementToolbar(false);
+              setSelectedMeasurementId(null);
+            }}
+            theme={theme}
+            t={t}
+            containerRef={containerRef}
+          />
         </>
       )}
+
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.5; transform: scale(1.2); }
+        }
+      `}</style>
     </div>
   );
 };

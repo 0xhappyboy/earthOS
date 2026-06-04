@@ -5,14 +5,19 @@ import {
   DrawIcon,
   ZoomInIcon,
   ZoomOutIcon,
+  LocateIcon,
+  ToolsIcon,
 } from "../../icons";
 import { Translations } from "../../i18n";
 
 interface ToolbarProps {
-  activePopup: "layers" | "basemap" | "draw" | null;
-  onTogglePopup: (popup: "layers" | "basemap" | "draw" | null) => void;
+  activePopup: "layers" | "basemap" | "draw" | "tools" | null;
+  onTogglePopup: (
+    popup: "layers" | "basemap" | "draw" | "tools" | null,
+  ) => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
+  onLocate: () => void;
   theme: "light" | "dark";
   t: Translations;
 }
@@ -22,6 +27,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onTogglePopup,
   onZoomIn,
   onZoomOut,
+  onLocate,
   theme,
   t,
 }) => {
@@ -89,6 +95,14 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         <DrawIcon size={16} />
       </button>
 
+      <button
+        onClick={() => onTogglePopup(activePopup === "tools" ? null : "tools")}
+        title={t.toolsTitle}
+        style={buttonStyle(activePopup === "tools")}
+      >
+        <ToolsIcon size={16} />
+      </button>
+
       <div
         style={{
           height: "1px",
@@ -111,6 +125,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         style={buttonStyle(false)}
       >
         <ZoomOutIcon size={16} />
+      </button>
+
+      <button onClick={onLocate} title={t.locateMe} style={buttonStyle(false)}>
+        <LocateIcon size={16} />
       </button>
     </div>
   );

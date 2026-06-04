@@ -39,27 +39,6 @@ export const DrawToolsPanel: React.FC<DrawToolsPanelProps> = ({
           {t.drawCircle}
         </span>
       </div>
-      <div
-        onClick={onEditCircle}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "10px",
-          padding: "8px 12px",
-          cursor: "pointer",
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = isDark ? "#2a2a2a" : "#f5f5f5";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = "transparent";
-        }}
-      >
-        <EditIcon size={14} />
-        <span style={{ color: isDark ? "#fff" : "#333", fontSize: "12px" }}>
-          {t.editCircle}
-        </span>
-      </div>
     </>
   );
 };
