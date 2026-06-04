@@ -99,21 +99,18 @@ export class EarthViewCore {
         this.onMapClickCallback = onMapClick;
         this.onCircleDrawnCallback = onCircleDrawn;
         this.enableDrawing = enableDrawing;
-
         container.setAttribute("data-theme", theme);
         document.body.setAttribute("data-theme", theme);
-
+        container.style.overflow = 'hidden';
         this.mapManager = new MapManager(container, basemap, center, zoom, coordinateSystem);
         this.layerManager = new LayerManager(this.mapManager.getMap());
         this.drawToolManager = new DrawToolManager();
         this.drawingManager = new DrawingManager();
-
         this.initUI();
         this.initLayers();
         this.initDrawingManager();
         this.bindEvents();
         this.initRightClickMenu();
-
         if (this.onLoadCallback) {
             setTimeout(() => this.onLoadCallback?.(this), 100);
         }
@@ -466,14 +463,17 @@ export class EarthViewCore {
         this.measurementToolbarPosition = pos;
         this.showMeasurementToolbar = true;
         if (this.measurementFloatingToolbar) {
+            this.measurementFloatingToolbar.showAtPosition(pos);
             this.measurementFloatingToolbar.setVisible(true);
-            this.measurementFloatingToolbar.updatePosition(pos);
         } else {
             this.measurementFloatingToolbar = new MeasurementFloatingToolbar({
                 onDelete: () => { if (this.selectedMeasurementId) { this.deleteMeasurement(this.selectedMeasurementId); } this.hideMeasurementToolbar(); },
                 onClose: () => this.hideMeasurementToolbar(),
                 onPositionChange: (p) => { this.measurementToolbarPosition = p; },
-                theme: this.theme, t: this.t, containerRef: this.container,
+                theme: this.theme,
+                t: this.t,
+                containerRef: this.container,
+                position: pos,
             });
         }
     }

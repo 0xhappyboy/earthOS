@@ -88,21 +88,21 @@ export class MapManager {
         zoom: number,
         coordinateSystem: CoordinateSystemTypeEnum
     ) {
+        if (getComputedStyle(container).position === 'static') {
+            container.style.position = 'relative';
+        }
         let actualCenter = center;
         if (coordinateSystem !== CoordinateSystemTypeEnum.WGS84) {
             actualCenter = toWGS84(center[0], center[1], coordinateSystem);
         }
-
         this.currentBasemap = basemap;
         this.basemapLayer = this.createBasemapLayer(basemap);
-
         this.view = new View({
             center: fromLonLat(actualCenter),
             zoom: zoom,
             minZoom: 1,
             maxZoom: 19,
         });
-
         this.map = new Map({
             target: container,
             layers: [this.basemapLayer],

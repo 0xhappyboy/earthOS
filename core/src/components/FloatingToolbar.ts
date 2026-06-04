@@ -29,13 +29,17 @@ export class FloatingToolbar {
     private strokeStylePanel: HTMLDivElement | null = null;
     private strokeWidthPanel: HTMLDivElement | null = null;
     private activePicker: string | null = null;
+
     constructor(options: FloatingToolbarOptions) {
         this.options = options;
         this.position = options.position || { x: 100, y: 100 };
         this.element = this.createElement();
+        options.containerRef.appendChild(this.element);
+        this.element.style.visibility = 'hidden';
+        this.position = this.constrainPosition(this.position);
         this.element.style.left = `${this.position.x}px`;
         this.element.style.top = `${this.position.y}px`;
-        options.containerRef.appendChild(this.element);
+        this.element.style.visibility = 'visible';
         this.attachDragEvents();
     }
 
@@ -127,21 +131,44 @@ export class FloatingToolbar {
 
     private onMouseMove(e: MouseEvent): void {
         if (!this.isDragging) return;
-
         const dx = e.clientX - this.dragStart.x;
         const dy = e.clientY - this.dragStart.y;
         let newX = this.positionStart.x + dx;
         let newY = this.positionStart.y + dy;
-
+        this.position = this.constrainPosition({ x: newX, y: newY });
+        this.element.style.left = `${this.position.x}px`;
+        this.element.style.top = `${this.position.y}px`;
+        this.options.onPositionChange(this.position);
+    }
+    private constrainPosition(position: { x: number; y: number }): { x: number; y: number } {
         const containerRect = this.options.containerRef.getBoundingClientRect();
         const toolbarRect = this.element.getBoundingClientRect();
-        newX = Math.max(0, Math.min(newX, containerRect.width - toolbarRect.width));
-        newY = Math.max(0, Math.min(newY, containerRect.height - toolbarRect.height));
+        let toolbarWidth = toolbarRect.width;
+        let toolbarHeight = toolbarRect.height;
+        if (toolbarWidth === 0 || toolbarHeight === 0) {
+            toolbarWidth = 200;
+            toolbarHeight = 48;
+        }
+        const minX = 0;
+        const minY = 0;
+        const maxX = Math.max(0, containerRect.width - toolbarWidth);
+        const maxY = Math.max(0, containerRect.height - toolbarHeight);
+        return {
+            x: Math.max(minX, Math.min(position.x, maxX)),
+            y: Math.max(minY, Math.min(position.y, maxY)),
+        };
+    }
 
-        this.position = { x: newX, y: newY };
-        this.element.style.left = `${newX}px`;
-        this.element.style.top = `${newY}px`;
-        this.options.onPositionChange(this.position);
+    public showAtPosition(position: { x: number; y: number }): void {
+        this.element.style.opacity = '0';
+        this.element.style.display = 'flex';
+        requestAnimationFrame(() => {
+            const constrainedPos = this.constrainPosition(position);
+            this.position = constrainedPos;
+            this.element.style.left = `${constrainedPos.x}px`;
+            this.element.style.top = `${constrainedPos.y}px`;
+            this.element.style.opacity = '1';
+        });
     }
 
     private onMouseUp(): void {
@@ -154,10 +181,8 @@ export class FloatingToolbar {
     private showColorPicker(btn: HTMLElement): void {
         this.hideAllPickers();
         this.activePicker = "color";
-
         const rect = btn.getBoundingClientRect();
         const containerRect = this.options.containerRef.getBoundingClientRect();
-
         this.colorPickerPanel = this.createColorPicker();
         this.colorPickerPanel.style.position = "absolute";
         this.colorPickerPanel.style.left = `${rect.left - containerRect.left - 110}px`;
@@ -168,10 +193,8 @@ export class FloatingToolbar {
     private showStrokeWidthPicker(btn: HTMLElement): void {
         this.hideAllPickers();
         this.activePicker = "width";
-
         const rect = btn.getBoundingClientRect();
         const containerRect = this.options.containerRef.getBoundingClientRect();
-
         this.strokeWidthPanel = this.createStrokeWidthPicker();
         this.strokeWidthPanel.style.position = "absolute";
         this.strokeWidthPanel.style.left = `${rect.left - containerRect.left - 65}px`;
@@ -182,10 +205,8 @@ export class FloatingToolbar {
     private showStrokeStylePicker(btn: HTMLElement): void {
         this.hideAllPickers();
         this.activePicker = "style";
-
         const rect = btn.getBoundingClientRect();
         const containerRect = this.options.containerRef.getBoundingClientRect();
-
         this.strokeStylePanel = this.createStrokeStylePicker();
         this.strokeStylePanel.style.position = "absolute";
         this.strokeStylePanel.style.left = `${rect.left - containerRect.left - 80}px`;
@@ -208,7 +229,6 @@ export class FloatingToolbar {
             [255, 255, 255, 1], [211, 211, 211, 1], [128, 128, 128, 1], [64, 64, 64, 1],
             [0, 0, 0, 1], [30, 30, 30, 1], [50, 50, 50, 1], [80, 80, 80, 1],
         ];
-
         const div = document.createElement("div");
         div.style.cssText = `
             background: ${isDark ? "#2d2d2d" : "#ffffff"};
@@ -219,14 +239,12 @@ export class FloatingToolbar {
             width: 220px;
             z-index: 300;
         `;
-
         const grid = document.createElement("div");
         grid.style.cssText = `
             display: grid;
             grid-template-columns: repeat(8, 1fr);
             gap: 4px;
         `;
-
         for (const color of PRESET_COLORS) {
             const btn = document.createElement("button");
             btn.style.cssText = `
@@ -246,7 +264,6 @@ export class FloatingToolbar {
             btn.onmouseleave = () => { btn.style.transform = "scale(1)"; };
             grid.appendChild(btn);
         }
-
         div.appendChild(grid);
         return div;
     }
@@ -254,7 +271,6 @@ export class FloatingToolbar {
     private createStrokeWidthPicker(): HTMLDivElement {
         const isDark = this.options.theme === "dark";
         const PRESET_WIDTHS = [1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 20];
-
         const div = document.createElement("div");
         div.style.cssText = `
         background: ${isDark ? "#2d2d2d" : "#ffffff"};
@@ -305,7 +321,6 @@ export class FloatingToolbar {
                 border-radius: 2px;
             `;
             row.appendChild(preview);
-
             const label = document.createElement("span");
             label.style.cssText = `color: ${isDark ? "#fff" : "#333"}; font-size: 11px; flex: 1;`;
             label.textContent = `${width}px`;
@@ -461,9 +476,9 @@ export class FloatingToolbar {
     }
 
     public updatePosition(position: { x: number; y: number }): void {
-        this.position = position;
-        this.element.style.left = `${position.x}px`;
-        this.element.style.top = `${position.y}px`;
+        this.position = this.constrainPosition(position);
+        this.element.style.left = `${this.position.x}px`;
+        this.element.style.top = `${this.position.y}px`;
     }
 
     public setVisible(visible: boolean): void {

@@ -9,6 +9,7 @@ export interface MeasurementFloatingToolbarOptions {
     theme: Theme;
     t: Translations;
     containerRef: HTMLElement;
+    position?: { x: number; y: number };
 }
 
 export class MeasurementFloatingToolbar {
@@ -21,15 +22,19 @@ export class MeasurementFloatingToolbar {
 
     constructor(options: MeasurementFloatingToolbarOptions) {
         this.options = options;
-        this.position = { x: 100, y: 100 };
+        this.position = options.position || { x: 100, y: 100 };
         this.element = this.createElement();
         options.containerRef.appendChild(this.element);
+        this.element.style.visibility = 'hidden';
+        this.position = this.constrainPosition(this.position);
+        this.element.style.left = `${this.position.x}px`;
+        this.element.style.top = `${this.position.y}px`;
+        this.element.style.visibility = 'visible';
         this.attachDragEvents();
     }
 
     private createElement(): HTMLDivElement {
         const isDark = this.options.theme === "dark";
-
         const div = document.createElement("div");
         div.style.cssText = `
             position: absolute;
@@ -47,7 +52,6 @@ export class MeasurementFloatingToolbar {
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             cursor: default;
         `;
-
         const buttonStyle = `
             width: 28px;
             height: 28px;
@@ -87,6 +91,25 @@ export class MeasurementFloatingToolbar {
         return div;
     }
 
+    private constrainPosition(position: { x: number; y: number }): { x: number; y: number } {
+        const containerRect = this.options.containerRef.getBoundingClientRect();
+        const toolbarRect = this.element.getBoundingClientRect();
+        let toolbarWidth = toolbarRect.width;
+        let toolbarHeight = toolbarRect.height;
+        if (toolbarWidth === 0 || toolbarHeight === 0) {
+            toolbarWidth = 100;
+            toolbarHeight = 40;
+        }
+        const minX = 0;
+        const minY = 0;
+        const maxX = Math.max(0, containerRect.width - toolbarWidth);
+        const maxY = Math.max(0, containerRect.height - toolbarHeight);
+        return {
+            x: Math.max(minX, Math.min(position.x, maxX)),
+            y: Math.max(minY, Math.min(position.y, maxY)),
+        };
+    }
+
     private attachDragEvents(): void {
     }
 
@@ -106,20 +129,13 @@ export class MeasurementFloatingToolbar {
 
     private onMouseMove(e: MouseEvent): void {
         if (!this.isDragging) return;
-
         const dx = e.clientX - this.dragStart.x;
         const dy = e.clientY - this.dragStart.y;
         let newX = this.positionStart.x + dx;
         let newY = this.positionStart.y + dy;
-
-        const containerRect = this.options.containerRef.getBoundingClientRect();
-        const toolbarRect = this.element.getBoundingClientRect();
-        newX = Math.max(0, Math.min(newX, containerRect.width - toolbarRect.width));
-        newY = Math.max(0, Math.min(newY, containerRect.height - toolbarRect.height));
-
-        this.position = { x: newX, y: newY };
-        this.element.style.left = `${newX}px`;
-        this.element.style.top = `${newY}px`;
+        this.position = this.constrainPosition({ x: newX, y: newY });
+        this.element.style.left = `${this.position.x}px`;
+        this.element.style.top = `${this.position.y}px`;
         this.options.onPositionChange(this.position);
     }
 
@@ -130,10 +146,22 @@ export class MeasurementFloatingToolbar {
         document.body.style.userSelect = "";
     }
 
+    public showAtPosition(position: { x: number; y: number }): void {
+        this.element.style.opacity = '0';
+        this.element.style.display = 'flex';
+        requestAnimationFrame(() => {
+            const constrainedPos = this.constrainPosition(position);
+            this.position = constrainedPos;
+            this.element.style.left = `${constrainedPos.x}px`;
+            this.element.style.top = `${constrainedPos.y}px`;
+            this.element.style.opacity = '1';
+        });
+    }
+
     public updatePosition(position: { x: number; y: number }): void {
-        this.position = position;
-        this.element.style.left = `${position.x}px`;
-        this.element.style.top = `${position.y}px`;
+        this.position = this.constrainPosition(position);
+        this.element.style.left = `${this.position.x}px`;
+        this.element.style.top = `${this.position.y}px`;
     }
 
     public setVisible(visible: boolean): void {
