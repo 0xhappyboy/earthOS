@@ -83,10 +83,6 @@ export class DistanceMeasurementLayer extends BaseLayer {
                 this.startNewMeasurement();
             } else if (event.state === "complete") {
                 this.saveMeasurementFromGraphic(event.graphic);
-                this.view?.graphics?.remove?.(event.graphic);
-                if (this.graphicsLayer) {
-                    this.graphicsLayer.add(event.graphic);
-                }
             }
         });
     }
@@ -123,22 +119,17 @@ export class DistanceMeasurementLayer extends BaseLayer {
 
     private saveMeasurementFromGraphic(graphic: Graphic): void {
         if (!graphic || !graphic.geometry || !this.graphicsLayer) return;
-
         const geometry = graphic.geometry as Polyline;
         const paths = geometry.paths;
         if (!paths || paths.length === 0) return;
-
         const points = paths[0].map(p => this.convertToWGS84(p[0], p[1]));
         this.currentPoints = points;
-
         const totalDistance = this.calculateTotalDistance(this.currentPoints);
-
         graphic.attributes = {
             type: "distance",
             measurementId: this.measurementId,
             distance: totalDistance
         };
-
         let midLng = 0, midLat = 0;
         for (const p of this.currentPoints) {
             midLng += p.longitude;
@@ -146,11 +137,9 @@ export class DistanceMeasurementLayer extends BaseLayer {
         }
         midLng /= this.currentPoints.length;
         midLat /= this.currentPoints.length;
-
         const distanceText = totalDistance >= 1000
             ? `${(totalDistance / 1000).toFixed(2)} km`
             : `${totalDistance.toFixed(0)} m`;
-
         const textSymbol = new TextSymbol({
             text: distanceText,
             color: this.textColor,
@@ -178,6 +167,7 @@ export class DistanceMeasurementLayer extends BaseLayer {
             distance: totalDistance,
             graphics: [graphic, textGraphic]
         });
+
         if (this.onMeasureCompleteCallback) {
             this.onMeasureCompleteCallback({
                 points: this.currentPoints,
@@ -212,7 +202,7 @@ export class DistanceMeasurementLayer extends BaseLayer {
         const measurement = this.measurements.get(id);
         if (measurement) {
             measurement.graphics.forEach(graphic => {
-                if (this.graphicsLayer) {
+                if (this.graphicsLayer && graphic) {
                     this.graphicsLayer.remove(graphic);
                 }
             });
@@ -227,7 +217,6 @@ export class DistanceMeasurementLayer extends BaseLayer {
         if (attributes && attributes.measurementId) {
             return attributes.measurementId;
         }
-
         const entries = Array.from(this.measurements.entries());
         for (let i = 0; i < entries.length; i++) {
             const [id, measurement] = entries[i];

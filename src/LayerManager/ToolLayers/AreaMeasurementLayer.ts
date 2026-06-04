@@ -90,10 +90,6 @@ export class AreaMeasurementLayer extends BaseLayer {
                 this.startNewMeasurement();
             } else if (event.state === "complete") {
                 this.saveMeasurementFromGraphic(event.graphic);
-                this.view?.graphics?.remove?.(event.graphic);
-                if (this.graphicsLayer) {
-                    this.graphicsLayer.add(event.graphic);
-                }
             }
         });
     }
@@ -206,8 +202,12 @@ export class AreaMeasurementLayer extends BaseLayer {
         const measurement = this.measurements.get(id);
         if (measurement) {
             if (this.graphicsLayer) {
-                this.graphicsLayer.remove(measurement.polygonGraphic);
-                this.graphicsLayer.remove(measurement.labelGraphic);
+                if (measurement.polygonGraphic) {
+                    this.graphicsLayer.remove(measurement.polygonGraphic);
+                }
+                if (measurement.labelGraphic) {
+                    this.graphicsLayer.remove(measurement.labelGraphic);
+                }
             }
             this.measurements.delete(id);
             return true;

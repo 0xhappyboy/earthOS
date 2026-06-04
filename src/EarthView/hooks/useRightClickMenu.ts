@@ -13,18 +13,19 @@ interface UseRightClickMenuProps {
 
 export const useRightClickMenu = (props: UseRightClickMenuProps) => {
   const { viewRef, circleDrawLayerRef, distanceLayerRef, areaLayerRef } = props;
+
   const [showFloatingToolbar, setShowFloatingToolbar] = useState(false);
   const [floatingToolbarPosition, setFloatingToolbarPosition] = useState({ x: 100, y: 100 });
   const [selectedGraphicId, setSelectedGraphicId] = useState<string | null>(null);
   const [showMeasurementToolbar, setShowMeasurementToolbar] = useState(false);
   const [measurementToolbarPosition, setMeasurementToolbarPosition] = useState({ x: 100, y: 100 });
   const [selectedMeasurementId, setSelectedMeasurementId] = useState<string | null>(null);
+
   const handleDeleteMeasurement = useCallback(() => {
     if (selectedMeasurementId) {
-      const deleted =
-        distanceLayerRef.current?.deleteMeasurement(selectedMeasurementId) ||
-        areaLayerRef.current?.deleteMeasurement(selectedMeasurementId);
-      if (deleted) {
+      const deletedInDistance = distanceLayerRef.current?.deleteMeasurement(selectedMeasurementId);
+      const deletedInArea = areaLayerRef.current?.deleteMeasurement(selectedMeasurementId);
+      if (deletedInDistance || deletedInArea) {
         setShowMeasurementToolbar(false);
         setSelectedMeasurementId(null);
       }
@@ -33,14 +34,12 @@ export const useRightClickMenu = (props: UseRightClickMenuProps) => {
 
   useEffect(() => {
     const view = viewRef.current;
-    if (!view) {
-      console.warn("useRightClickMenu: viewRef.current is null");
-      return;
-    }
+    if (!view) return;
 
     const handleImmediateClick = (event: any) => {
       if (event.button !== 2) return;
       event.stopPropagation();
+
       view
         .hitTest(event)
         .then((response: any) => {
@@ -48,12 +47,10 @@ export const useRightClickMenu = (props: UseRightClickMenuProps) => {
           const circleHit = results.find((hit: any) => {
             return hit.graphic && hit.graphic.layer?.id === "circle-draw";
           });
-
           if (circleHit && circleHit.graphic) {
             const graphic = circleHit.graphic;
             const id = graphic.attributes?.id;
             if (id) {
-              console.log("Circle right-click detected, id:", id);
               setSelectedGraphicId(id);
               setFloatingToolbarPosition({ x: event.x, y: event.y });
               setShowFloatingToolbar(true);
@@ -73,7 +70,6 @@ export const useRightClickMenu = (props: UseRightClickMenuProps) => {
               id = areaLayerRef.current?.findMeasurementIdByGraphic(graphic);
             }
             if (id) {
-              console.log("Measurement right-click detected, id:", id);
               setSelectedMeasurementId(id);
               setMeasurementToolbarPosition({ x: event.x, y: event.y });
               setShowMeasurementToolbar(true);
