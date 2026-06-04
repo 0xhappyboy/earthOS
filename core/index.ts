@@ -29,7 +29,7 @@ export {
     gcj02ToWgs84,
     bd09ToWgs84,
     isInChina,
-} from "./transform/CoordTransform";
+} from "./CoordTransform";
 
 export { getTranslation } from "./i18n";
 export type { Locale, Translations } from "./i18n";

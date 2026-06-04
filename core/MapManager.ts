@@ -4,8 +4,8 @@ import TileLayer from "ol/layer/Tile";
 import OSM from "ol/source/OSM";
 import XYZ from "ol/source/XYZ";
 import { fromLonLat, toLonLat } from "ol/proj";
-import { BasemapTypeEnum, CoordinateSystemTypeEnum } from "../types";
-import { toWGS84 } from "../transform/CoordTransform";
+import { BasemapTypeEnum, CoordinateSystemTypeEnum } from "./types";
+import { toWGS84 } from "./CoordTransform";
 import { defaults as defaultInteractions } from "ol/interaction";
 
 const BASEMAP_CONFIG: Record<BasemapTypeEnum, { url: string; attribution?: string }> = {
@@ -57,6 +57,22 @@ const BASEMAP_CONFIG: Record<BasemapTypeEnum, { url: string; attribution?: strin
         url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Physical_Map/MapServer/tile/{z}/{y}/{x}",
         attribution: "Esri",
     },
+    [BasemapTypeEnum.AMAP_STREETS]: {
+        url: "https://webrd01.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}",
+        attribution: "高德地图",
+    },
+    [BasemapTypeEnum.AMAP_SATELLITE]: {
+        url: "https://webst01.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}",
+        attribution: "高德地图",
+    },
+    [BasemapTypeEnum.GOOGLE_STREETS]: {
+        url: "http://www.google.cn/maps/vt?lyrs=m&x={x}&y={y}&z={z}",
+        attribution: "Google",
+    },
+    [BasemapTypeEnum.GOOGLE_SATELLITE]: {
+        url: "http://www.google.cn/maps/vt?lyrs=s&x={x}&y={y}&z={z}",
+        attribution: "Google",
+    },
 };
 
 export class MapManager {
@@ -93,7 +109,7 @@ export class MapManager {
             view: this.view,
             controls: [],
             interactions: defaultInteractions({
-                doubleClickZoom: false, 
+                doubleClickZoom: false,
             }),
         });
     }
@@ -164,4 +180,3 @@ export class MapManager {
         this.map.dispose();
     }
 }
-

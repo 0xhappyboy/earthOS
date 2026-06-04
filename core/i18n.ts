@@ -23,6 +23,10 @@ export interface Translations {
     hybrid: string;
     imagery: string;
     physical: string;
+    amapStreets: string;
+    amapSatellite: string;
+    googleStreets: string;
+    googleSatellite: string;
     drawTools: string;
     drawToolsTitle: string;
     drawCircle: string;
@@ -93,6 +97,10 @@ const zh: Translations = {
     hybrid: "混合图",
     imagery: "纯影像",
     physical: "物理地形",
+    amapStreets: "高德街道图",
+    amapSatellite: "高德卫星图",
+    googleStreets: "谷歌街道图",
+    googleSatellite: "谷歌卫星图",
     drawTools: "绘图工具",
     drawToolsTitle: "绘图工具",
     drawCircle: "绘制圆形",
@@ -156,6 +164,10 @@ const en: Translations = {
     hybrid: "Hybrid",
     imagery: "Imagery",
     physical: "Physical",
+    amapStreets: "AMap Streets",
+    amapSatellite: "AMap Satellite",
+    googleStreets: "Google Streets",
+    googleSatellite: "Google Satellite",
     drawTools: "Draw Tools",
     drawToolsTitle: "Draw Tools",
     drawCircle: "Draw Circle",

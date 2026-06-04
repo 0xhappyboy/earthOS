@@ -1,4 +1,4 @@
-import { CoordinateSystemTypeEnum } from "../types";
+import { CoordinateSystemTypeEnum } from "./types";
 
 const PI = Math.PI;
 const a = 6378245.0;

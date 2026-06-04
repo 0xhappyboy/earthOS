@@ -1,4 +1,4 @@
-import { MapManager } from "./map/MapManager";
+import { MapManager } from "./MapManager";
 import { LayerManager } from "./layers/LayerManager";
 import {
     CircleDrawLayer,
@@ -91,14 +91,6 @@ export class EarthViewCore {
     private errorMessage: string | null = null;
     private drawingStatusText: string | null = null;
     private measureStatusText: string | null = null;
-
-    private basemapOptions: BasemapOption[] = [
-        { value: BasemapTypeEnum.SATELLITE, label: "卫星图", icon: "🛰️" },
-        { value: BasemapTypeEnum.STREETS, label: "街道图", icon: "🗺️" },
-        { value: BasemapTypeEnum.TOPO, label: "地形图", icon: "⛰️" },
-        { value: BasemapTypeEnum.DARK_GRAY, label: "深色图", icon: "🌙" },
-        { value: BasemapTypeEnum.LIGHT_GRAY, label: "浅色图", icon: "☀️" },
-    ];
 
     constructor(options: EarthViewOptions) {
         const {
@@ -367,7 +359,23 @@ export class EarthViewCore {
                     onSelect: (basemap) => this.setBasemap(basemap),
                     theme: this.theme,
                     t: this.t,
-                    options: this.basemapOptions,
+                    options: [
+                        { value: BasemapTypeEnum.SATELLITE, label: this.t.satellite, icon: "🛰️" },
+                        { value: BasemapTypeEnum.STREETS, label: this.t.streets, icon: "🗺️" },
+                        { value: BasemapTypeEnum.TOPO, label: this.t.topographic, icon: "⛰️" },
+                        { value: BasemapTypeEnum.HYBRID, label: this.t.hybrid, icon: "🔄" },
+                        { value: BasemapTypeEnum.TERRAIN, label: this.t.terrain, icon: "🗻" },
+                        { value: BasemapTypeEnum.OCEANS, label: this.t.oceans, icon: "🌊" },
+                        { value: BasemapTypeEnum.DARK_GRAY, label: this.t.darkGray, icon: "🌙" },
+                        { value: BasemapTypeEnum.LIGHT_GRAY, label: this.t.lightGray, icon: "☀️" },
+                        { value: BasemapTypeEnum.NATIONAL_GEOGRAPHIC, label: this.t.nationalGeographic, icon: "📰" },
+                        { value: BasemapTypeEnum.IMAGERY, label: this.t.imagery, icon: "📷" },
+                        { value: BasemapTypeEnum.PHYSICAL, label: this.t.physical, icon: "🌎" },
+                        { value: BasemapTypeEnum.AMAP_STREETS, label: this.t.amapStreets, icon: "🗺️" },
+                        { value: BasemapTypeEnum.AMAP_SATELLITE, label: this.t.amapSatellite, icon: "🛰️" },
+                        { value: BasemapTypeEnum.GOOGLE_STREETS, label: this.t.googleStreets, icon: "🗺️" },
+                        { value: BasemapTypeEnum.GOOGLE_SATELLITE, label: this.t.googleSatellite, icon: "🛰️" },
+                    ],
                 });
                 panel.appendChild(basemapOptions.getElement());
                 this.activePopupPanel = panel;
