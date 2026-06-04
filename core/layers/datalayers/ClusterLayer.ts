@@ -30,7 +30,10 @@ export class ClusterLayer extends BaseLayer {
             zIndex?: number;
         }
     ) {
-        super(id, name, LayerTypeEnum.CLUSTER, options);
+        super(id, name, LayerTypeEnum.CLUSTER, {
+            ...options,
+            zIndex: options?.zIndex ?? 15,
+        });
         this.source = new VectorSource();
         this.clusterSource = new Cluster({
             distance: options?.distance || 60,

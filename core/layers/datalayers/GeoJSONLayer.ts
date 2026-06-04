@@ -12,7 +12,10 @@ export class GeoJSONLayer extends BaseLayer {
         name: string,
         options?: { visible?: boolean; opacity?: number; zIndex?: number }
     ) {
-        super(id, name, LayerTypeEnum.GEOJSON, options);
+        super(id, name, LayerTypeEnum.GEOJSON, {
+            ...options,
+            zIndex: options?.zIndex ?? 15,
+        });
         this.source = new VectorSource();
         this.layer = new VectorLayer({
             source: this.source,

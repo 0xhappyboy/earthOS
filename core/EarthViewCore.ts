@@ -171,7 +171,7 @@ export class EarthViewCore {
         });
         this.drawToolManager.registerTool(this.circleDrawTool);
     }
-   
+
     public activateDrawTool(toolId: string): void {
         this.drawToolManager.activateTool(toolId);
 
@@ -829,6 +829,10 @@ export class EarthViewCore {
         );
     }
 
+    public getMap(): any {
+        return this.mapManager.getMap();
+    }
+
     public destroy(): void {
         if (this.isDestroyed) return;
         this.isDestroyed = true;
@@ -851,4 +855,5 @@ export class EarthViewCore {
         this.layerManager.clearAll();
         this.mapManager.destroy();
     }
+
 }

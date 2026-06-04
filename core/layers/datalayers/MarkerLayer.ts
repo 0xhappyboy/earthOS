@@ -21,7 +21,10 @@ export class MarkerLayer extends BaseLayer {
         name: string,
         options?: { defaultColor?: number[]; defaultSize?: number; visible?: boolean; opacity?: number; zIndex?: number }
     ) {
-        super(id, name, LayerTypeEnum.MARKER, options);
+        super(id, name, LayerTypeEnum.MARKER, {
+            ...options,
+            zIndex: options?.zIndex ?? 15,
+        });
         this.defaultColor = options?.defaultColor || [255, 0, 0, 0.8];
         this.defaultSize = options?.defaultSize || 12;
         this.source = new VectorSource();

@@ -22,7 +22,10 @@ export class HeatmapLayer extends BaseLayer {
             zIndex?: number;
         }
     ) {
-        super(id, name, LayerTypeEnum.HEATMAP, options);
+        super(id, name, LayerTypeEnum.HEATMAP, {
+            ...options,
+            zIndex: options?.zIndex ?? 20,
+        });
         this.source = new VectorSource();
         this.heatmapLayer = new Heatmap({
             source: this.source,
@@ -33,7 +36,7 @@ export class HeatmapLayer extends BaseLayer {
             opacity: this.opacity,
             zIndex: this.zIndex,
         });
-
+        this.layer = this.heatmapLayer;
         if (options?.colorStops) {
             (this.heatmapLayer as any).setGradient(options.colorStops);
         }
@@ -43,6 +46,8 @@ export class HeatmapLayer extends BaseLayer {
         if (!this.heatmapLayer) {
             throw new Error("HeatmapLayer not initialized");
         }
+        this.heatmapLayer.setBlur(15);
+        this.heatmapLayer.setRadius(10);
         map.addLayer(this.heatmapLayer);
         return this.heatmapLayer;
     }

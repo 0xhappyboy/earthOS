@@ -30,7 +30,10 @@ export class DistanceMeasurementLayer extends BaseLayer {
             zIndex?: number;
         }
     ) {
-        super(id, name, LayerTypeEnum.DISTANCE_MEASUREMENT, options);
+        super(id, name, LayerTypeEnum.DISTANCE_MEASUREMENT, {
+            ...options,
+            zIndex: options?.zIndex ?? 50,
+        });
         this.lineColor = options?.lineColor || [0, 170, 255, 1];
         this.lineWidth = options?.lineWidth || 2;
         this.source = new VectorSource();

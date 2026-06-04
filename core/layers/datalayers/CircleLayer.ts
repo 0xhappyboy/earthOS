@@ -28,7 +28,10 @@ export class CircleLayer extends BaseLayer {
             zIndex?: number;
         }
     ) {
-        super(id, name, LayerTypeEnum.CIRCLE, options);
+        super(id, name, LayerTypeEnum.CIRCLE, {
+            ...options,
+            zIndex: options?.zIndex ?? 15,
+        });
         this.defaultFillColor = options?.defaultFillColor || [0, 255, 0, 0.3];
         this.defaultOutlineColor = options?.defaultOutlineColor || [0, 255, 0, 1];
         this.defaultOutlineWidth = options?.defaultOutlineWidth || 2;

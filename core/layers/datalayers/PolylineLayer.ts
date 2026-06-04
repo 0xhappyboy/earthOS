@@ -19,7 +19,10 @@ export class PolylineLayer extends BaseLayer {
         name: string,
         options?: { defaultColor?: number[]; defaultWidth?: number; visible?: boolean; opacity?: number; zIndex?: number }
     ) {
-        super(id, name, LayerTypeEnum.POLYLINE, options);
+        super(id, name, LayerTypeEnum.POLYLINE, {
+            ...options,
+            zIndex: options?.zIndex ?? 10,
+        });
         this.defaultColor = options?.defaultColor || [0, 0, 255, 1];
         this.defaultWidth = options?.defaultWidth || 3;
         this.source = new VectorSource();

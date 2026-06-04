@@ -19,6 +19,7 @@ export interface PopupMarkerLayerOptions {
 }
 
 export class PopupMarkerLayer extends BaseLayer {
+    private moveHandler: (() => void) | null = null;
     private features: Map<string, Feature> = new Map();
     private defaultColor: number[];
     private defaultSize: number;
@@ -27,6 +28,10 @@ export class PopupMarkerLayer extends BaseLayer {
     private view: any = null;
     private currentPopup: HTMLDivElement | null = null;
     private currentFeature: Feature | null = null;
+    private needsUpdate: boolean = false;
+    private animationFrameId: number | null = null;
+    private postRenderHandler: (() => void) | null = null;
+    private updateFrame: number | null = null;
 
     constructor(
         id: string,
@@ -48,9 +53,25 @@ export class PopupMarkerLayer extends BaseLayer {
         });
     }
 
-    public setView(view: any): void {
-        this.view = view;
+    public setView(map: any): void {
+        this.view = map;
         this.attachClickEvent();
+        this.postRenderHandler = () => {
+            this.updatePopupPosition();
+        };
+        this.view.on("postrender", this.postRenderHandler);
+    }
+
+    private scheduleUpdate(): void {
+        if (this.animationFrameId !== null) return;
+
+        this.animationFrameId = requestAnimationFrame(() => {
+            if (this.needsUpdate) {
+                this.updatePopupPosition();
+                this.needsUpdate = false;
+            }
+            this.animationFrameId = null;
+        });
     }
 
     public createLayer(map: any): VectorLayer<VectorSource> {
@@ -60,11 +81,9 @@ export class PopupMarkerLayer extends BaseLayer {
 
     private attachClickEvent(): void {
         if (!this.view) return;
-        
         this.view.on("click", (event: any) => {
             const features = this.view.getFeaturesAtPixel(event.pixel);
             const feature = features?.find((f: any) => f.get("_popupLayer") === this.id);
-            
             if (feature) {
                 this.showPopup(feature, event);
             } else {
@@ -82,10 +101,8 @@ export class PopupMarkerLayer extends BaseLayer {
             coverImage: data.coverImage,
             _popupLayer: this.id,
         });
-
         const color = data.color || this.defaultColor;
         const size = data.size || this.defaultSize;
-
         feature.setStyle(
             new Style({
                 image: new CircleStyle({
@@ -95,7 +112,6 @@ export class PopupMarkerLayer extends BaseLayer {
                 }),
             })
         );
-
         this.source?.addFeature(feature);
         this.features.set(data.id, feature);
     }
@@ -114,19 +130,16 @@ export class PopupMarkerLayer extends BaseLayer {
     private showPopup(feature: Feature, event: any): void {
         this.hidePopup();
         this.currentFeature = feature;
-
         const attrs = feature.getProperties();
         const hasCover = attrs.coverImage && attrs.coverImage.trim() !== "";
         const hasTitle = attrs.title && attrs.title.trim() !== "";
         const hasDesc = attrs.description && attrs.description.trim() !== "";
-        
         const theme = document.body.getAttribute("data-theme") || "dark";
         const isDark = theme === "dark";
         const bgColor = isDark ? "#1e1e1e" : "#ffffff";
         const borderColor = isDark ? "#333" : "#e0e0e0";
         const titleColor = isDark ? "#fff" : "#333";
         const descColor = isDark ? "#aaa" : "#666";
-
         const popupDiv = document.createElement("div");
         popupDiv.style.position = "absolute";
         popupDiv.style.zIndex = "10000";
@@ -137,12 +150,11 @@ export class PopupMarkerLayer extends BaseLayer {
         popupDiv.style.width = `${this.popupWidth}px`;
         popupDiv.style.maxWidth = `${this.popupWidth}px`;
         popupDiv.style.overflow = "hidden";
-
         let html = "";
         if (hasCover) {
             html += `<div style="height: ${this.coverImageHeight}px; overflow: hidden;">
-                        <img src="${attrs.coverImage}" style="width: 100%; height: 100%; object-fit: cover;" />
-                     </div>`;
+                    <img src="${attrs.coverImage}" style="width: 100%; height: 100%; object-fit: cover;" />
+                </div>`;
         }
         html += `<div style="padding: 12px;">`;
         if (hasTitle) {
@@ -152,21 +164,34 @@ export class PopupMarkerLayer extends BaseLayer {
             html += `<div style="font-size: 12px; color: ${descColor}; line-height: 1.5;">${attrs.description}</div>`;
         }
         html += `</div>`;
-
         popupDiv.innerHTML = html;
-
-        const container = this.view.getContainer();
-        container.style.position = "relative";
+        const container = this.view.getTargetElement();
+        if (getComputedStyle(container).position === 'static') {
+            container.style.position = 'relative';
+        }
         container.appendChild(popupDiv);
-
         const geom = feature.getGeometry() as Point;
         const screen = this.view.getPixelFromCoordinate(geom.getCoordinates());
-
-        const left = screen[0] - this.popupWidth / 2;
-        const top = screen[1] - popupDiv.offsetHeight - 15;
-        popupDiv.style.left = `${Math.max(10, Math.min(left, container.clientWidth - this.popupWidth - 10))}px`;
-        popupDiv.style.top = `${Math.max(10, top)}px`;
-
+        const containerRect = container.getBoundingClientRect();
+        const popupWidth = popupDiv.offsetWidth;
+        const popupHeight = popupDiv.offsetHeight;
+        const isInViewport = screen[0] >= 0 && screen[0] <= containerRect.width &&
+            screen[1] >= 0 && screen[1] <= containerRect.height;
+        if (!isInViewport) {
+            popupDiv.style.display = 'none';
+            this.currentPopup = popupDiv;
+            return;
+        }
+        let left = screen[0] - containerRect.left - popupWidth / 2;
+        let top = screen[1] - containerRect.top - popupHeight - 15;
+        if (top < 5) {
+            top = screen[1] - containerRect.top + 15;
+        }
+        left = Math.max(5, Math.min(left, containerRect.width - popupWidth - 5));
+        top = Math.max(5, Math.min(top, containerRect.height - popupHeight - 5));
+        popupDiv.style.left = `${left}px`;
+        popupDiv.style.top = `${top}px`;
+        popupDiv.style.display = 'block';
         this.currentPopup = popupDiv;
     }
 
@@ -206,5 +231,43 @@ export class PopupMarkerLayer extends BaseLayer {
             this.clearAllMarkers();
             data.markers.forEach((marker) => this.addMarker(marker));
         }
+    }
+
+    private updatePopupPosition(): void {
+        if (!this.currentPopup || !this.currentFeature) return;
+        if (this.updateFrame) cancelAnimationFrame(this.updateFrame);
+        this.updateFrame = requestAnimationFrame(() => {
+            if (!this.currentPopup || !this.currentFeature) return;
+            const geom = this.currentFeature.getGeometry() as Point;
+            const screen = this.view.getPixelFromCoordinate(geom.getCoordinates());
+            const container = this.view.getTargetElement();
+            const containerRect = container.getBoundingClientRect();
+            const popupWidth = this.currentPopup.offsetWidth;
+            const popupHeight = this.currentPopup.offsetHeight;
+            const isInViewport = screen[0] >= 0 && screen[0] <= containerRect.width &&
+                screen[1] >= 0 && screen[1] <= containerRect.height;
+            if (!isInViewport) {
+                this.currentPopup.style.display = 'none';
+                return;
+            }
+            this.currentPopup.style.display = 'block';
+            let left = screen[0] - containerRect.left - popupWidth / 2;
+            let top = screen[1] - containerRect.top - popupHeight - 15;
+            left = Math.max(5, Math.min(left, containerRect.width - popupWidth - 5));
+            top = Math.max(5, Math.min(top, containerRect.height - popupHeight - 5));
+            this.currentPopup.style.left = `${left}px`;
+            this.currentPopup.style.top = `${top}px`;
+        });
+    }
+
+    public destroy(): void {
+        if (this.updateFrame) {
+            cancelAnimationFrame(this.updateFrame);
+        }
+        if (this.view && this.postRenderHandler) {
+            this.view.un("postrender", this.postRenderHandler);
+            this.postRenderHandler = null;
+        }
+        super.destroy();
     }
 }

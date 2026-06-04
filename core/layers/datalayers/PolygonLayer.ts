@@ -28,7 +28,10 @@ export class PolygonLayer extends BaseLayer {
             zIndex?: number;
         }
     ) {
-        super(id, name, LayerTypeEnum.POLYGON, options);
+        super(id, name, LayerTypeEnum.POLYGON, {
+            ...options,
+            zIndex: options?.zIndex ?? 10,
+        });
         this.defaultFillColor = options?.defaultFillColor || [255, 0, 0, 0.3];
         this.defaultOutlineColor = options?.defaultOutlineColor || [255, 0, 0, 1];
         this.defaultOutlineWidth = options?.defaultOutlineWidth || 2;

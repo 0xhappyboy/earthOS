@@ -8,6 +8,7 @@ import { fromLonLat } from "ol/proj";
 import { BaseLayer } from "../BaseLayer";
 import { LayerTypeEnum, BarChartData } from "../../types";
 import { arrayToRgba } from "../../utils";
+import CircleStyle from "ol/style/Circle";
 
 export class BarChartLayer extends BaseLayer {
     private features: Map<string, Feature> = new Map();
@@ -28,7 +29,10 @@ export class BarChartLayer extends BaseLayer {
             zIndex?: number;
         }
     ) {
-        super(id, name, LayerTypeEnum.BARCHART, options);
+        super(id, name, LayerTypeEnum.BARCHART, {
+            ...options,
+            zIndex: options?.zIndex ?? 15,
+        });
         this.maxHeight = options?.maxHeight || 100;
         this.defaultColor = options?.defaultColor || [255, 0, 0, 0.8];
         this.unit = options?.unit || "";
@@ -72,11 +76,9 @@ export class BarChartLayer extends BaseLayer {
     public setData(data: BarChartData[]): void {
         this.calcMaxValue(data);
         this.clear();
-
         data.forEach((item) => {
             const height = this.getHeight(item.value);
             const color = item.color || this.getColor(item.value);
-            
             const feature = new Feature({
                 geometry: new Point(fromLonLat([item.longitude, item.latitude])),
                 id: item.id,
@@ -85,13 +87,15 @@ export class BarChartLayer extends BaseLayer {
                 height,
                 color: arrayToRgba(color),
             });
-
             feature.setStyle(
                 new Style({
                     fill: new Fill({ color: arrayToRgba(color) }),
+                    image: new CircleStyle({
+                        radius: Math.sqrt(height) / 2,
+                        fill: new Fill({ color: arrayToRgba(color) }),
+                    }),
                 })
             );
-
             this.source?.addFeature(feature);
             this.features.set(item.id, feature);
         });

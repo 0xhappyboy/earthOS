@@ -25,7 +25,10 @@ export class CustomTileLayer extends BaseLayer {
             zIndex?: number;
         }
     ) {
-        super(id, name, LayerTypeEnum.TILE, options);
+        super(id, name, LayerTypeEnum.TILE, {
+            ...options,
+            zIndex: options?.zIndex ?? 0,
+        });
         this.urlTemplate = options.urlTemplate;
         this.subDomains = options.subDomains || ["a", "b", "c"];
         this.attribution = options.attribution || "";
@@ -37,7 +40,6 @@ export class CustomTileLayer extends BaseLayer {
         let url = this.urlTemplate;
         const sub = this.subDomains[Math.floor(Math.random() * this.subDomains.length)];
         url = url.replace(/\{s\}/g, sub);
-
         this.tileLayer = new TileLayer({
             source: new XYZ({
                 url,
@@ -50,7 +52,7 @@ export class CustomTileLayer extends BaseLayer {
             opacity: this.opacity,
             zIndex: this.zIndex,
         });
-
+        this.layer = this.tileLayer;
         map.addLayer(this.tileLayer);
         return this.tileLayer;
     }

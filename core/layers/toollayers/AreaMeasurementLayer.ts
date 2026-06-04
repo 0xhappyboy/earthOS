@@ -33,7 +33,10 @@ export class AreaMeasurementLayer extends BaseLayer {
             zIndex?: number;
         }
     ) {
-        super(id, name, LayerTypeEnum.AREA_MEASUREMENT, options);
+        super(id, name, LayerTypeEnum.AREA_MEASUREMENT, {
+            ...options,
+            zIndex: options?.zIndex ?? 50,
+        });
         this.fillColor = options?.fillColor || [0, 170, 255, 0.2];
         this.lineColor = options?.lineColor || [0, 170, 255, 1];
         this.lineWidth = options?.lineWidth || 2;
