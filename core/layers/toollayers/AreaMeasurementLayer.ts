@@ -1,10 +1,12 @@
 import Feature from "ol/Feature";
 import Polygon from "ol/geom/Polygon";
+import Point from "ol/geom/Point";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import Style from "ol/style/Style";
 import Fill from "ol/style/Fill";
 import Stroke from "ol/style/Stroke";
+import Text from "ol/style/Text";
 import Draw from "ol/interaction/Draw";
 import { getArea } from "ol/sphere";
 import { toLonLat } from "ol/proj";
@@ -43,13 +45,6 @@ export class AreaMeasurementLayer extends BaseLayer {
         this.source = new VectorSource();
         this.layer = new VectorLayer({
             source: this.source,
-            style: new Style({
-                fill: new Fill({ color: arrayToRgba(this.fillColor) }),
-                stroke: new Stroke({
-                    color: arrayToRgba(this.lineColor),
-                    width: this.lineWidth,
-                }),
-            }),
             properties: { id, name, type: LayerTypeEnum.AREA_MEASUREMENT },
             visible: this.visible,
             opacity: this.opacity,
@@ -86,17 +81,45 @@ export class AreaMeasurementLayer extends BaseLayer {
             }).slice(0, -1);
 
             const area = getArea(geometry);
-
             const id = generateId("area_");
-            this.measurements.set(id, { id, points, area });
+            let centerX = 0, centerY = 0;
+            for (const coord of coordinates.slice(0, -1)) {
+                centerX += coord[0];
+                centerY += coord[1];
+            }
+            centerX /= (coordinates.length - 1);
+            centerY /= (coordinates.length - 1);
+            const areaText = area >= 1000000
+                ? `${(area / 1000000).toFixed(2)} km²`
+                : `${area.toFixed(0)} m²`;
 
+            const labelFeature = new Feature({
+                geometry: new Point([centerX, centerY]),
+                measurementId: id,
+            });
+            labelFeature.setStyle(new Style({
+                text: new Text({
+                    text: areaText,
+                    font: "14px sans-serif",
+                    fill: new Fill({ color: "#ffffff" }),
+                    stroke: new Stroke({ color: "#000000", width: 2 }),
+                    textAlign: "center",
+                }),
+            }));
+            this.measurements.set(id, { id, points, area });
             feature.set("measurementId", id);
             feature.set("type", "area");
-
+            feature.setStyle(new Style({
+                fill: new Fill({ color: arrayToRgba(this.fillColor) }),
+                stroke: new Stroke({
+                    color: arrayToRgba(this.lineColor),
+                    width: this.lineWidth,
+                }),
+            }));
+            this.source?.addFeature(labelFeature);
             if (this.onCompleteCallback) {
                 this.onCompleteCallback({ id, points, area });
             }
-
             this.stopMeasure();
         });
 
@@ -114,15 +137,13 @@ export class AreaMeasurementLayer extends BaseLayer {
     public deleteMeasurement(id: string): boolean {
         const measurement = this.measurements.get(id);
         if (measurement) {
-            let targetFeature: Feature | null = null;
+            let targetFeatures: Feature[] = [];
             this.source?.forEachFeature((feature) => {
                 if (feature.get("measurementId") === id) {
-                    targetFeature = feature;
+                    targetFeatures.push(feature);
                 }
             });
-            if (targetFeature) {
-                this.source?.removeFeature(targetFeature);
-            }
+            targetFeatures.forEach(f => this.source?.removeFeature(f));
             this.measurements.delete(id);
             return true;
         }

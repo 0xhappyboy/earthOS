@@ -1,9 +1,12 @@
 import Feature from "ol/Feature";
 import LineString from "ol/geom/LineString";
+import Point from "ol/geom/Point";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import Style from "ol/style/Style";
 import Stroke from "ol/style/Stroke";
+import Text from "ol/style/Text";
+import Fill from "ol/style/Fill";
 import Draw from "ol/interaction/Draw";
 import { getLength } from "ol/sphere";
 import { toLonLat } from "ol/proj";
@@ -39,12 +42,6 @@ export class DistanceMeasurementLayer extends BaseLayer {
         this.source = new VectorSource();
         this.layer = new VectorLayer({
             source: this.source,
-            style: new Style({
-                stroke: new Stroke({
-                    color: arrayToRgba(this.lineColor),
-                    width: this.lineWidth,
-                }),
-            }),
             properties: { id, name, type: LayerTypeEnum.DISTANCE_MEASUREMENT },
             visible: this.visible,
             opacity: this.opacity,
@@ -70,12 +67,6 @@ export class DistanceMeasurementLayer extends BaseLayer {
             type: "LineString",
         });
 
-        let currentPoints: MeasurementPoint[] = [];
-
-        this.drawInteraction.on("drawstart", () => {
-            currentPoints = [];
-        });
-
         this.drawInteraction.on("drawend", (event: any) => {
             const feature = event.feature;
             const geometry = feature.getGeometry();
@@ -90,13 +81,35 @@ export class DistanceMeasurementLayer extends BaseLayer {
             for (let i = 0; i < points.length - 1; i++) {
                 totalDistance += this.calculateDistance(points[i], points[i + 1]);
             }
-
             const id = generateId("dist_");
+            const midIndex = Math.floor(points.length / 2);
+            const distanceText = totalDistance >= 1000
+                ? `${(totalDistance / 1000).toFixed(2)} km`
+                : `${totalDistance.toFixed(0)} m`;
+            const labelFeature = new Feature({
+                geometry: new Point([coordinates[midIndex][0], coordinates[midIndex][1]]),
+                measurementId: id,
+            });
+            labelFeature.setStyle(new Style({
+                text: new Text({
+                    text: distanceText,
+                    font: "14px sans-serif",
+                    fill: new Fill({ color: "#ffffff" }),
+                    stroke: new Stroke({ color: "#000000", width: 2 }),
+                    offsetY: -10,
+                    textAlign: "center",
+                }),
+            }));
             this.measurements.set(id, { id, points, distance: totalDistance });
-
             feature.set("measurementId", id);
             feature.set("type", "distance");
-
+            feature.setStyle(new Style({
+                stroke: new Stroke({
+                    color: arrayToRgba(this.lineColor),
+                    width: this.lineWidth,
+                }),
+            }));
+            this.source?.addFeature(labelFeature);
             if (this.onCompleteCallback) {
                 this.onCompleteCallback({
                     points,
@@ -117,7 +130,7 @@ export class DistanceMeasurementLayer extends BaseLayer {
             [p1.longitude, p1.latitude],
             [p2.longitude, p2.latitude],
         ]);
-        return getLength(line);
+        return getLength(line, { projection: "EPSG:4326" });
     }
 
     public stopMeasure(): void {
@@ -131,15 +144,13 @@ export class DistanceMeasurementLayer extends BaseLayer {
     public deleteMeasurement(id: string): boolean {
         const measurement = this.measurements.get(id);
         if (measurement) {
-            let targetFeature: Feature | null = null;
+            let targetFeatures: Feature[] = [];
             this.source?.forEachFeature((feature) => {
                 if (feature.get("measurementId") === id) {
-                    targetFeature = feature;
+                    targetFeatures.push(feature);
                 }
             });
-            if (targetFeature) {
-                this.source?.removeFeature(targetFeature);
-            }
+            targetFeatures.forEach(f => this.source?.removeFeature(f));
             this.measurements.delete(id);
             return true;
         }
