@@ -1,7 +1,8 @@
-import { MapManager } from "./MapManager";
 import { LayerManager } from "./layers/LayerManager";
 import {
     CircleDrawLayer,
+    RectangleDrawLayer,
+    TriangleDrawLayer,
     DistanceMeasurementLayer,
     AreaMeasurementLayer,
     MarkerLayer,
@@ -14,78 +15,55 @@ import {
     CustomTileLayer,
     BarChartLayer,
     PopupMarkerLayer,
-    RectangleDrawLayer,
-    TriangleDrawLayer,
 } from "./layers";
-import {
-    Toolbar,
-    PopupPanel,
-    LayersPanel,
-    BasemapOptions,
-    DrawToolsPanel,
-    ToolsPanel,
-    FloatingToolbar,
-    MeasurementFloatingToolbar,
-    ScaleBar,
-    LoadingOverlay,
-    PopupType,
-    LayerInfo,
-    BasemapOption,
-} from "./components";
-import {
-    EarthViewOptions,
-    BasemapTypeEnum,
-    CoordinateSystemTypeEnum,
-    CircleDrawData,
-    RectangleDrawData,
-    TriangleDrawData,
-} from "./types";
+import { FloatingToolbar, MeasurementFloatingToolbar } from "./components";
+import { EarthViewOptions, BasemapTypeEnum, CoordinateSystemTypeEnum, CircleDrawData, RectangleDrawData, TriangleDrawData } from "./types";
 import { getTranslation, Locale, Translations } from "./i18n";
 import { DrawToolManager } from "./draw/DrawToolManager";
 import { CircleDrawTool } from "./draw/CircleDrawTool";
-import { DrawToolType } from "./draw/DrawTool";
-import { RectangleDrawTool, TriangleDrawTool } from "./draw";
+import { RectangleDrawTool } from "./draw/RectangleDrawTool";
+import { TriangleDrawTool } from "./draw/TriangleDrawTool";
+import { LayerInfo } from "./components/types";
+import { MapManager } from "./MapManager";
+import { DrawToolType } from "./draw";
+import { UIManager } from "./UIManager";
+import { DrawingManager } from "./DrawingManager";
 
 export class EarthViewCore {
     private mapManager: MapManager;
     private layerManager: LayerManager;
-
+    private uiManager!: UIManager;
+    private drawingManager: DrawingManager;
+    private drawToolManager: DrawToolManager;
     private circleDrawLayer: CircleDrawLayer | null = null;
+    private rectangleDrawLayer: RectangleDrawLayer | null = null;
+    private triangleDrawLayer: TriangleDrawLayer | null = null;
     private distanceMeasureLayer: DistanceMeasurementLayer | null = null;
     private areaMeasureLayer: AreaMeasurementLayer | null = null;
-
-    private drawToolManager: DrawToolManager = new DrawToolManager();
     private circleDrawTool: CircleDrawTool | null = null;
-
-    private toolbar: Toolbar | null = null;
-    private scaleBar: ScaleBar | null = null;
-    private loadingOverlay: LoadingOverlay | null = null;
-    private activePopupPanel: PopupPanel | null = null;
-    private activePopupType: PopupType = null;
-
+    private rectangleDrawTool: RectangleDrawTool | null = null;
+    private triangleDrawTool: TriangleDrawTool | null = null;
     private floatingToolbar: FloatingToolbar | null = null;
     private measurementFloatingToolbar: MeasurementFloatingToolbar | null = null;
-
     private drawingStatusDiv: HTMLDivElement | null = null;
     private measureStatusDiv: HTMLDivElement | null = null;
-
-    private onMoveEndCallback?: (center: [number, number], zoom: number) => void;
-    private onLoadCallback?: (core: EarthViewCore) => void;
-    private onMapClickCallback?: (event: { longitude: number; latitude: number }) => void;
-    private onCircleDrawnCallback?: (data: CircleDrawData) => void;
-
-    private locale: Locale = "zh";
+    private container: HTMLElement;
     private theme: "light" | "dark" = "dark";
     private t: Translations;
+    private locale: Locale = "zh";
     private isDestroyed: boolean = false;
     private enableDrawing: boolean = true;
-    private container: HTMLElement;
-
+    private onLoadCallback?: (core: EarthViewCore) => void;
+    private onMoveEndCallback?: (center: [number, number], zoom: number) => void;
+    private onMapClickCallback?: (event: { longitude: number; latitude: number }) => void;
+    private onCircleDrawnCallback?: (data: CircleDrawData) => void;
     private showFloatingToolbar: boolean = false;
     private floatingToolbarPosition: { x: number; y: number } = { x: 100, y: 100 };
     private showMeasurementToolbar: boolean = false;
     private measurementToolbarPosition: { x: number; y: number } = { x: 100, y: 100 };
     private selectedCircleId: string | null = null;
+    private selectedRectangleId: string | null = null;
+    private selectedTriangleId: string | null = null;
     private selectedMeasurementId: string | null = null;
     private currentColor: number[] = [255, 0, 0, 1];
     private currentStrokeWidth: number = 3;
@@ -93,18 +71,8 @@ export class EarthViewCore {
     private currentScale: string = "";
     private isLoading: boolean = true;
     private isChangingBasemap: boolean = false;
-    private errorMessage: string | null = null;
     private drawingStatusText: string | null = null;
     private measureStatusText: string | null = null;
-
-    private selectedRectangleId: string | null = null;
-    private selectedTriangleId: string | null = null;
-
-    private rectangleDrawLayer: RectangleDrawLayer | null = null;
-    private rectangleDrawTool: RectangleDrawTool | null = null;
-
-    private triangleDrawLayer: TriangleDrawLayer | null = null;
-    private triangleDrawTool: TriangleDrawTool | null = null;
 
     constructor(options: EarthViewOptions) {
         const {
@@ -135,553 +103,168 @@ export class EarthViewCore {
         container.setAttribute("data-theme", theme);
         document.body.setAttribute("data-theme", theme);
 
-        this.mapManager = new MapManager(
-            container,
-            basemap,
-            center,
-            zoom,
-            coordinateSystem
-        );
+        this.mapManager = new MapManager(container, basemap, center, zoom, coordinateSystem);
         this.layerManager = new LayerManager(this.mapManager.getMap());
+        this.drawToolManager = new DrawToolManager();
+        this.drawingManager = new DrawingManager();
+
         this.initUI();
-        if (this.enableDrawing) {
-            this.initCircleDrawLayer();
-            this.initRectangleDrawLayer();
-            this.initTriangleDrawLayer();
-            this.initDistanceMeasureLayer();
-            this.initAreaMeasureLayer();
-            this.registerDrawTools();
-        }
+        this.initLayers();
+        this.initDrawingManager();
         this.bindEvents();
         this.initRightClickMenu();
+
         if (this.onLoadCallback) {
             setTimeout(() => this.onLoadCallback?.(this), 100);
         }
-        setTimeout(() => {
-            this.setLoading(false, "");
-        }, 500);
-    }
-
-    private showFloatingToolbarForRectangle(position: { x: number; y: number }, rectangleData: RectangleDrawData): void {
-        this.floatingToolbarPosition = position;
-        this.showFloatingToolbar = true;
-        this.currentColor = rectangleData.fillColor || [0, 0, 255, 1];
-        this.currentStrokeWidth = rectangleData.outlineWidth || 3;
-        this.currentStrokeStyle = "solid";
-        if (this.floatingToolbar) {
-            this.floatingToolbar.updatePosition(this.floatingToolbarPosition);
-            this.floatingToolbar.setVisible(true);
-        } else {
-            this.floatingToolbar = new FloatingToolbar({
-                onColorChange: (color) => {
-                    this.currentColor = color;
-                    if (this.selectedRectangleId && this.rectangleDrawLayer) {
-                        this.rectangleDrawLayer.updateRectangleStyle(
-                            this.selectedRectangleId,
-                            [color[0], color[1], color[2], 0.3],
-                            [color[0], color[1], color[2], 1],
-                            this.currentStrokeWidth,
-                            this.currentStrokeStyle
-                        );
-                    }
-                },
-                onStrokeWidthChange: (width) => {
-                    this.currentStrokeWidth = width;
-                    if (this.selectedRectangleId && this.rectangleDrawLayer) {
-                        this.rectangleDrawLayer.updateRectangleStyle(
-                            this.selectedRectangleId,
-                            [this.currentColor[0], this.currentColor[1], this.currentColor[2], 0.3],
-                            [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1],
-                            width,
-                            this.currentStrokeStyle
-                        );
-                    }
-                },
-                onStrokeStyleChange: (style) => {
-                    this.currentStrokeStyle = style;
-                    if (this.selectedRectangleId && this.rectangleDrawLayer) {
-                        this.rectangleDrawLayer.updateRectangleStyle(
-                            this.selectedRectangleId,
-                            [this.currentColor[0], this.currentColor[1], this.currentColor[2], 0.3],
-                            [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1],
-                            this.currentStrokeWidth,
-                            style
-                        );
-                    }
-                },
-                onDelete: () => {
-                    if (this.selectedRectangleId && this.rectangleDrawLayer) {
-                        this.rectangleDrawLayer.removeRectangle(this.selectedRectangleId);
-                        this.selectedRectangleId = null;
-                    }
-                    this.hideFloatingToolbar();
-                },
-                onClose: () => {
-                    this.hideFloatingToolbar();
-                },
-                onPositionChange: (pos) => {
-                    this.floatingToolbarPosition = pos;
-                },
-                theme: this.theme,
-                t: this.t,
-                containerRef: this.container,
-                currentColor: this.currentColor,
-                currentStrokeWidth: this.currentStrokeWidth,
-                currentStrokeStyle: this.currentStrokeStyle,
-                position: this.floatingToolbarPosition,
-            });
-        }
-    }
-
-    private showFloatingToolbarForTriangle(position: { x: number; y: number }, triangleData: TriangleDrawData): void {
-        this.floatingToolbarPosition = position;
-        this.showFloatingToolbar = true;
-        this.currentColor = triangleData.fillColor || [255, 255, 0, 1];
-        this.currentStrokeWidth = triangleData.outlineWidth || 3;
-        this.currentStrokeStyle = "solid";
-        if (this.floatingToolbar) {
-            this.floatingToolbar.updatePosition(this.floatingToolbarPosition);
-            this.floatingToolbar.setVisible(true);
-        } else {
-            this.floatingToolbar = new FloatingToolbar({
-                onColorChange: (color) => {
-                    this.currentColor = color;
-                    if (this.selectedTriangleId && this.triangleDrawLayer) {
-                        this.triangleDrawLayer.updateTriangleStyle(
-                            this.selectedTriangleId,
-                            [color[0], color[1], color[2], 0.3],
-                            [color[0], color[1], color[2], 1],
-                            this.currentStrokeWidth,
-                            this.currentStrokeStyle
-                        );
-                    }
-                },
-                onStrokeWidthChange: (width) => {
-                    this.currentStrokeWidth = width;
-                    if (this.selectedTriangleId && this.triangleDrawLayer) {
-                        this.triangleDrawLayer.updateTriangleStyle(
-                            this.selectedTriangleId,
-                            [this.currentColor[0], this.currentColor[1], this.currentColor[2], 0.3],
-                            [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1],
-                            width,
-                            this.currentStrokeStyle
-                        );
-                    }
-                },
-                onStrokeStyleChange: (style) => {
-                    this.currentStrokeStyle = style;
-                    if (this.selectedTriangleId && this.triangleDrawLayer) {
-                        this.triangleDrawLayer.updateTriangleStyle(
-                            this.selectedTriangleId,
-                            [this.currentColor[0], this.currentColor[1], this.currentColor[2], 0.3],
-                            [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1],
-                            this.currentStrokeWidth,
-                            style
-                        );
-                    }
-                },
-                onDelete: () => {
-                    if (this.selectedTriangleId && this.triangleDrawLayer) {
-                        this.triangleDrawLayer.removeTriangle(this.selectedTriangleId);
-                        this.selectedTriangleId = null;
-                    }
-                    this.hideFloatingToolbar();
-                },
-                onClose: () => {
-                    this.hideFloatingToolbar();
-                },
-                onPositionChange: (pos) => {
-                    this.floatingToolbarPosition = pos;
-                },
-                theme: this.theme,
-                t: this.t,
-                containerRef: this.container,
-                currentColor: this.currentColor,
-                currentStrokeWidth: this.currentStrokeWidth,
-                currentStrokeStyle: this.currentStrokeStyle,
-                position: this.floatingToolbarPosition,
-            });
-        }
-    }
-
-    public initRectangleDrawLayer(options?: {
-        defaultFillColor?: number[];
-        defaultOutlineColor?: number[];
-        defaultOutlineWidth?: number;
-    }): RectangleDrawLayer {
-        if (this.rectangleDrawLayer) return this.rectangleDrawLayer;
-        this.rectangleDrawLayer = new RectangleDrawLayer("rectangle-draw", "矩形绘制", options);
-        this.rectangleDrawLayer.setView(this.mapManager.getMap());
-        this.layerManager.addLayer(this.rectangleDrawLayer);
-        this.setupRectangleSelection();
-        return this.rectangleDrawLayer;
-    }
-
-    public initTriangleDrawLayer(options?: {
-        defaultFillColor?: number[];
-        defaultOutlineColor?: number[];
-        defaultOutlineWidth?: number;
-    }): TriangleDrawLayer {
-        if (this.triangleDrawLayer) return this.triangleDrawLayer;
-        this.triangleDrawLayer = new TriangleDrawLayer("triangle-draw", "三角形绘制", options);
-        this.triangleDrawLayer.setView(this.mapManager.getMap());
-        this.layerManager.addLayer(this.triangleDrawLayer);
-        this.setupTriangleSelection();
-        return this.triangleDrawLayer;
-    }
-
-    public startDrawRectangle(onComplete?: (data: RectangleDrawData) => void): void {
-        if (!this.rectangleDrawLayer) this.initRectangleDrawLayer();
-        this.setDrawingStatus(this.t.editingRectangle);
-        this.rectangleDrawLayer?.startDraw((data) => {
-            this.setDrawingStatus(null);
-            if (onComplete) onComplete(data);
-        });
-    }
-
-    public startDrawTriangle(onComplete?: (data: TriangleDrawData) => void): void {
-        if (!this.triangleDrawLayer) this.initTriangleDrawLayer();
-        this.setDrawingStatus(this.t.editingCircle);
-        this.triangleDrawLayer?.startDraw((data) => {
-            this.setDrawingStatus(null);
-            if (onComplete) onComplete(data);
-        });
-    }
-
-    public startEditShape(): void {
-        const circles = this.circleDrawLayer?.getAllCircles();
-        if (circles && circles.length > 0) {
-            this.setDrawingStatus(this.t.editingCircle);
-            this.circleDrawTool?.startEdit(circles[circles.length - 1].id);
-            return;
-        }
-
-        const rectangles = this.rectangleDrawLayer?.getAllRectangles();
-        if (rectangles && rectangles.length > 0) {
-            this.setDrawingStatus(this.t.editingRectangle);
-            this.rectangleDrawLayer?.startEdit(rectangles[rectangles.length - 1].id, () => {
-                this.setDrawingStatus(null);
-            });
-            return;
-        }
-
-        const triangles = this.triangleDrawLayer?.getAllTriangles();
-        if (triangles && triangles.length > 0) {
-            this.setDrawingStatus(this.t.editingTriangle);
-            this.triangleDrawLayer?.startEdit(triangles[triangles.length - 1].id, () => {
-                this.setDrawingStatus(null);
-            });
-            return;
-        }
-
-        alert(this.t.noCirclesToEdit);
-    }
-
-    private setupRectangleSelection(): void {
-        this.mapManager.getMap().on("click", (event: any) => {
-            const features = this.mapManager.getMap().getFeaturesAtPixel(event.pixel);
-            const rectangleFeature = features?.find((f: any) => {
-                const id = f.get("id");
-                return id && id.toString().startsWith("rectangle_");
-            });
-            if (rectangleFeature && this.rectangleDrawLayer) {
-                const id = rectangleFeature.get("id");
-                this.rectangleDrawLayer.startEdit(id);
-            }
-        });
-    }
-
-    private setupTriangleSelection(): void {
-        this.mapManager.getMap().on("click", (event: any) => {
-            const features = this.mapManager.getMap().getFeaturesAtPixel(event.pixel);
-            const triangleFeature = features?.find((f: any) => {
-                const id = f.get("id");
-                return id && id.toString().startsWith("triangle_");
-            });
-            if (triangleFeature && this.triangleDrawLayer) {
-                const id = triangleFeature.get("id");
-                this.triangleDrawLayer.startEdit(id);
-            }
-        });
-    }
-
-    private registerDrawTools(): void {
-        if (!this.circleDrawLayer) return;
-        this.circleDrawTool = new CircleDrawTool(this.circleDrawLayer, this.t);
-        this.circleDrawTool.setOnDrawComplete((data) => {
-            this.onCircleDrawnCallback?.(data);
-            this.setDrawingStatus(null);
-        });
-        this.circleDrawTool.setOnEditComplete((data) => {
-            this.setDrawingStatus(null);
-        });
-        this.drawToolManager.registerTool(this.circleDrawTool);
-    }
-
-    public activateDrawTool(toolId: string): void {
-        this.drawToolManager.activateTool(toolId);
-
-        const tool = this.drawToolManager.getTool(toolId);
-        if (tool) {
-            this.setDrawingStatus(`${tool.name} ${this.t.drawingCircle || "绘制中..."}`);
-        }
-    }
-
-    public deactivateDrawTool(): void {
-        this.drawToolManager.deactivateCurrent();
-        this.setDrawingStatus(null);
-    }
-
-    public getActiveDrawTool(): string | null {
-        return this.drawToolManager.getActiveToolId();
-    }
-
-    public startDraw(): void {
-        const activeTool = this.drawToolManager.getActiveTool();
-        if (activeTool && activeTool.id === DrawToolType.CIRCLE && this.circleDrawTool) {
-            this.circleDrawTool.startDraw();
-        } else {
-            console.warn("No active draw tool or circle tool not available");
-        }
-    }
-
-    public startEditCircle(): void {
-        const circles = this.circleDrawLayer?.getAllCircles();
-        if (circles && circles.length > 0 && this.circleDrawTool) {
-            this.setDrawingStatus(this.t.editingCircle);
-            this.circleDrawTool.startEdit(circles[circles.length - 1].id);
-        } else {
-        }
-    }
-
-    public getAllCircles(): CircleDrawData[] {
-        return this.circleDrawLayer?.getAllCircles() || [];
-    }
-
-
-    public startDrawCircle(onComplete?: (data: CircleDrawData) => void): void {
-        if (!this.circleDrawLayer) this.initCircleDrawLayer();
-        this.setDrawingStatus(this.t.drawingCircle);
-        this.activateDrawTool(DrawToolType.CIRCLE);
-        if (this.circleDrawTool && onComplete) {
-            this.circleDrawTool.setOnDrawComplete((data) => {
-                onComplete(data);
-                this.setDrawingStatus(null);
-            });
-        }
-        this.startDraw();
+        setTimeout(() => this.hideLoading(), 500);
     }
 
     private initUI(): void {
-        this.toolbar = new Toolbar({
-            container: this.container,
-            t: this.t,
-            theme: this.theme,
-            activePopup: this.activePopupType,
-            onTogglePopup: this.handleTogglePopup.bind(this),
-            onZoomIn: () => this.zoomIn(),
-            onZoomOut: () => this.zoomOut(),
-            onLocate: () => this.locateUser(),
-        });
-        this.scaleBar = new ScaleBar(this.container, this.theme);
-        this.loadingOverlay = new LoadingOverlay(this.container, this.theme);
+        this.uiManager = new UIManager(
+            this.container,
+            this.theme,
+            this.t,
+            {
+                onTogglePopup: (popup) => this.handleTogglePopup(popup),
+                onZoomIn: () => this.zoomIn(),
+                onZoomOut: () => this.zoomOut(),
+                onLocate: () => this.locateUser(),
+                onDrawCircle: () => this.startDrawCircle(),
+                onDrawRectangle: () => this.startDrawRectangle(),
+                onDrawTriangle: () => this.startDrawTriangle(),
+                onEditShape: () => this.startEditShape(),
+                onDistanceMeasure: () => this.startMeasureDistance(),
+                onAreaMeasure: () => this.startMeasureArea(),
+                onClearMeasurements: () => this.clearAllMeasurements(),
+                onSetBasemap: (basemap) => this.setBasemap(basemap),
+                onToggleLayerVisibility: (id) => this.setLayerVisibility(id, !this.getLayerVisibility(id)),
+                onRemoveLayer: (id) => this.removeLayer(id),
+            },
+            () => this.getLayerList(),
+            () => this.getBasemap()
+        );
         this.createStatusIndicators();
+    }
+
+    private handleTogglePopup(popup: any): void {
     }
 
     private createStatusIndicators(): void {
         const isDark = this.theme === "dark";
         this.drawingStatusDiv = document.createElement("div");
         this.drawingStatusDiv.style.cssText = `
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            z-index: 200;
+            position: absolute; top: 10px; left: 10px; z-index: 200;
             background: ${isDark ? "rgba(0,0,0,0.8)" : "rgba(255,255,255,0.9)"};
-            border: 1px solid ${isDark ? "#444" : "#ddd"};
-            border-radius: 8px;
-            padding: 8px 16px;
-            backdrop-filter: blur(4px);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            border: 1px solid ${isDark ? "#444" : "#ddd"}; border-radius: 8px;
+            padding: 8px 16px; backdrop-filter: blur(4px);
+            display: flex; align-items: center; gap: 10px;
             display: none;
         `;
         const spinner = document.createElement("div");
-        spinner.style.cssText = `
-            width: 16px;
-            height: 16px;
-            border: 2px solid ${isDark ? "#555" : "#ccc"};
-            border-top: 2px solid #00aaff;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        `;
+        spinner.style.cssText = `width:16px;height:16px;border:2px solid ${isDark ? "#555" : "#ccc"};border-top:2px solid #00aaff;border-radius:50%;animation:spin 0.8s linear infinite;`;
         this.drawingStatusDiv.appendChild(spinner);
         const statusText = document.createElement("span");
-        statusText.style.cssText = `color: ${isDark ? "#fff" : "#333"}; font-size: 12px;`;
+        statusText.style.cssText = `color:${isDark ? "#fff" : "#333"};font-size:12px;`;
         statusText.id = "drawing-status-text";
         this.drawingStatusDiv.appendChild(statusText);
         this.container.appendChild(this.drawingStatusDiv);
+
         this.measureStatusDiv = document.createElement("div");
         this.measureStatusDiv.style.cssText = `
-            position: absolute;
-            bottom: 60px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 200;
-            background: ${isDark ? "rgba(0,0,0,0.85)" : "rgba(255,255,255,0.95)"};
-            border: 1px solid ${isDark ? "#444" : "#ddd"};
-            border-radius: 8px;
-            padding: 6px 12px;
-            backdrop-filter: blur(4px);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-            pointer-events: none;
+            position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%);
+            z-index: 200; background: ${isDark ? "rgba(0,0,0,0.85)" : "rgba(255,255,255,0.95)"};
+            border: 1px solid ${isDark ? "#444" : "#ddd"}; border-radius: 8px;
+            padding: 6px 12px; backdrop-filter: blur(4px);
+            display: flex; align-items: center; gap: 8px; pointer-events: none;
             display: none;
         `;
         const dot = document.createElement("div");
-        dot.style.cssText = `
-            width: 8px;
-            height: 8px;
-            background: #00aaff;
-            border-radius: 50%;
-            animation: pulse 1s infinite;
-        `;
+        dot.style.cssText = `width:8px;height:8px;background:#00aaff;border-radius:50%;animation:pulse 1s infinite;`;
         this.measureStatusDiv.appendChild(dot);
         const measureText = document.createElement("span");
-        measureText.style.cssText = `color: ${isDark ? "#fff" : "#333"}; font-size: 12px;`;
+        measureText.style.cssText = `color:${isDark ? "#fff" : "#333"};font-size:12px;`;
         measureText.id = "measure-status-text";
         this.measureStatusDiv.appendChild(measureText);
         this.container.appendChild(this.measureStatusDiv);
+
         const style = document.createElement("style");
-        style.textContent = `
-            @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-            }
-            @keyframes pulse {
-                0%, 100% { opacity: 1; transform: scale(1); }
-                50% { opacity: 0.5; transform: scale(1.2); }
-            }
-        `;
+        style.textContent = `@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(1.2)}}`;
         document.head.appendChild(style);
     }
 
-    private handleTogglePopup(popup: PopupType): void {
-        if (this.activePopupPanel) {
-            this.activePopupPanel.destroy();
-            this.activePopupPanel = null;
-        }
-        this.activePopupType = popup;
-        this.toolbar?.updateActivePopup(popup);
-        if (popup === null) return;
-        let panel: PopupPanel;
-        let content: HTMLElement;
-        switch (popup) {
-            case "layers":
-                panel = new PopupPanel({
-                    title: this.t.layers,
-                    theme: this.theme,
-                    t: this.t,
-                    onClose: () => this.handleTogglePopup(null),
-                });
-                const layersPanel = new LayersPanel({
-                    layerList: this.getLayerList(),
-                    onToggleVisibility: (id) => this.setLayerVisibility(id, !this.getLayerVisibility(id)),
-                    onRemoveLayer: (id) => this.removeLayer(id),
-                    theme: this.theme,
-                    t: this.t,
-                });
-                panel.appendChild(layersPanel.getElement());
-                this.activePopupPanel = panel;
-                this.container.appendChild(panel.getElement());
-                break;
+    private initLayers(): void {
+        if (!this.enableDrawing) return;
+        this.circleDrawLayer = new CircleDrawLayer("circle-draw", "Circle Draw");
+        this.circleDrawLayer.setView(this.mapManager.getMap());
+        this.layerManager.addLayer(this.circleDrawLayer);
+        this.rectangleDrawLayer = new RectangleDrawLayer("rectangle-draw", "Rectangle Draw");
+        this.rectangleDrawLayer.setView(this.mapManager.getMap());
+        this.layerManager.addLayer(this.rectangleDrawLayer);
+        this.triangleDrawLayer = new TriangleDrawLayer("triangle-draw", "Triangle Draw");
+        this.triangleDrawLayer.setView(this.mapManager.getMap());
+        this.layerManager.addLayer(this.triangleDrawLayer);
+        this.distanceMeasureLayer = new DistanceMeasurementLayer("distance-measurement", "Distance Measurement");
+        this.distanceMeasureLayer.setView(this.mapManager.getMap());
+        this.layerManager.addLayer(this.distanceMeasureLayer);
+        this.areaMeasureLayer = new AreaMeasurementLayer("area-measurement", "Area Measurement");
+        this.areaMeasureLayer.setView(this.mapManager.getMap());
+        this.layerManager.addLayer(this.areaMeasureLayer);
+        this.circleDrawTool = new CircleDrawTool(this.circleDrawLayer, this.t);
+        this.rectangleDrawTool = new RectangleDrawTool(this.rectangleDrawLayer, this.t);
+        this.triangleDrawTool = new TriangleDrawTool(this.triangleDrawLayer, this.t);
+        this.circleDrawTool.setOnDrawComplete(() => {
+            this.onDrawingEnd();
+        });
+        this.rectangleDrawTool.setOnDrawComplete(() => {
+            this.onDrawingEnd();
+        });
+        this.triangleDrawTool.setOnDrawComplete(() => {
+            this.onDrawingEnd();
+        });
+        this.drawingManager.registerTools(this.circleDrawTool, this.rectangleDrawTool, this.triangleDrawTool);
+        this.drawingManager.setCallbacks(
+            (type) => this.onDrawingStart(type),
+            () => this.onDrawingEnd()
+        );
+        this.setupSelections();
+    }
 
-            case "basemap":
-                panel = new PopupPanel({
-                    title: this.t.basemap,
-                    theme: this.theme,
-                    t: this.t,
-                    onClose: () => this.handleTogglePopup(null),
-                });
-                const basemapOptions = new BasemapOptions({
-                    currentBasemap: this.mapManager.getCurrentBasemap(),
-                    onSelect: (basemap) => this.setBasemap(basemap),
-                    theme: this.theme,
-                    t: this.t,
-                    options: [
-                        { value: BasemapTypeEnum.SATELLITE, label: this.t.satellite, icon: "🛰️" },
-                        { value: BasemapTypeEnum.STREETS, label: this.t.streets, icon: "🗺️" },
-                        { value: BasemapTypeEnum.TOPO, label: this.t.topographic, icon: "⛰️" },
-                        { value: BasemapTypeEnum.HYBRID, label: this.t.hybrid, icon: "🔄" },
-                        { value: BasemapTypeEnum.TERRAIN, label: this.t.terrain, icon: "🗻" },
-                        { value: BasemapTypeEnum.OCEANS, label: this.t.oceans, icon: "🌊" },
-                        { value: BasemapTypeEnum.DARK_GRAY, label: this.t.darkGray, icon: "🌙" },
-                        { value: BasemapTypeEnum.LIGHT_GRAY, label: this.t.lightGray, icon: "☀️" },
-                        { value: BasemapTypeEnum.NATIONAL_GEOGRAPHIC, label: this.t.nationalGeographic, icon: "📰" },
-                        { value: BasemapTypeEnum.IMAGERY, label: this.t.imagery, icon: "📷" },
-                        { value: BasemapTypeEnum.PHYSICAL, label: this.t.physical, icon: "🌎" },
-                        { value: BasemapTypeEnum.AMAP_STREETS, label: this.t.amapStreets, icon: "🗺️" },
-                        { value: BasemapTypeEnum.AMAP_SATELLITE, label: this.t.amapSatellite, icon: "🛰️" },
-                        { value: BasemapTypeEnum.GOOGLE_STREETS, label: this.t.googleStreets, icon: "🗺️" },
-                        { value: BasemapTypeEnum.GOOGLE_SATELLITE, label: this.t.googleSatellite, icon: "🛰️" },
-                    ],
-                });
-                panel.appendChild(basemapOptions.getElement());
-                this.activePopupPanel = panel;
-                this.container.appendChild(panel.getElement());
-                break;
-            case "draw":
-                panel = new PopupPanel({
-                    title: this.t.drawTools,
-                    theme: this.theme,
-                    t: this.t,
-                    onClose: () => this.handleTogglePopup(null),
-                });
-                const drawPanel = new DrawToolsPanel({
-                    onDrawCircle: () => this.startDrawCircle(),
-                    onDrawRectangle: () => this.startDrawRectangle(),
-                    onDrawTriangle: () => this.startDrawTriangle(),
-                    onEditShape: () => this.startEditShape(),
-                    theme: this.theme,
-                    t: this.t,
-                });
-                panel.appendChild(drawPanel.getElement());
-                this.activePopupPanel = panel;
-                this.container.appendChild(panel.getElement());
-                break;
-            case "tools":
-                panel = new PopupPanel({
-                    title: this.t.tools,
-                    theme: this.theme,
-                    t: this.t,
-                    onClose: () => {
-                        this.handleTogglePopup(null);
-                        this.setMeasureStatus(null);
-                    },
-                });
-                const toolsPanel = new ToolsPanel({
-                    onDistanceMeasure: () => this.startMeasureDistance(),
-                    onAreaMeasure: () => this.startMeasureArea(),
-                    onClearMeasurements: () => this.clearAllMeasurements(),
-                    isMeasuring: false,
-                    currentMeasureType: null,
-                    measurePreview: null,
-                    theme: this.theme,
-                    t: this.t,
-                });
-                panel.appendChild(toolsPanel.getElement());
-                this.activePopupPanel = panel;
-                this.container.appendChild(panel.getElement());
-                break;
+    private onDrawingStart(type: DrawToolType): void {
+        let msg = "";
+        if (type === DrawToolType.CIRCLE) {
+            msg = this.t.drawingCircle;
+        } else if (type === DrawToolType.RECTANGLE) {
+            msg = "正在绘制矩形...";
+        } else if (type === DrawToolType.TRIANGLE) {
+            msg = "正在绘制三角形...";
         }
+        this.setDrawingStatus(msg);
+    }
+
+    private onDrawingEnd(): void {
+        this.setDrawingStatus(null);
+    }
+
+    private setupSelections(): void {
+        const map = this.mapManager.getMap();
+        map.on("click", (event: any) => {
+            const features = map.getFeaturesAtPixel(event.pixel);
+            const circle = features?.find((f: any) => f.get("id")?.startsWith("circle_"));
+            if (circle && this.circleDrawTool) { this.circleDrawTool.startEdit(circle.get("id")); return; }
+            const rect = features?.find((f: any) => f.get("id")?.startsWith("rectangle_"));
+            if (rect && this.rectangleDrawTool) { this.rectangleDrawTool.startEdit(rect.get("id")); return; }
+            const tri = features?.find((f: any) => f.get("id")?.startsWith("triangle_"));
+            if (tri && this.triangleDrawTool) { this.triangleDrawTool.startEdit(tri.get("id")); return; }
+            this.stopAllEditing();
+        });
+    }
+
+    private initDrawingManager(): void {
     }
 
     private bindEvents(): void {
-        const view = this.mapManager.getView();
-        view.on("moveend" as any, () => {
+        this.mapManager.getView().on("moveend" as any, () => {
             if (this.onMoveEndCallback && !this.isDestroyed) {
                 this.onMoveEndCallback(this.getCenter(), this.getZoom());
             }
@@ -689,7 +272,6 @@ export class EarthViewCore {
         });
         if (this.onMapClickCallback) {
             this.mapManager.getMap().on("click", (event: any) => {
-                const coordinate = event.coordinate;
                 const [lng, lat] = this.mapManager.getMap().getCoordinateFromPixel(event.pixel);
                 this.onMapClickCallback?.({ longitude: lng, latitude: lat });
             });
@@ -700,248 +282,198 @@ export class EarthViewCore {
         });
     }
 
-    private getLayerList(): LayerInfo[] {
-        return this.layerManager.getAllLayers().map(layer => ({
-            id: layer.id,
-            name: layer.name,
-            visible: layer.visible,
-        }));
-    }
+    private initRightClickMenu(): void {
+        this.container.addEventListener("contextmenu", (e) => {
+            e.preventDefault();
+            const rect = this.container.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const pixel = [x, y];
+            const features = this.mapManager.getMap().getFeaturesAtPixel(pixel);
 
-    private getLayerVisibility(id: string): boolean {
-        const layer = this.layerManager.getLayer(id);
-        return layer ? layer.visible : false;
-    }
-
-    private updateScale(): void {
-        const zoom = this.getZoom();
-        if (zoom) {
-            if (zoom >= 10) {
-                this.currentScale = `1:${Math.round(1000000 / Math.pow(2, zoom))}`;
-            } else {
-                this.currentScale = `1:${Math.round(10000000 / Math.pow(2, zoom))}`;
+            const circle = features?.find((f: any) => f.get("id")?.startsWith("circle_"));
+            if (circle && this.circleDrawLayer) {
+                const data = this.circleDrawLayer.getCircle(circle.get("id"));
+                if (data) { this.selectedCircleId = data.id; this.showFloatingToolbarForCircle({ x, y }, data); return; }
             }
-            this.scaleBar?.updateScale(this.currentScale);
-        }
-    }
-
-    private setLoading(loading: boolean, message: string): void {
-        this.isLoading = loading;
-        if (loading) {
-            this.loadingOverlay?.show(message);
-        } else {
-            this.loadingOverlay?.hide();
-        }
-    }
-
-    private setDrawingStatus(status: string | null): void {
-        this.drawingStatusText = status;
-        if (this.drawingStatusDiv) {
-            const textSpan = this.drawingStatusDiv.querySelector("#drawing-status-text");
-            if (textSpan) {
-                textSpan.textContent = status || "";
+            const rectFeature = features?.find((f: any) => f.get("id")?.startsWith("rectangle_"));
+            if (rectFeature && this.rectangleDrawLayer) {
+                const data = this.rectangleDrawLayer.getRectangle(rectFeature.get("id"));
+                if (data) { this.selectedRectangleId = data.id; this.showFloatingToolbarForRectangle({ x, y }, data); return; }
             }
-            this.drawingStatusDiv.style.display = status ? "flex" : "none";
-        }
-    }
-
-    private setMeasureStatus(status: string | null): void {
-        this.measureStatusText = status;
-        if (this.measureStatusDiv) {
-            const textSpan = this.measureStatusDiv.querySelector("#measure-status-text");
-            if (textSpan) {
-                textSpan.textContent = status || "";
+            const tri = features?.find((f: any) => f.get("id")?.startsWith("triangle_"));
+            if (tri && this.triangleDrawLayer) {
+                const data = this.triangleDrawLayer.getTriangle(tri.get("id"));
+                if (data) { this.selectedTriangleId = data.id; this.showFloatingToolbarForTriangle({ x, y }, data); return; }
             }
-            this.measureStatusDiv.style.display = status ? "flex" : "none";
-        }
-    }
-
-    public getCenter(): [number, number] {
-        return this.mapManager.getCenter();
-    }
-
-    public getZoom(): number {
-        return this.mapManager.getZoom();
-    }
-
-    public setCenter(center: [number, number], coordinateSystem?: CoordinateSystemTypeEnum): void {
-        this.mapManager.setCenter(center, coordinateSystem);
-    }
-
-    public setZoom(zoom: number): void {
-        this.mapManager.setZoom(zoom);
-        this.updateScale();
-    }
-
-    public setBasemap(basemap: BasemapTypeEnum): void {
-        this.setLoading(true, this.t.changingBasemap);
-        this.mapManager.setBasemap(basemap);
-        setTimeout(() => {
-            this.setLoading(false, "");
-            this.handleTogglePopup(null);
-        }, 500);
-    }
-
-    public getBasemap(): BasemapTypeEnum {
-        return this.mapManager.getCurrentBasemap();
-    }
-
-    public setTheme(theme: "light" | "dark"): void {
-        this.theme = theme;
-        this.container.setAttribute("data-theme", theme);
-        document.body.setAttribute("data-theme", theme);
-        this.toolbar?.updateTheme(theme);
-        this.scaleBar?.updateTheme(theme);
-        this.floatingToolbar?.updateTheme(theme);
-        this.measurementFloatingToolbar?.updateTheme(theme);
-        if (this.activePopupType) {
-            const currentPopup = this.activePopupType;
-            this.handleTogglePopup(null);
-            this.handleTogglePopup(currentPopup);
-        }
-    }
-
-    public getTheme(): "light" | "dark" {
-        return this.theme;
-    }
-
-    public setLocale(locale: Locale): void {
-        this.locale = locale;
-        this.t = getTranslation(locale);
-        this.toolbar?.destroy();
-        if (this.activePopupPanel) {
-            this.activePopupPanel.destroy();
-            this.activePopupPanel = null;
-        }
-        this.initUI();
-        if (this.activePopupType) {
-            this.handleTogglePopup(this.activePopupType);
-        }
-    }
-
-    public getContainer(): HTMLElement {
-        return this.container;
-    }
-
-    public getLayerManager(): LayerManager {
-        return this.layerManager;
-    }
-
-    public addMarkerLayer(id: string, name: string, options?: { defaultColor?: number[]; defaultSize?: number }): MarkerLayer {
-        const layer = new MarkerLayer(id, name, { ...options, visible: true, opacity: 1 });
-        this.layerManager.addLayer(layer);
-        return layer;
-    }
-
-    public removeLayer(id: string): void {
-        this.layerManager.removeLayer(id);
-        if (this.activePopupType === "layers") {
-            this.handleTogglePopup("layers");
-        }
-    }
-
-    public setLayerVisibility(id: string, visible: boolean): void {
-        const layer = this.layerManager.getLayer(id);
-        if (layer) {
-            layer.setVisible(visible);
-            if (this.activePopupType === "layers") {
-                this.handleTogglePopup("layers");
+            const measure = features?.find((f: any) => f.get("measurementId"));
+            if (measure) {
+                this.selectedMeasurementId = measure.get("measurementId");
+                this.showMeasurementToolbarForFeature({ x, y });
+                return;
             }
-        }
-    }
-
-    public initCircleDrawLayer(options?: { defaultFillColor?: number[]; defaultOutlineColor?: number[]; defaultOutlineWidth?: number }): CircleDrawLayer {
-        if (this.circleDrawLayer) return this.circleDrawLayer;
-        this.circleDrawLayer = new CircleDrawLayer("circle-draw", "Circle Draw", options);
-        this.circleDrawLayer.setView(this.mapManager.getMap());
-        this.layerManager.addLayer(this.circleDrawLayer);
-        this.setupCircleSelection();
-        return this.circleDrawLayer;
-    }
-
-    private setupCircleSelection(): void {
-        this.mapManager.getMap().on("click", (event: any) => {
-            const features = this.mapManager.getMap().getFeaturesAtPixel(event.pixel);
-            const circleFeature = features?.find((f: any) => {
-                const id = f.get("id");
-                return id && id.toString().startsWith("circle_");
-            });
-            if (circleFeature && this.circleDrawLayer && this.circleDrawTool) {
-                const id = circleFeature.get("id");
-                this.circleDrawTool.startEdit(id);
-            } else {
-                this.circleDrawLayer?.stopEdit();
-            }
+            this.hideFloatingToolbar();
+            this.hideMeasurementToolbar();
         });
     }
 
-    private showFloatingToolbarForCircle(position: { x: number; y: number }, circleData: CircleDrawData): void {
-        this.floatingToolbarPosition = position;
+    public startDrawCircle(): void {
+        if (this.drawingManager.isDrawing()) this.drawingManager.cancelDrawing();
+        this.drawingManager.startDrawingCircle();
+    }
+
+    public startDrawRectangle(): void {
+        if (this.drawingManager.isDrawing()) this.drawingManager.cancelDrawing();
+        this.drawingManager.startDrawingRectangle();
+    }
+
+    public startDrawTriangle(): void {
+        if (this.drawingManager.isDrawing()) this.drawingManager.cancelDrawing();
+        this.drawingManager.startDrawingTriangle();
+    }
+
+    public startEditShape(): void {
+        const circles = this.circleDrawLayer?.getAllCircles() || [];
+        if (circles.length > 0) { this.circleDrawTool?.startEdit(circles[circles.length - 1].id); return; }
+        const rects = this.rectangleDrawLayer?.getAllRectangles() || [];
+        if (rects.length > 0) { this.rectangleDrawTool?.startEdit(rects[rects.length - 1].id); return; }
+        const tris = this.triangleDrawLayer?.getAllTriangles() || [];
+        if (tris.length > 0) { this.triangleDrawTool?.startEdit(tris[tris.length - 1].id); return; }
+        alert(this.t.noCirclesToEdit);
+    }
+
+    private stopAllEditing(): void {
+        this.circleDrawLayer?.stopEdit();
+        this.rectangleDrawLayer?.stopEdit();
+        this.triangleDrawLayer?.stopEdit();
+    }
+
+    private showFloatingToolbarForCircle(pos: { x: number; y: number }, data: CircleDrawData): void {
+        this.floatingToolbarPosition = pos;
         this.showFloatingToolbar = true;
-        this.currentColor = circleData.fillColor || [255, 0, 0, 1];
-        this.currentStrokeWidth = circleData.outlineWidth || 3;
-        this.currentStrokeStyle = "solid";
+        this.currentColor = data.fillColor || [255, 0, 0, 1];
+        this.currentStrokeWidth = data.outlineWidth || 3;
         if (this.floatingToolbar) {
-            this.floatingToolbar.updatePosition(this.floatingToolbarPosition);
+            this.floatingToolbar.updatePosition(pos);
             this.floatingToolbar.setVisible(true);
         } else {
             this.floatingToolbar = new FloatingToolbar({
                 onColorChange: (color) => {
                     this.currentColor = color;
                     if (this.selectedCircleId && this.circleDrawLayer) {
-                        this.circleDrawLayer.updateCircleStyle(
-                            this.selectedCircleId,
-                            [color[0], color[1], color[2], 0.3],
-                            [color[0], color[1], color[2], 1],
-                            this.currentStrokeWidth,
-                            this.currentStrokeStyle
-                        );
+                        this.circleDrawLayer.updateCircleStyle(this.selectedCircleId, [color[0], color[1], color[2], 0.3], [color[0], color[1], color[2], 1], this.currentStrokeWidth, this.currentStrokeStyle);
                     }
                 },
                 onStrokeWidthChange: (width) => {
                     this.currentStrokeWidth = width;
                     if (this.selectedCircleId && this.circleDrawLayer) {
-                        this.circleDrawLayer.updateCircleStyle(
-                            this.selectedCircleId,
-                            [this.currentColor[0], this.currentColor[1], this.currentColor[2], 0.3],
-                            [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1],
-                            width,
-                            this.currentStrokeStyle
-                        );
+                        this.circleDrawLayer.updateCircleStyle(this.selectedCircleId, [this.currentColor[0], this.currentColor[1], this.currentColor[2], 0.3], [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1], width, this.currentStrokeStyle);
                     }
                 },
                 onStrokeStyleChange: (style) => {
                     this.currentStrokeStyle = style;
                     if (this.selectedCircleId && this.circleDrawLayer) {
-                        this.circleDrawLayer.updateCircleStyle(
-                            this.selectedCircleId,
-                            [this.currentColor[0], this.currentColor[1], this.currentColor[2], 0.3],
-                            [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1],
-                            this.currentStrokeWidth,
-                            style
-                        );
+                        this.circleDrawLayer.updateCircleStyle(this.selectedCircleId, [this.currentColor[0], this.currentColor[1], this.currentColor[2], 0.3], [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1], this.currentStrokeWidth, style);
                     }
                 },
-                onDelete: () => {
-                    if (this.selectedCircleId && this.circleDrawLayer) {
-                        this.circleDrawLayer.removeCircle(this.selectedCircleId);
-                        this.selectedCircleId = null;
+                onDelete: () => { if (this.selectedCircleId && this.circleDrawLayer) { this.circleDrawLayer.removeCircle(this.selectedCircleId); this.selectedCircleId = null; } this.hideFloatingToolbar(); },
+                onClose: () => this.hideFloatingToolbar(),
+                onPositionChange: (p) => { this.floatingToolbarPosition = p; },
+                theme: this.theme, t: this.t, containerRef: this.container,
+                currentColor: this.currentColor, currentStrokeWidth: this.currentStrokeWidth, currentStrokeStyle: this.currentStrokeStyle,
+                position: pos,
+            });
+        }
+    }
+
+    private showFloatingToolbarForRectangle(pos: { x: number; y: number }, data: RectangleDrawData): void {
+        this.floatingToolbarPosition = pos;
+        this.showFloatingToolbar = true;
+        this.currentColor = data.fillColor || [0, 0, 255, 1];
+        this.currentStrokeWidth = data.outlineWidth || 3;
+        if (this.floatingToolbar) {
+            this.floatingToolbar.updatePosition(pos);
+            this.floatingToolbar.setVisible(true);
+        } else {
+            this.floatingToolbar = new FloatingToolbar({
+                onColorChange: (color) => {
+                    this.currentColor = color;
+                    if (this.selectedRectangleId && this.rectangleDrawLayer) {
+                        this.rectangleDrawLayer.updateRectangleStyle(this.selectedRectangleId, [color[0], color[1], color[2], 0.3], [color[0], color[1], color[2], 1], this.currentStrokeWidth, this.currentStrokeStyle);
                     }
-                    this.hideFloatingToolbar();
                 },
-                onClose: () => {
-                    this.hideFloatingToolbar();
+                onStrokeWidthChange: (width) => {
+                    this.currentStrokeWidth = width;
+                    if (this.selectedRectangleId && this.rectangleDrawLayer) {
+                        this.rectangleDrawLayer.updateRectangleStyle(this.selectedRectangleId, [this.currentColor[0], this.currentColor[1], this.currentColor[2], 0.3], [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1], width, this.currentStrokeStyle);
+                    }
                 },
-                onPositionChange: (pos) => {
-                    this.floatingToolbarPosition = pos;
+                onStrokeStyleChange: (style) => {
+                    this.currentStrokeStyle = style;
+                    if (this.selectedRectangleId && this.rectangleDrawLayer) {
+                        this.rectangleDrawLayer.updateRectangleStyle(this.selectedRectangleId, [this.currentColor[0], this.currentColor[1], this.currentColor[2], 0.3], [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1], this.currentStrokeWidth, style);
+                    }
                 },
-                theme: this.theme,
-                t: this.t,
-                containerRef: this.container,
-                currentColor: this.currentColor,
-                currentStrokeWidth: this.currentStrokeWidth,
-                currentStrokeStyle: this.currentStrokeStyle,
-                position: this.floatingToolbarPosition,
+                onDelete: () => { if (this.selectedRectangleId && this.rectangleDrawLayer) { this.rectangleDrawLayer.removeRectangle(this.selectedRectangleId); this.selectedRectangleId = null; } this.hideFloatingToolbar(); },
+                onClose: () => this.hideFloatingToolbar(),
+                onPositionChange: (p) => { this.floatingToolbarPosition = p; },
+                theme: this.theme, t: this.t, containerRef: this.container,
+                currentColor: this.currentColor, currentStrokeWidth: this.currentStrokeWidth, currentStrokeStyle: this.currentStrokeStyle,
+                position: pos,
+            });
+        }
+    }
+
+    private showFloatingToolbarForTriangle(pos: { x: number; y: number }, data: TriangleDrawData): void {
+        this.floatingToolbarPosition = pos;
+        this.showFloatingToolbar = true;
+        this.currentColor = data.fillColor || [255, 255, 0, 1];
+        this.currentStrokeWidth = data.outlineWidth || 3;
+        if (this.floatingToolbar) {
+            this.floatingToolbar.updatePosition(pos);
+            this.floatingToolbar.setVisible(true);
+        } else {
+            this.floatingToolbar = new FloatingToolbar({
+                onColorChange: (color) => {
+                    this.currentColor = color;
+                    if (this.selectedTriangleId && this.triangleDrawLayer) {
+                        this.triangleDrawLayer.updateTriangleStyle(this.selectedTriangleId, [color[0], color[1], color[2], 0.3], [color[0], color[1], color[2], 1], this.currentStrokeWidth, this.currentStrokeStyle);
+                    }
+                },
+                onStrokeWidthChange: (width) => {
+                    this.currentStrokeWidth = width;
+                    if (this.selectedTriangleId && this.triangleDrawLayer) {
+                        this.triangleDrawLayer.updateTriangleStyle(this.selectedTriangleId, [this.currentColor[0], this.currentColor[1], this.currentColor[2], 0.3], [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1], width, this.currentStrokeStyle);
+                    }
+                },
+                onStrokeStyleChange: (style) => {
+                    this.currentStrokeStyle = style;
+                    if (this.selectedTriangleId && this.triangleDrawLayer) {
+                        this.triangleDrawLayer.updateTriangleStyle(this.selectedTriangleId, [this.currentColor[0], this.currentColor[1], this.currentColor[2], 0.3], [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1], this.currentStrokeWidth, style);
+                    }
+                },
+                onDelete: () => { if (this.selectedTriangleId && this.triangleDrawLayer) { this.triangleDrawLayer.removeTriangle(this.selectedTriangleId); this.selectedTriangleId = null; } this.hideFloatingToolbar(); },
+                onClose: () => this.hideFloatingToolbar(),
+                onPositionChange: (p) => { this.floatingToolbarPosition = p; },
+                theme: this.theme, t: this.t, containerRef: this.container,
+                currentColor: this.currentColor, currentStrokeWidth: this.currentStrokeWidth, currentStrokeStyle: this.currentStrokeStyle,
+                position: pos,
+            });
+        }
+    }
+
+    private showMeasurementToolbarForFeature(pos: { x: number; y: number }): void {
+        this.measurementToolbarPosition = pos;
+        this.showMeasurementToolbar = true;
+        if (this.measurementFloatingToolbar) {
+            this.measurementFloatingToolbar.setVisible(true);
+            this.measurementFloatingToolbar.updatePosition(pos);
+        } else {
+            this.measurementFloatingToolbar = new MeasurementFloatingToolbar({
+                onDelete: () => { if (this.selectedMeasurementId) { this.deleteMeasurement(this.selectedMeasurementId); } this.hideMeasurementToolbar(); },
+                onClose: () => this.hideMeasurementToolbar(),
+                onPositionChange: (p) => { this.measurementToolbarPosition = p; },
+                theme: this.theme, t: this.t, containerRef: this.container,
             });
         }
     }
@@ -954,107 +486,96 @@ export class EarthViewCore {
         this.floatingToolbar?.setVisible(false);
     }
 
-    public initDistanceMeasureLayer(options?: { lineColor?: number[]; lineWidth?: number }): DistanceMeasurementLayer {
-        if (this.distanceMeasureLayer) return this.distanceMeasureLayer;
-        this.distanceMeasureLayer = new DistanceMeasurementLayer("distance-measurement", "Distance Measurement", options);
-        this.distanceMeasureLayer.setView(this.mapManager.getMap());
-        this.layerManager.addLayer(this.distanceMeasureLayer);
-        this.setupMeasurementSelection();
-        return this.distanceMeasureLayer;
-    }
-
-    public initAreaMeasureLayer(options?: { fillColor?: number[]; lineColor?: number[]; lineWidth?: number }): AreaMeasurementLayer {
-        if (this.areaMeasureLayer) return this.areaMeasureLayer;
-        this.areaMeasureLayer = new AreaMeasurementLayer("area-measurement", "Area Measurement", options);
-        this.areaMeasureLayer.setView(this.mapManager.getMap());
-        this.layerManager.addLayer(this.areaMeasureLayer);
-        return this.areaMeasureLayer;
-    }
-
-    private setupMeasurementSelection(): void {
-        this.mapManager.getMap().on("click", (event: any) => {
-            const features = this.mapManager.getMap().getFeaturesAtPixel(event.pixel);
-            const measureFeature = features?.find((f: any) => f.get("measurementId"));
-
-            if (measureFeature) {
-                const id = measureFeature.get("measurementId");
-                this.selectedMeasurementId = id;
-                this.showMeasurementToolbarForFeature(event.pixel);
-            } else {
-                this.hideMeasurementToolbar();
-            }
-        });
-    }
-
-    private showMeasurementToolbarForFeature(pixel: { x: number; y: number }): void {
-        this.measurementToolbarPosition = { x: pixel.x, y: pixel.y };
-        this.showMeasurementToolbar = true;
-
-        if (this.measurementFloatingToolbar) {
-            this.measurementFloatingToolbar.setVisible(true);
-            this.measurementFloatingToolbar.updatePosition(this.measurementToolbarPosition);
-        } else {
-            this.measurementFloatingToolbar = new MeasurementFloatingToolbar({
-                onDelete: () => {
-                    if (this.selectedMeasurementId) {
-                        this.deleteMeasurement(this.selectedMeasurementId);
-                    }
-                    this.hideMeasurementToolbar();
-                },
-                onClose: () => this.hideMeasurementToolbar(),
-                onPositionChange: (pos) => {
-                    this.measurementToolbarPosition = pos;
-                },
-                theme: this.theme,
-                t: this.t,
-                containerRef: this.container,
-            });
-        }
-    }
-
     private hideMeasurementToolbar(): void {
         this.showMeasurementToolbar = false;
         this.selectedMeasurementId = null;
         this.measurementFloatingToolbar?.setVisible(false);
     }
 
-    public startMeasureDistance(onComplete?: (data: any) => void): void {
-        if (!this.distanceMeasureLayer) {
-            this.initDistanceMeasureLayer();
+    private getLayerList(): LayerInfo[] {
+        return this.layerManager.getAllLayers().map(l => ({ id: l.id, name: l.name, visible: l.visible }));
+    }
+
+    private getLayerVisibility(id: string): boolean {
+        return this.layerManager.getLayer(id)?.visible || false;
+    }
+
+    private updateScale(): void {
+        const zoom = this.getZoom();
+        if (zoom) {
+            this.currentScale = zoom >= 10 ? `1:${Math.round(1000000 / Math.pow(2, zoom))}` : `1:${Math.round(10000000 / Math.pow(2, zoom))}`;
+            this.uiManager.updateScale(this.currentScale);
         }
+    }
+
+    private setDrawingStatus(status: string | null): void {
+        this.drawingStatusText = status;
+        if (this.drawingStatusDiv) {
+            const span = this.drawingStatusDiv.querySelector("#drawing-status-text");
+            if (span) span.textContent = status || "";
+            this.drawingStatusDiv.style.display = status ? "flex" : "none";
+        }
+    }
+
+    private setMeasureStatus(status: string | null): void {
+        this.measureStatusText = status;
+        if (this.measureStatusDiv) {
+            const span = this.measureStatusDiv.querySelector("#measure-status-text");
+            if (span) span.textContent = status || "";
+            this.measureStatusDiv.style.display = status ? "flex" : "none";
+        }
+    }
+
+    private showLoading(message: string): void {
+        this.isLoading = true;
+        this.uiManager.showLoading(message);
+    }
+
+    private hideLoading(): void {
+        this.isLoading = false;
+        this.uiManager.hideLoading();
+    }
+
+    public getCenter(): [number, number] { return this.mapManager.getCenter(); }
+    public getZoom(): number { return this.mapManager.getZoom(); }
+    public setCenter(center: [number, number], cs?: CoordinateSystemTypeEnum): void { this.mapManager.setCenter(center, cs); }
+    public setZoom(zoom: number): void { this.mapManager.setZoom(zoom); this.updateScale(); }
+    public setBasemap(basemap: BasemapTypeEnum): void { this.showLoading(this.t.changingBasemap); this.mapManager.setBasemap(basemap); setTimeout(() => this.hideLoading(), 500); }
+    public getBasemap(): BasemapTypeEnum { return this.mapManager.getCurrentBasemap(); }
+    public setTheme(theme: "light" | "dark"): void { this.theme = theme; this.container.setAttribute("data-theme", theme); document.body.setAttribute("data-theme", theme); this.uiManager.updateTheme(theme); }
+    public getTheme(): "light" | "dark" { return this.theme; }
+    public setLocale(locale: Locale): void { this.locale = locale; this.t = getTranslation(locale); this.uiManager.updateLocale(this.t); }
+    public getContainer(): HTMLElement { return this.container; }
+    public getLayerManager(): LayerManager { return this.layerManager; }
+    public getMap(): any { return this.mapManager.getMap(); }
+
+    public addMarkerLayer(id: string, name: string, options?: any): MarkerLayer {
+        const layer = new MarkerLayer(id, name, { ...options, visible: true, opacity: 1 });
+        this.layerManager.addLayer(layer);
+        return layer;
+    }
+
+    public removeLayer(id: string): void { this.layerManager.removeLayer(id); }
+    public setLayerVisibility(id: string, visible: boolean): void { this.layerManager.getLayer(id)?.setVisible(visible); }
+
+    public startMeasureDistance(): void {
         this.setMeasureStatus(this.t.clickToStartMeasure);
-        this.distanceMeasureLayer?.startMeasure((data) => {
-            if ('isDrawing' in data && data.isDrawing) {
-                const distanceText = data.distance >= 1000
-                    ? `${(data.distance / 1000).toFixed(2)} ${this.t.kilometers}`
-                    : `${data.distance.toFixed(0)} ${this.t.meters}`;
-                this.setMeasureStatus(`${this.t.distance}: ${distanceText} | ${this.t.doubleClickToFinish}`);
+        this.distanceMeasureLayer?.startMeasure((data: any) => {
+            if (data.isDrawing) {
+                const dist = data.distance >= 1000 ? `${(data.distance / 1000).toFixed(2)} ${this.t.kilometers}` : `${data.distance.toFixed(0)} ${this.t.meters}`;
+                this.setMeasureStatus(`${this.t.distance}: ${dist} | ${this.t.doubleClickToFinish}`);
             } else {
                 this.setMeasureStatus(null);
-                onComplete?.(data);
             }
         });
     }
 
-    public startMeasureArea(onComplete?: (data: any) => void): void {
-        if (!this.areaMeasureLayer) {
-            this.initAreaMeasureLayer();
-        }
+    public startMeasureArea(): void {
         this.setMeasureStatus(this.t.clickToStartMeasure);
-        this.areaMeasureLayer?.startMeasure((data) => {
-            const areaText = data.area >= 1000000
-                ? `${(data.area / 1000000).toFixed(2)} ${this.t.squareKilometers}`
-                : `${data.area.toFixed(0)} ${this.t.squareMeters}`;
-
-            if ('isDrawing' in data && data.isDrawing) {
-                this.setMeasureStatus(`${this.t.area}: ${areaText}`);
-            } else {
-                this.setMeasureStatus(`${this.t.area}: ${areaText}`);
-                setTimeout(() => {
-                    this.setMeasureStatus(null);
-                }, 2000);
-                onComplete?.(data);
-            }
+        this.areaMeasureLayer?.startMeasure((data: any) => {
+            const area = data.area >= 1000000 ? `${(data.area / 1000000).toFixed(2)} ${this.t.squareKilometers}` : `${data.area.toFixed(0)} ${this.t.squareMeters}`;
+            this.setMeasureStatus(`${this.t.area}: ${area}`);
+            setTimeout(() => this.setMeasureStatus(null), 2000);
         });
     }
 
@@ -1065,123 +586,31 @@ export class EarthViewCore {
     }
 
     public deleteMeasurement(id: string): boolean {
-        const deleted = this.distanceMeasureLayer?.deleteMeasurement(id) || this.areaMeasureLayer?.deleteMeasurement(id);
-        return deleted || false;
+        return this.distanceMeasureLayer?.deleteMeasurement(id) || this.areaMeasureLayer?.deleteMeasurement(id) || false;
     }
 
-    public zoomIn(): void {
-        const currentZoom = this.getZoom();
-        this.setZoom(currentZoom + 1);
-    }
-
-    public zoomOut(): void {
-        const currentZoom = this.getZoom();
-        this.setZoom(currentZoom - 1);
-    }
+    public zoomIn(): void { this.setZoom(this.getZoom() + 1); }
+    public zoomOut(): void { this.setZoom(this.getZoom() - 1); }
 
     public locateUser(): void {
-        if (!navigator.geolocation) {
-            return;
-        }
-
-        this.setLoading(true, this.t.locateMe);
+        if (!navigator.geolocation) return;
+        this.showLoading(this.t.locateMe);
         navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const { latitude, longitude } = position.coords;
-                this.setCenter([longitude, latitude]);
-                this.setZoom(15);
-                this.setLoading(false, "");
-            },
-            (error) => {
-                console.warn("Geolocation error:", error);
-                this.setLoading(false, "");
-            }
+            (pos) => { this.setCenter([pos.coords.longitude, pos.coords.latitude]); this.setZoom(15); this.hideLoading(); },
+            () => this.hideLoading()
         );
-    }
-
-    public getMap(): any {
-        return this.mapManager.getMap();
     }
 
     public destroy(): void {
         if (this.isDestroyed) return;
         this.isDestroyed = true;
-        this.toolbar?.destroy();
-        this.scaleBar?.destroy();
-        this.loadingOverlay?.destroy();
+        this.uiManager.destroy();
+        this.drawingManager.destroy();
         this.floatingToolbar?.destroy();
         this.measurementFloatingToolbar?.destroy();
-        if (this.activePopupPanel) {
-            this.activePopupPanel.destroy();
-        }
-        if (this.drawingStatusDiv) this.drawingStatusDiv.remove();
-        if (this.measureStatusDiv) this.measureStatusDiv.remove();
-
-        this.drawToolManager.destroy();
-        this.circleDrawLayer = null;
-        this.circleDrawTool = null;
-        this.distanceMeasureLayer = null;
-        this.areaMeasureLayer = null;
+        this.drawingStatusDiv?.remove();
+        this.measureStatusDiv?.remove();
         this.layerManager.clearAll();
         this.mapManager.destroy();
-    }
-
-    private initRightClickMenu(): void {
-        this.container.addEventListener("contextmenu", (e) => {
-            e.preventDefault();
-            const containerRect = this.container.getBoundingClientRect();
-            const relativeX = e.clientX - containerRect.left;
-            const relativeY = e.clientY - containerRect.top;
-            const pixel = [relativeX, relativeY];
-            const features = this.mapManager.getMap().getFeaturesAtPixel(pixel);
-            const circleFeature = features?.find((f: any) => {
-                const id = f.get("id");
-                return id && id.toString().startsWith("circle_");
-            });
-            if (circleFeature && this.circleDrawLayer) {
-                const id = circleFeature.get("id");
-                const circleData = this.circleDrawLayer.getCircle(id);
-                if (circleData) {
-                    this.selectedCircleId = id;
-                    this.showFloatingToolbarForCircle({ x: relativeX, y: relativeY }, circleData);
-                    return;
-                }
-            }
-            const rectangleFeature = features?.find((f: any) => {
-                const id = f.get("id");
-                return id && id.toString().startsWith("rectangle_");
-            });
-            if (rectangleFeature && this.rectangleDrawLayer) {
-                const id = rectangleFeature.get("id");
-                const rectangleData = this.rectangleDrawLayer.getRectangle(id);
-                if (rectangleData) {
-                    this.selectedRectangleId = id;
-                    this.showFloatingToolbarForRectangle({ x: relativeX, y: relativeY }, rectangleData);
-                    return;
-                }
-            }
-            const triangleFeature = features?.find((f: any) => {
-                const id = f.get("id");
-                return id && id.toString().startsWith("triangle_");
-            });
-            if (triangleFeature && this.triangleDrawLayer) {
-                const id = triangleFeature.get("id");
-                const triangleData = this.triangleDrawLayer.getTriangle(id);
-                if (triangleData) {
-                    this.selectedTriangleId = id;
-                    this.showFloatingToolbarForTriangle({ x: relativeX, y: relativeY }, triangleData);
-                    return;
-                }
-            }
-            const measureFeature = features?.find((f: any) => f.get("measurementId"));
-            if (measureFeature) {
-                const id = measureFeature.get("measurementId");
-                this.selectedMeasurementId = id;
-                this.showMeasurementToolbarForFeature({ x: relativeX, y: relativeY });
-                return;
-            }
-            this.hideFloatingToolbar();
-            this.hideMeasurementToolbar();
-        });
     }
 }
