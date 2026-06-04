@@ -35,6 +35,7 @@ export class PopupMarkerLayer extends BaseLayer {
     private currentPopupGraphic: Graphic | null = null;
     private eventsAttached: boolean = false;
     private mapContainer: HTMLElement | null = null;
+    private extentWatchHandle: any = null;
 
     private popupWidth: number;
     private coverImageHeight: number;
@@ -81,30 +82,59 @@ export class PopupMarkerLayer extends BaseLayer {
     }
 
     private attachClickEvent(): void {
-        if (!this.graphicsLayer || !this.view || this.eventsAttached) {
-            return;
-        }
-
+        if (!this.graphicsLayer || !this.view || this.eventsAttached) return;
         this.eventsAttached = true;
-
         this.view.on("click", (event) => {
             this.view?.hitTest(event).then((response) => {
-                const results = response.results;
-                for (let i = 0; i < results.length; i++) {
-                    const hit: any = results[i];
+                let hitMarker = false;
+                for (let i = 0; i < response.results.length; i++) {
+                    const hit: any = response.results[i];
                     if (hit.graphic && hit.graphic.layer && hit.graphic.layer.id === this.id) {
-                        event.stopPropagation();
+                        hitMarker = true;
                         this.showPopupForGraphic(hit.graphic);
                         return;
                     }
                 }
-                this.hidePopup();
+                if (!hitMarker) {
+                    this.hidePopup();
+                }
             }).catch(() => { });
         });
     }
 
+    private updatePopupPosition(): void {
+        if (!this.currentPopupDiv || !this.currentPopupGraphic || !this.view || !this.mapContainer) return;
+
+        const geometry = this.currentPopupGraphic.geometry;
+        if (!geometry || geometry.type !== "point") return;
+
+        const screenPoint = this.view.toScreen(geometry as Point);
+        if (!screenPoint) return;
+
+        const mapRect = this.mapContainer.getBoundingClientRect();
+        const card = this.currentPopupDiv.querySelector('div:first-child') as HTMLElement;
+        if (!card) return;
+
+        const actualHeight = card.offsetHeight;
+        let left = screenPoint.x - mapRect.left - this.popupWidth / 2;
+        let top = screenPoint.y - mapRect.top - actualHeight - 15;
+
+        const containerWidth = mapRect.width;
+        const containerHeight = mapRect.height;
+
+        left = Math.max(10, Math.min(left, containerWidth - this.popupWidth - 10));
+        top = Math.max(10, Math.min(top, containerHeight - actualHeight - 10));
+
+        this.currentPopupDiv.style.left = `${left}px`;
+        this.currentPopupDiv.style.top = `${top}px`;
+    }
+
     private showPopupForGraphic(graphic: Graphic): void {
         if (!this.view || !this.mapContainer) return;
+        if (this.currentPopupGraphic === graphic && this.currentPopupDiv) {
+            this.updatePopupPosition();
+            return;
+        }
         this.hidePopup();
         const geometry = graphic.geometry;
         if (!geometry || geometry.type !== "point") return;
@@ -112,6 +142,9 @@ export class PopupMarkerLayer extends BaseLayer {
         const hasCover = attributes.coverImage && attributes.coverImage.trim() !== "";
         const hasTitle = attributes.title && attributes.title.trim() !== "";
         const hasDesc = attributes.description && attributes.description.trim() !== "";
+        const FIXED_CARD_HEIGHT = 260;
+        const IMAGE_HEIGHT = hasCover ? this.coverImageHeight : 0;
+        const CONTENT_AREA_HEIGHT = FIXED_CARD_HEIGHT - IMAGE_HEIGHT - 24;
         const theme = document.body.getAttribute("data-theme") ||
             document.documentElement.getAttribute("data-theme") ||
             "dark";
@@ -128,18 +161,23 @@ export class PopupMarkerLayer extends BaseLayer {
         const card = document.createElement("div");
         card.style.width = `${this.popupWidth}px`;
         card.style.maxWidth = `${this.popupWidth}px`;
+        card.style.height = `${FIXED_CARD_HEIGHT}px`;
         card.style.backgroundColor = bgColor;
         card.style.border = `1px solid ${borderColor}`;
         card.style.borderRadius = "8px";
         card.style.boxShadow = "0 4px 12px rgba(0,0,0,0.3)";
         card.style.overflow = "hidden";
         card.style.position = "relative";
+        card.style.display = "flex";
+        card.style.flexDirection = "column";
         card.style.fontFamily = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+        let imageContainer: HTMLDivElement | null = null;
         if (hasCover) {
-            const imageContainer = document.createElement("div");
-            imageContainer.style.height = `${this.coverImageHeight}px`;
+            imageContainer = document.createElement("div");
+            imageContainer.style.height = `${IMAGE_HEIGHT}px`;
             imageContainer.style.overflow = "hidden";
             imageContainer.style.backgroundColor = "#f0f0f0";
+            imageContainer.style.flexShrink = "0";
             const img = document.createElement("img");
             img.src = attributes.coverImage;
             img.alt = "";
@@ -147,20 +185,23 @@ export class PopupMarkerLayer extends BaseLayer {
             img.style.height = "100%";
             img.style.objectFit = "cover";
             img.style.display = "block";
-            img.onerror = () => {
-                imageContainer.style.display = "none";
-            };
             imageContainer.appendChild(img);
             card.appendChild(imageContainer);
         }
         const contentDiv = document.createElement("div");
         contentDiv.style.padding = "12px";
+        contentDiv.style.flex = "1";
+        contentDiv.style.display = "flex";
+        contentDiv.style.flexDirection = "column";
+        contentDiv.style.overflow = "hidden";
+        let titleDiv: HTMLDivElement | null = null;
+        let descDiv: HTMLDivElement | null = null;
         if (hasTitle) {
-            const titleDiv = document.createElement("div");
-            titleDiv.style.fontSize = "14px";
+            titleDiv = document.createElement("div");
+            titleDiv.style.fontSize = "19px";
             titleDiv.style.fontWeight = "600";
             titleDiv.style.color = titleColor;
-            titleDiv.style.lineHeight = "1.4";
+            titleDiv.style.lineHeight = "1.5";
             titleDiv.style.marginBottom = hasDesc ? "8px" : "0";
             titleDiv.style.wordWrap = "break-word";
             titleDiv.style.wordBreak = "break-word";
@@ -172,32 +213,19 @@ export class PopupMarkerLayer extends BaseLayer {
             contentDiv.appendChild(titleDiv);
         }
         if (hasDesc) {
-            const descDiv = document.createElement("div");
-            descDiv.style.fontSize = "12px";
+            descDiv = document.createElement("div");
+            descDiv.style.fontSize = "17px";
             descDiv.style.color = descColor;
-            descDiv.style.lineHeight = "1.5";
+            descDiv.style.lineHeight = "1.6";
             descDiv.style.wordWrap = "break-word";
             descDiv.style.wordBreak = "break-word";
-            descDiv.style.display = "-webkit-box";
-            descDiv.style.webkitLineClamp = "10";
-            descDiv.style.webkitBoxOrient = "vertical";
-            descDiv.style.overflow = "hidden";
+            descDiv.style.overflowY = "auto";
+            descDiv.style.flex = "1";
+            descDiv.style.maxHeight = `${CONTENT_AREA_HEIGHT + IMAGE_HEIGHT}px`;
             descDiv.textContent = attributes.description;
             contentDiv.appendChild(descDiv);
         }
         card.appendChild(contentDiv);
-        const arrow = document.createElement("div");
-        arrow.style.position = "absolute";
-        arrow.style.bottom = "-6px";
-        arrow.style.left = "50%";
-        arrow.style.transform = "translateX(-50%)";
-        arrow.style.width = "0";
-        arrow.style.height = "0";
-        arrow.style.borderLeft = "6px solid transparent";
-        arrow.style.borderRight = "6px solid transparent";
-        arrow.style.borderTop = `6px solid ${bgColor}`;
-        arrow.style.filter = `drop-shadow(0 1px 0 ${borderColor})`;
-        card.appendChild(arrow);
         popupDiv.appendChild(card);
         if (getComputedStyle(this.mapContainer).position === 'static') {
             this.mapContainer.style.position = 'relative';
@@ -207,54 +235,64 @@ export class PopupMarkerLayer extends BaseLayer {
         const pointGeom = geometry as Point;
         const screenPoint = this.view.toScreen(pointGeom);
         if (!screenPoint) {
-            console.warn("Cannot get screen point for marker");
             this.hidePopup();
             return;
         }
         const mapRect = this.mapContainer.getBoundingClientRect();
-        popupDiv.style.opacity = "0";
+        let left = screenPoint.x - mapRect.left - this.popupWidth / 2;
+        let top = screenPoint.y - mapRect.top - FIXED_CARD_HEIGHT - 15;
+        const containerWidth = mapRect.width;
+        const containerHeight = mapRect.height;
+        left = Math.max(10, Math.min(left, containerWidth - this.popupWidth - 10));
+        top = Math.max(10, Math.min(top, containerHeight - FIXED_CARD_HEIGHT - 10));
+        popupDiv.style.left = `${left}px`;
+        popupDiv.style.top = `${top}px`;
         popupDiv.style.display = "block";
-        const position = () => {
-            const actualHeight = card.offsetHeight;
-            let left = screenPoint.x - mapRect.left - this.popupWidth / 2;
-            let top = screenPoint.y - mapRect.top - actualHeight - 15;
-            const containerWidth = mapRect.width;
-            const containerHeight = mapRect.height;
-            left = Math.max(10, Math.min(left, containerWidth - this.popupWidth - 10));
-            if (top < 50) {
-                top = screenPoint.y - mapRect.top + 20;
-                arrow.style.position = "absolute";
-                arrow.style.top = "-6px";
-                arrow.style.bottom = "auto";
-                arrow.style.left = "50%";
-                arrow.style.transform = "translateX(-50%)";
-                arrow.style.width = "0";
-                arrow.style.height = "0";
-                arrow.style.borderLeft = "6px solid transparent";
-                arrow.style.borderRight = "6px solid transparent";
-                arrow.style.borderBottom = `6px solid ${bgColor}`;
-                arrow.style.borderTop = "none";
-                arrow.style.filter = `drop-shadow(0 -1px 0 ${borderColor})`;
-            }
-            top = Math.max(10, Math.min(top, containerHeight - actualHeight - 10));
-            popupDiv.style.left = `${left}px`;
-            popupDiv.style.top = `${top}px`;
-            popupDiv.style.opacity = "1";
-        };
-        const img = card.querySelector('img');
-        if (img && !img.complete) {
-            img.onload = () => {
-                position();
-            };
-            img.onerror = () => {
-                position();
-            };
-        } else {
-            requestAnimationFrame(() => {
-                position();
-            });
-        }
         this.currentPopupGraphic = graphic;
+        if (imageContainer) {
+            const img = imageContainer.querySelector('img');
+            if (img) {
+                if (img.complete && img.naturalHeight > 0) {
+                    imageContainer.style.display = "block";
+                    if (titleDiv) {
+                        titleDiv.style.fontSize = "14px";
+                        titleDiv.style.lineHeight = "1.4";
+                    }
+                    if (descDiv) {
+                        descDiv.style.fontSize = "12px";
+                        descDiv.style.lineHeight = "1.5";
+                        descDiv.style.maxHeight = `${CONTENT_AREA_HEIGHT - (hasTitle ? 30 : 0)}px`;
+                    }
+                } else {
+                    imageContainer.style.display = "none";
+                    img.onload = () => {
+                        if (imageContainer && this.currentPopupDiv === popupDiv) {
+                            imageContainer.style.display = "block";
+                            if (titleDiv) {
+                                titleDiv.style.fontSize = "14px";
+                                titleDiv.style.lineHeight = "1.4";
+                            }
+                            if (descDiv) {
+                                descDiv.style.fontSize = "12px";
+                                descDiv.style.lineHeight = "1.5";
+                                descDiv.style.maxHeight = `${CONTENT_AREA_HEIGHT - (hasTitle ? 30 : 0)}px`;
+                            }
+                        }
+                    };
+                    img.onerror = () => {
+                        if (imageContainer && this.currentPopupDiv === popupDiv) {
+                            imageContainer.style.display = "none";
+                        }
+                    };
+                }
+            }
+        }
+        if (this.extentWatchHandle) {
+            this.extentWatchHandle.remove();
+        }
+        this.extentWatchHandle = this.view.watch("extent", () => {
+            this.updatePopupPosition();
+        });
     }
 
     private hidePopup(): void {
@@ -263,6 +301,11 @@ export class PopupMarkerLayer extends BaseLayer {
             this.currentPopupDiv = null;
         }
         this.currentPopupGraphic = null;
+
+        if (this.extentWatchHandle) {
+            this.extentWatchHandle.remove();
+            this.extentWatchHandle = null;
+        }
     }
 
     public addMarker(data: PopupMarkerData): void {
