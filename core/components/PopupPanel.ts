@@ -1,5 +1,3 @@
-// core/src/components/PopupPanel.ts
-
 import { Theme } from "./types";
 import { Translations } from "../i18n";
 import { Icons } from "./icons";
@@ -14,7 +12,7 @@ export interface PopupPanelOptions {
 export class PopupPanel {
     private element: HTMLDivElement;
     private options: PopupPanelOptions;
-    private contentContainer!: HTMLDivElement;  // 添加 ! 断言
+    private contentContainer!: HTMLDivElement; 
 
     constructor(options: PopupPanelOptions) {
         this.options = options;
@@ -23,7 +21,6 @@ export class PopupPanel {
 
     private createElement(): HTMLDivElement {
         const isDark = this.options.theme === "dark";
-
         const panel = document.createElement("div");
         panel.style.cssText = `
             position: absolute;
@@ -38,8 +35,6 @@ export class PopupPanel {
             z-index: 200;
             overflow: hidden;
         `;
-
-        // 头部
         const header = document.createElement("div");
         header.style.cssText = `
             display: flex;
@@ -70,37 +65,27 @@ export class PopupPanel {
         closeBtn.title = this.options.t.close;
         closeBtn.onclick = () => this.options.onClose();
         header.appendChild(closeBtn);
-
         panel.appendChild(header);
-
-        // 内容区域 - 添加自定义滚动条样式类名
         this.contentContainer = document.createElement("div");
         this.contentContainer.style.cssText = `
             max-height: 210px;
             overflow-y: auto;
             padding: 4px 0;
         `;
-        // 添加类名用于样式
         this.contentContainer.className = "earthview-popup-scroll";
         panel.appendChild(this.contentContainer);
-
-        // 注入滚动条样式
         this.injectScrollbarStyles(isDark);
-
         return panel;
     }
 
     private injectScrollbarStyles(isDark: boolean): void {
-        // 检查是否已经注入过样式
         if (document.getElementById("earthview-popup-scroll-styles")) {
-            // 如果已存在，更新样式
             const styleEl = document.getElementById("earthview-popup-scroll-styles") as HTMLStyleElement;
             if (styleEl) {
                 styleEl.textContent = this.getScrollbarStyles(isDark);
             }
             return;
         }
-
         const style = document.createElement("style");
         style.id = "earthview-popup-scroll-styles";
         style.textContent = this.getScrollbarStyles(isDark);
@@ -144,12 +129,8 @@ export class PopupPanel {
 
     public updateTheme(theme: Theme): void {
         const isDark = theme === "dark";
-
-        // 更新面板样式
         this.element.style.background = isDark ? "#1e1e1e" : "#ffffff";
         this.element.style.borderColor = isDark ? "#333" : "#e0e0e0";
-
-        // 更新头部样式
         const header = this.element.querySelector("div:first-child") as HTMLDivElement;
         if (header) {
             header.style.borderBottomColor = isDark ? "#333" : "#e0e0e0";
@@ -163,8 +144,6 @@ export class PopupPanel {
                 closeBtn.style.color = isDark ? "#ccc" : "#666";
             }
         }
-
-        // 更新滚动条样式
         const styleEl = document.getElementById("earthview-popup-scroll-styles") as HTMLStyleElement;
         if (styleEl) {
             styleEl.textContent = this.getScrollbarStyles(isDark);

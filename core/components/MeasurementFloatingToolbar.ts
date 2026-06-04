@@ -1,5 +1,3 @@
-// core/src/components/MeasurementFloatingToolbar.ts
-
 import { Icons } from "./icons";
 import { Theme } from "./types";
 import { Translations } from "../i18n";
@@ -64,8 +62,6 @@ export class MeasurementFloatingToolbar {
             transition: all 0.2s;
             flex-shrink: 0;
         `;
-
-        // 拖拽手柄
         const dragHandle = document.createElement("div");
         dragHandle.style.cssText = `
             ${buttonStyle}
@@ -76,43 +72,33 @@ export class MeasurementFloatingToolbar {
         dragHandle.innerHTML = Icons.DragHandle;
         dragHandle.onmousedown = this.onMouseDown.bind(this);
         div.appendChild(dragHandle);
-
-        // 删除按钮
         const deleteBtn = document.createElement("button");
         deleteBtn.style.cssText = buttonStyle;
         deleteBtn.innerHTML = Icons.Delete;
         deleteBtn.title = this.options.t.delete;
         deleteBtn.onclick = () => this.options.onDelete();
         div.appendChild(deleteBtn);
-
-        // 关闭按钮
         const closeBtn = document.createElement("button");
         closeBtn.style.cssText = buttonStyle;
         closeBtn.innerHTML = Icons.Close;
         closeBtn.title = this.options.t.cancel;
         closeBtn.onclick = () => this.options.onClose();
         div.appendChild(closeBtn);
-
         return div;
     }
 
     private attachDragEvents(): void {
-        // 已经在 createElement 中绑定了 dragHandle 的 mousedown 事件
-        // 这里不需要额外操作
     }
 
     private onMouseDown(e: MouseEvent): void {
-        // 确保只有点击拖拽手柄时才触发
         const target = e.target as HTMLElement;
         if (!target.closest('[style*="cursor: grab"]')) {
             return;
         }
-
         e.preventDefault();
         this.isDragging = true;
         this.dragStart = { x: e.clientX, y: e.clientY };
         this.positionStart = { x: this.position.x, y: this.position.y };
-
         window.addEventListener("mousemove", this.onMouseMove.bind(this));
         window.addEventListener("mouseup", this.onMouseUp.bind(this));
         document.body.style.userSelect = "none";

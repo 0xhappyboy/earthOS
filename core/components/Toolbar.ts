@@ -1,5 +1,3 @@
-// core/src/components/Toolbar.ts
-
 import { Icons } from "./icons";
 import { PopupType, Theme } from "./types";
 import { Translations } from "../i18n";
@@ -28,7 +26,6 @@ export class Toolbar {
 
     private createElement(): HTMLDivElement {
         const isDark = this.options.theme === "dark";
-        
         const div = document.createElement("div");
         div.style.cssText = `
             position: absolute;
@@ -43,7 +40,6 @@ export class Toolbar {
             border-radius: 8px;
             backdrop-filter: blur(4px);
         `;
-
         const buttonStyle = (isActive: boolean): string => `
             width: 30px;
             height: 30px;
@@ -57,54 +53,37 @@ export class Toolbar {
             justify-content: center;
             transition: all 0.2s;
         `;
-
-        // 图层按钮
         const layersBtn = this.createButton(Icons.Layers, "layers", buttonStyle);
         layersBtn.title = this.options.t.layersTitle;
         div.appendChild(layersBtn);
         this.buttons.set("layers", layersBtn);
-
-        // 底图按钮
         const basemapBtn = this.createButton(Icons.Basemap, "basemap", buttonStyle);
         basemapBtn.title = this.options.t.basemapTitle;
         div.appendChild(basemapBtn);
         this.buttons.set("basemap", basemapBtn);
-
-        // 绘图按钮
         const drawBtn = this.createButton(Icons.Draw, "draw", buttonStyle);
         drawBtn.title = this.options.t.drawToolsTitle;
         div.appendChild(drawBtn);
         this.buttons.set("draw", drawBtn);
-
-        // 工具按钮
         const toolsBtn = this.createButton(Icons.Tools, "tools", buttonStyle);
         toolsBtn.title = this.options.t.toolsTitle;
         div.appendChild(toolsBtn);
         this.buttons.set("tools", toolsBtn);
-
-        // 分隔线
         const divider = document.createElement("div");
         divider.style.cssText = `height: 1px; background: ${isDark ? "#444" : "#ddd"}; margin: 4px 0;`;
         div.appendChild(divider);
-
-        // 放大按钮
         const zoomInBtn = this.createButton(Icons.ZoomIn, null, buttonStyle);
         zoomInBtn.title = this.options.t.zoomInTitle;
         zoomInBtn.onclick = () => this.options.onZoomIn();
         div.appendChild(zoomInBtn);
-
-        // 缩小按钮
         const zoomOutBtn = this.createButton(Icons.ZoomOut, null, buttonStyle);
         zoomOutBtn.title = this.options.t.zoomOutTitle;
         zoomOutBtn.onclick = () => this.options.onZoomOut();
         div.appendChild(zoomOutBtn);
-
-        // 定位按钮
         const locateBtn = this.createButton(Icons.Locate, null, buttonStyle);
         locateBtn.title = this.options.t.locateMe;
         locateBtn.onclick = () => this.options.onLocate();
         div.appendChild(locateBtn);
-
         return div;
     }
 

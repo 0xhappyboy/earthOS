@@ -1,5 +1,3 @@
-// core/src/components/ToolsPanel.ts
-
 import { Icons } from "./icons";
 import { Theme } from "./types";
 import { Translations } from "../i18n";
@@ -37,8 +35,6 @@ export class ToolsPanel {
     private render(): void {
         this.element.innerHTML = "";
         const isDark = this.props.theme === "dark";
-        
-        // 距离测量
         const distanceRow = this.createMeasureRow(
             Icons.Ruler,
             this.props.t.distanceMeasure,
@@ -46,8 +42,6 @@ export class ToolsPanel {
             this.props.onDistanceMeasure
         );
         this.element.appendChild(distanceRow);
-        
-        // 面积测量
         const areaRow = this.createMeasureRow(
             Icons.Area,
             this.props.t.areaMeasure,
@@ -89,17 +83,13 @@ export class ToolsPanel {
             }
         };
         row.onclick = onClick;
-        
         const iconSpan = document.createElement("span");
         iconSpan.innerHTML = icon;
         row.appendChild(iconSpan);
-        
         const labelSpan = document.createElement("span");
         labelSpan.style.cssText = `color: ${isDark ? "#fff" : "#333"}; font-size: 12px; flex: 1;`;
         labelSpan.textContent = label;
         row.appendChild(labelSpan);
-        
-        // 预览值
         if (isActive && this.props.measurePreview) {
             const preview = this.props.measurePreview;
             let previewText = "";
@@ -120,15 +110,12 @@ export class ToolsPanel {
                 row.appendChild(previewSpan);
             }
         }
-        
-        // 活动指示器
         if (isActive) {
             const activeDot = document.createElement("span");
             activeDot.style.cssText = `color: #00aaff; font-size: 10px;`;
             activeDot.textContent = "●";
             row.appendChild(activeDot);
         }
-        
         return row;
     }
 

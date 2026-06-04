@@ -1,5 +1,3 @@
-// core/src/components/ScaleBar.ts
-
 import { Theme } from "./types";
 
 export class ScaleBar {

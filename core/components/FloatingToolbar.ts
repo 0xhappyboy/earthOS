@@ -1,5 +1,3 @@
-// core/src/components/FloatingToolbar.ts
-
 import { Icons } from "./icons";
 import { Theme } from "./types";
 import { Translations } from "../i18n";
@@ -17,6 +15,7 @@ export interface FloatingToolbarOptions {
     currentColor: number[];
     currentStrokeWidth: number;
     currentStrokeStyle: "solid" | "dashed";
+    position?: { x: number; y: number };
 }
 
 export class FloatingToolbar {
@@ -26,24 +25,22 @@ export class FloatingToolbar {
     private dragStart: { x: number; y: number } = { x: 0, y: 0 };
     private positionStart: { x: number; y: number } = { x: 0, y: 0 };
     private position: { x: number; y: number };
-    
-    // 子面板
     private colorPickerPanel: HTMLDivElement | null = null;
     private strokeStylePanel: HTMLDivElement | null = null;
     private strokeWidthPanel: HTMLDivElement | null = null;
     private activePicker: string | null = null;
-
     constructor(options: FloatingToolbarOptions) {
         this.options = options;
-        this.position = { x: 100, y: 100 };
+        this.position = options.position || { x: 100, y: 100 };
         this.element = this.createElement();
+        this.element.style.left = `${this.position.x}px`;
+        this.element.style.top = `${this.position.y}px`;
         options.containerRef.appendChild(this.element);
         this.attachDragEvents();
     }
 
     private createElement(): HTMLDivElement {
         const isDark = this.options.theme === "dark";
-        
         const div = document.createElement("div");
         div.style.cssText = `
             position: absolute;
@@ -61,7 +58,6 @@ export class FloatingToolbar {
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             cursor: default;
         `;
-        
         const buttonStyle = `
             width: 28px;
             height: 28px;
@@ -76,8 +72,6 @@ export class FloatingToolbar {
             transition: all 0.2s;
             flex-shrink: 0;
         `;
-        
-        // 拖拽手柄
         const dragHandle = document.createElement("div");
         dragHandle.style.cssText = `
             ${buttonStyle}
@@ -88,47 +82,36 @@ export class FloatingToolbar {
         dragHandle.innerHTML = Icons.DragHandle;
         dragHandle.onmousedown = this.onMouseDown.bind(this);
         div.appendChild(dragHandle);
-        
-        // 颜色按钮
         const colorBtn = document.createElement("button");
         colorBtn.style.cssText = `${buttonStyle} background: transparent; padding: 2px;`;
         colorBtn.innerHTML = `<div style="width: 20px; height: 20px; background: rgba(${this.options.currentColor[0]}, ${this.options.currentColor[1]}, ${this.options.currentColor[2]}, ${this.options.currentColor[3] || 1}); border-radius: 4px; border: 1px solid ${isDark ? "#666" : "#ccc"};"></div>`;
         colorBtn.title = this.options.t.colorTitle;
         colorBtn.onclick = () => this.showColorPicker(colorBtn);
         div.appendChild(colorBtn);
-        
-        // 线宽按钮
         const strokeWidthBtn = document.createElement("button");
         strokeWidthBtn.style.cssText = buttonStyle;
         strokeWidthBtn.innerHTML = Icons.StrokeWidth;
         strokeWidthBtn.title = this.options.t.strokeWidthTitle;
         strokeWidthBtn.onclick = () => this.showStrokeWidthPicker(strokeWidthBtn);
         div.appendChild(strokeWidthBtn);
-        
-        // 线型按钮
         const strokeStyleBtn = document.createElement("button");
         strokeStyleBtn.style.cssText = `${buttonStyle} border-style: ${this.options.currentStrokeStyle === "dashed" ? "dashed" : "solid"};`;
         strokeStyleBtn.innerHTML = Icons.StrokeStyle;
         strokeStyleBtn.title = this.options.t.strokeStyleTitle;
         strokeStyleBtn.onclick = () => this.showStrokeStylePicker(strokeStyleBtn);
         div.appendChild(strokeStyleBtn);
-        
-        // 删除按钮
         const deleteBtn = document.createElement("button");
         deleteBtn.style.cssText = buttonStyle;
         deleteBtn.innerHTML = Icons.Delete;
         deleteBtn.title = this.options.t.deleteTitle;
         deleteBtn.onclick = () => this.options.onDelete();
         div.appendChild(deleteBtn);
-        
-        // 关闭按钮
         const closeBtn = document.createElement("button");
         closeBtn.style.cssText = buttonStyle;
         closeBtn.innerHTML = Icons.Close;
         closeBtn.title = this.options.t.closeTitle;
         closeBtn.onclick = () => this.options.onClose();
         div.appendChild(closeBtn);
-        
         return div;
     }
 
@@ -137,7 +120,6 @@ export class FloatingToolbar {
         this.isDragging = true;
         this.dragStart = { x: e.clientX, y: e.clientY };
         this.positionStart = { x: this.position.x, y: this.position.y };
-        
         document.addEventListener("mousemove", this.onMouseMove.bind(this));
         document.addEventListener("mouseup", this.onMouseUp.bind(this));
         document.body.style.userSelect = "none";
@@ -145,17 +127,17 @@ export class FloatingToolbar {
 
     private onMouseMove(e: MouseEvent): void {
         if (!this.isDragging) return;
-        
+
         const dx = e.clientX - this.dragStart.x;
         const dy = e.clientY - this.dragStart.y;
         let newX = this.positionStart.x + dx;
         let newY = this.positionStart.y + dy;
-        
+
         const containerRect = this.options.containerRef.getBoundingClientRect();
         const toolbarRect = this.element.getBoundingClientRect();
         newX = Math.max(0, Math.min(newX, containerRect.width - toolbarRect.width));
         newY = Math.max(0, Math.min(newY, containerRect.height - toolbarRect.height));
-        
+
         this.position = { x: newX, y: newY };
         this.element.style.left = `${newX}px`;
         this.element.style.top = `${newY}px`;
@@ -172,10 +154,10 @@ export class FloatingToolbar {
     private showColorPicker(btn: HTMLElement): void {
         this.hideAllPickers();
         this.activePicker = "color";
-        
+
         const rect = btn.getBoundingClientRect();
         const containerRect = this.options.containerRef.getBoundingClientRect();
-        
+
         this.colorPickerPanel = this.createColorPicker();
         this.colorPickerPanel.style.position = "absolute";
         this.colorPickerPanel.style.left = `${rect.left - containerRect.left - 110}px`;
@@ -186,10 +168,10 @@ export class FloatingToolbar {
     private showStrokeWidthPicker(btn: HTMLElement): void {
         this.hideAllPickers();
         this.activePicker = "width";
-        
+
         const rect = btn.getBoundingClientRect();
         const containerRect = this.options.containerRef.getBoundingClientRect();
-        
+
         this.strokeWidthPanel = this.createStrokeWidthPicker();
         this.strokeWidthPanel.style.position = "absolute";
         this.strokeWidthPanel.style.left = `${rect.left - containerRect.left - 65}px`;
@@ -200,10 +182,10 @@ export class FloatingToolbar {
     private showStrokeStylePicker(btn: HTMLElement): void {
         this.hideAllPickers();
         this.activePicker = "style";
-        
+
         const rect = btn.getBoundingClientRect();
         const containerRect = this.options.containerRef.getBoundingClientRect();
-        
+
         this.strokeStylePanel = this.createStrokeStylePicker();
         this.strokeStylePanel.style.position = "absolute";
         this.strokeStylePanel.style.left = `${rect.left - containerRect.left - 80}px`;
@@ -226,7 +208,7 @@ export class FloatingToolbar {
             [255, 255, 255, 1], [211, 211, 211, 1], [128, 128, 128, 1], [64, 64, 64, 1],
             [0, 0, 0, 1], [30, 30, 30, 1], [50, 50, 50, 1], [80, 80, 80, 1],
         ];
-        
+
         const div = document.createElement("div");
         div.style.cssText = `
             background: ${isDark ? "#2d2d2d" : "#ffffff"};
@@ -237,14 +219,14 @@ export class FloatingToolbar {
             width: 220px;
             z-index: 300;
         `;
-        
+
         const grid = document.createElement("div");
         grid.style.cssText = `
             display: grid;
             grid-template-columns: repeat(8, 1fr);
             gap: 4px;
         `;
-        
+
         for (const color of PRESET_COLORS) {
             const btn = document.createElement("button");
             btn.style.cssText = `
@@ -264,7 +246,7 @@ export class FloatingToolbar {
             btn.onmouseleave = () => { btn.style.transform = "scale(1)"; };
             grid.appendChild(btn);
         }
-        
+
         div.appendChild(grid);
         return div;
     }
@@ -272,23 +254,23 @@ export class FloatingToolbar {
     private createStrokeWidthPicker(): HTMLDivElement {
         const isDark = this.options.theme === "dark";
         const PRESET_WIDTHS = [1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 20];
-        
+
         const div = document.createElement("div");
         div.style.cssText = `
-            background: ${isDark ? "#2d2d2d" : "#ffffff"};
-            border: 1px solid ${isDark ? "#444" : "#ddd"};
-            border-radius: 8px;
-            padding: 6px 0;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            width: 130px;
-            max-height: 200px;
-            overflow-y: auto;
-            z-index: 300;
-        `;
-        
+        background: ${isDark ? "#2d2d2d" : "#ffffff"};
+        border: 1px solid ${isDark ? "#444" : "#ddd"};
+        border-radius: 8px;
+        padding: 6px 0;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        width: 130px;
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 300;
+    `;
+        div.className = "earthview-stroke-width-scroll";
+        this.injectStrokeWidthScrollbarStyles(isDark);
         const container = document.createElement("div");
         container.style.cssText = `display: flex; flex-direction: column; gap: 2px;`;
-        
         for (const width of PRESET_WIDTHS) {
             const row = document.createElement("div");
             row.style.cssText = `
@@ -314,7 +296,7 @@ export class FloatingToolbar {
                 this.options.onStrokeWidthChange(width);
                 this.hideAllPickers();
             };
-            
+
             const preview = document.createElement("div");
             preview.style.cssText = `
                 width: 35px;
@@ -323,29 +305,60 @@ export class FloatingToolbar {
                 border-radius: 2px;
             `;
             row.appendChild(preview);
-            
+
             const label = document.createElement("span");
             label.style.cssText = `color: ${isDark ? "#fff" : "#333"}; font-size: 11px; flex: 1;`;
             label.textContent = `${width}px`;
             row.appendChild(label);
-            
             if (this.options.currentStrokeWidth === width) {
                 const check = document.createElement("span");
                 check.style.cssText = `color: #00aaff; font-size: 12px;`;
                 check.textContent = "✓";
                 row.appendChild(check);
             }
-            
             container.appendChild(row);
         }
-        
         div.appendChild(container);
         return div;
     }
 
+    private injectStrokeWidthScrollbarStyles(isDark: boolean): void {
+        const styleId = "earthview-stroke-width-scroll-styles";
+        const thumbColor = isDark ? "#555" : "#ccc";
+        const trackColor = isDark ? "#2d2d2d" : "#f0f0f0";
+        const thumbHoverColor = isDark ? "#777" : "#aaa";
+        const css = `
+        .earthview-stroke-width-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: ${thumbColor} ${trackColor};
+        }
+        .earthview-stroke-width-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .earthview-stroke-width-scroll::-webkit-scrollbar-track {
+            background: ${trackColor};
+            border-radius: 4px;
+        }
+        .earthview-stroke-width-scroll::-webkit-scrollbar-thumb {
+            background: ${thumbColor};
+            border-radius: 4px;
+        }
+        .earthview-stroke-width-scroll::-webkit-scrollbar-thumb:hover {
+            background: ${thumbHoverColor};
+        }
+    `;
+        let styleEl = document.getElementById(styleId) as HTMLStyleElement;
+        if (!styleEl) {
+            styleEl = document.createElement("style");
+            styleEl.id = styleId;
+            document.head.appendChild(styleEl);
+        }
+        styleEl.textContent = css;
+    }
+
     private createStrokeStylePicker(): HTMLDivElement {
         const isDark = this.options.theme === "dark";
-        
+
         const div = document.createElement("div");
         div.style.cssText = `
             background: ${isDark ? "#2d2d2d" : "#ffffff"};
@@ -356,12 +369,12 @@ export class FloatingToolbar {
             width: 160px;
             z-index: 300;
         `;
-        
+
         const styles = [
             { value: "solid" as const, label: this.options.t.solidLine },
             { value: "dashed" as const, label: this.options.t.dashedLine }
         ];
-        
+
         for (const style of styles) {
             const row = document.createElement("div");
             row.style.cssText = `
@@ -387,7 +400,7 @@ export class FloatingToolbar {
                 this.options.onStrokeStyleChange(style.value);
                 this.hideAllPickers();
             };
-            
+
             const preview = document.createElementNS("http://www.w3.org/2000/svg", "svg");
             preview.setAttribute("width", "40");
             preview.setAttribute("height", "4");
@@ -404,22 +417,22 @@ export class FloatingToolbar {
             }
             preview.appendChild(line);
             row.appendChild(preview);
-            
+
             const label = document.createElement("span");
             label.style.cssText = `color: ${isDark ? "#fff" : "#333"}; font-size: 12px; flex: 1;`;
             label.textContent = style.label;
             row.appendChild(label);
-            
+
             if (this.options.currentStrokeStyle === style.value) {
                 const check = document.createElement("span");
                 check.style.cssText = `color: #00aaff; font-size: 12px;`;
                 check.textContent = "✓";
                 row.appendChild(check);
             }
-            
+
             div.appendChild(row);
         }
-        
+
         return div;
     }
 
@@ -484,7 +497,7 @@ export class FloatingToolbar {
         const isDark = theme === "dark";
         this.element.style.background = isDark ? "rgba(30,30,30,0.95)" : "rgba(255,255,255,0.95)";
         this.element.style.borderColor = isDark ? "#444" : "#ddd";
-        
+
         const buttons = this.element.querySelectorAll("button");
         buttons.forEach((btn, index) => {
             const isDragHandle = index === 0;

@@ -1,5 +1,3 @@
-// core/src/components/LoadingOverlay.ts
-
 import { Theme } from "./types";
 
 export class LoadingOverlay {
@@ -28,7 +26,7 @@ export class LoadingOverlay {
             gap: 12px;
             display: none;
         `;
-        
+
         const spinner = document.createElement("div");
         spinner.style.cssText = `
             width: 40px;
@@ -39,7 +37,6 @@ export class LoadingOverlay {
             animation: spin 1s linear infinite;
         `;
         div.appendChild(spinner);
-        
         const messageSpan = document.createElement("span");
         messageSpan.style.cssText = `
             color: #fff;
@@ -50,8 +47,6 @@ export class LoadingOverlay {
         `;
         messageSpan.textContent = "";
         div.appendChild(messageSpan);
-        
-        // 添加动画样式
         const style = document.createElement("style");
         style.textContent = `
             @keyframes spin {
@@ -60,7 +55,6 @@ export class LoadingOverlay {
             }
         `;
         document.head.appendChild(style);
-        
         return div;
     }
 
@@ -77,7 +71,6 @@ export class LoadingOverlay {
     }
 
     public updateTheme(theme: Theme): void {
-        // 主题不变，保持深色
     }
 
     public destroy(): void {

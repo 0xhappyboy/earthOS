@@ -1,5 +1,3 @@
-// core/src/components/DrawToolsPanel.ts
-
 import { Icons } from "./icons";
 import { Theme } from "./types";
 import { Translations } from "../i18n";
@@ -33,8 +31,6 @@ export class DrawToolsPanel {
     private render(): void {
         this.element.innerHTML = "";
         const isDark = this.props.theme === "dark";
-        
-        // 绘制圆形
         const drawRow = document.createElement("div");
         drawRow.style.cssText = `
             display: flex;

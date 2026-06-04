@@ -236,20 +236,26 @@ export class CircleDrawLayer extends BaseLayer {
         return undefined;
     }
 
-    public updateCircleStyle(id: string, fillColor: number[], outlineColor: number[], outlineWidth: number, outlineStyle: "solid" | "dashed"): void {
-        const lineDash = outlineStyle === "dashed" ? [10, 10] : [0];
-        (this.layer as VectorLayer<VectorSource>).setStyle(
-            new Style({
-                fill: new Fill({ color: arrayToRgba(fillColor) }),
-                stroke: new Stroke({
-                    color: arrayToRgba(outlineColor),
-                    width: outlineWidth,
-                    lineDash: lineDash,
-                }),
-            })
-        );
+    public updateCircleStyle(
+        id: string,
+        fillColor: number[],
+        outlineColor: number[],
+        outlineWidth: number,
+        outlineStyle: "solid" | "dashed"
+    ): void {
         const feature = this.features.get(id);
-        if (feature) feature.changed();
+        if (!feature) return;
+        const lineDash = outlineStyle === "dashed" ? [10, 10] : undefined;
+        feature.setStyle(new Style({
+            fill: new Fill({ color: arrayToRgba(fillColor) }),
+            stroke: new Stroke({
+                color: arrayToRgba(outlineColor),
+                width: outlineWidth,
+                lineDash: lineDash,
+            }),
+        }));
+        feature.changed();
+        this.mapView?.render();
     }
 
     public stopDraw(): void {

@@ -1,5 +1,3 @@
-// core/src/components/BasemapOptions.ts
-
 import { Icons } from "./icons";
 import { BasemapOption, Theme } from "./types";
 import { BasemapTypeEnum } from "../types";

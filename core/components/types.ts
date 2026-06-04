@@ -1,5 +1,3 @@
-// core/src/components/types.ts
-
 import { Translations } from "../i18n";
 import { BasemapTypeEnum } from "../types";
 

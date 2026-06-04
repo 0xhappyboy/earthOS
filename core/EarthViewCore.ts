@@ -149,6 +149,8 @@ export class EarthViewCore {
 
         this.bindEvents();
 
+        this.initRightClickMenu();
+
         if (this.onLoadCallback) {
             setTimeout(() => this.onLoadCallback?.(this), 100);
         }
@@ -430,6 +432,10 @@ export class EarthViewCore {
                 this.onMapClickCallback?.({ longitude: lng, latitude: lat });
             });
         }
+        this.mapManager.getMap().on("click", () => {
+            this.hideFloatingToolbar();
+            this.hideMeasurementToolbar();
+        });
     }
 
     private getLayerList(): LayerInfo[] {
@@ -600,26 +606,22 @@ export class EarthViewCore {
             });
             if (circleFeature && this.circleDrawLayer && this.circleDrawTool) {
                 const id = circleFeature.get("id");
-                if (this.circleDrawLayer.getEditingId() !== id) {
-                    this.circleDrawTool.startEdit(id);
-                }
+                this.circleDrawTool.startEdit(id);
             } else {
                 this.circleDrawLayer?.stopEdit();
-                this.hideFloatingToolbar();
             }
         });
     }
 
-    private showFloatingToolbarForCircle(pixel: { x: number; y: number }, circleData: CircleDrawData): void {
-        this.floatingToolbarPosition = { x: pixel.x, y: pixel.y };
+    private showFloatingToolbarForCircle(position: { x: number; y: number }, circleData: CircleDrawData): void {
+        this.floatingToolbarPosition = position;
         this.showFloatingToolbar = true;
         this.currentColor = circleData.fillColor || [255, 0, 0, 1];
         this.currentStrokeWidth = circleData.outlineWidth || 3;
         this.currentStrokeStyle = "solid";
-
         if (this.floatingToolbar) {
-            this.floatingToolbar.setVisible(true);
             this.floatingToolbar.updatePosition(this.floatingToolbarPosition);
+            this.floatingToolbar.setVisible(true);
         } else {
             this.floatingToolbar = new FloatingToolbar({
                 onColorChange: (color) => {
@@ -661,10 +663,13 @@ export class EarthViewCore {
                 onDelete: () => {
                     if (this.selectedCircleId && this.circleDrawLayer) {
                         this.circleDrawLayer.removeCircle(this.selectedCircleId);
+                        this.selectedCircleId = null;
                     }
                     this.hideFloatingToolbar();
                 },
-                onClose: () => this.hideFloatingToolbar(),
+                onClose: () => {
+                    this.hideFloatingToolbar();
+                },
                 onPositionChange: (pos) => {
                     this.floatingToolbarPosition = pos;
                 },
@@ -674,6 +679,7 @@ export class EarthViewCore {
                 currentColor: this.currentColor,
                 currentStrokeWidth: this.currentStrokeWidth,
                 currentStrokeStyle: this.currentStrokeStyle,
+                position: this.floatingToolbarPosition,
             });
         }
     }
@@ -856,4 +862,36 @@ export class EarthViewCore {
         this.mapManager.destroy();
     }
 
+    private initRightClickMenu(): void {
+        this.container.addEventListener("contextmenu", (e) => {
+            e.preventDefault();
+            const containerRect = this.container.getBoundingClientRect();
+            const relativeX = e.clientX - containerRect.left;
+            const relativeY = e.clientY - containerRect.top;
+            const pixel = [relativeX, relativeY];
+            const features = this.mapManager.getMap().getFeaturesAtPixel(pixel);
+            const circleFeature = features?.find((f: any) => {
+                const id = f.get("id");
+                return id && id.toString().startsWith("circle_");
+            });
+            if (circleFeature && this.circleDrawLayer) {
+                const id = circleFeature.get("id");
+                const circleData = this.circleDrawLayer.getCircle(id);
+                if (circleData) {
+                    this.selectedCircleId = id;
+                    this.showFloatingToolbarForCircle({ x: relativeX, y: relativeY }, circleData);
+                    return;
+                }
+            }
+            const measureFeature = features?.find((f: any) => f.get("measurementId"));
+            if (measureFeature) {
+                const id = measureFeature.get("measurementId");
+                this.selectedMeasurementId = id;
+                this.showMeasurementToolbarForFeature({ x: relativeX, y: relativeY });
+                return;
+            }
+            this.hideFloatingToolbar();
+            this.hideMeasurementToolbar();
+        });
+    }
 }
