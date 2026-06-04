@@ -1,5 +1,5 @@
 import Feature from "ol/Feature";
-import Circle from "ol/geom/Circle";
+import Polygon from "ol/geom/Polygon";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import Style from "ol/style/Style";
@@ -10,18 +10,28 @@ import Draw from "ol/interaction/Draw";
 import Transform from "ol-ext/interaction/Transform";
 import { fromLonLat, toLonLat } from "ol/proj";
 import { BaseLayer } from "../BaseLayer";
-import { LayerTypeEnum, CircleDrawData } from "../../types";
+import { LayerTypeEnum } from "../../types";
 import { generateId, arrayToRgba } from "../../utils";
+import { Circle } from "ol/geom";
 
-export class CircleDrawLayer extends BaseLayer {
+export interface TriangleDrawData {
+    id: string;
+    center: [number, number];
+    size: number;
+    fillColor?: number[];
+    outlineColor?: number[];
+    outlineWidth?: number;
+}
+
+export class TriangleDrawLayer extends BaseLayer {
     private drawInteraction: Draw | null = null;
     private transformInteraction: Transform | null = null;
     private features: Map<string, Feature> = new Map();
     private defaultFillColor: number[];
     private defaultOutlineColor: number[];
     private defaultOutlineWidth: number;
-    private onDrawCompleteCallback: ((data: CircleDrawData) => void) | null = null;
-    private onEditCompleteCallback: ((data: CircleDrawData) => void) | null = null;
+    private onDrawCompleteCallback: ((data: TriangleDrawData) => void) | null = null;
+    private onEditCompleteCallback: ((data: TriangleDrawData) => void) | null = null;
     private editingFeature: Feature | null = null;
     private mapView: any = null;
 
@@ -33,18 +43,18 @@ export class CircleDrawLayer extends BaseLayer {
         opacity?: number;
         zIndex?: number;
     }) {
-        super(id, name, LayerTypeEnum.CIRCLE_DRAW, {
+        super(id, name, LayerTypeEnum.TRIANGLE_DRAW, {
             ...options,
             zIndex: options?.zIndex ?? 100,
         });
-        this.defaultFillColor = options?.defaultFillColor || [255, 0, 0, 0.3];
-        this.defaultOutlineColor = options?.defaultOutlineColor || [255, 0, 0, 1];
+        this.defaultFillColor = options?.defaultFillColor || [255, 255, 0, 0.3];
+        this.defaultOutlineColor = options?.defaultOutlineColor || [255, 255, 0, 1];
         this.defaultOutlineWidth = options?.defaultOutlineWidth || 1;
         this.source = new VectorSource();
         this.layer = new VectorLayer({
             source: this.source,
             style: this.createStyle.bind(this),
-            properties: { id, name, type: LayerTypeEnum.CIRCLE_DRAW },
+            properties: { id, name, type: LayerTypeEnum.TRIANGLE_DRAW },
             visible: this.visible,
             opacity: this.opacity,
             zIndex: this.zIndex,
@@ -70,56 +80,120 @@ export class CircleDrawLayer extends BaseLayer {
         return this.layer;
     }
 
-    public startDraw(onComplete?: (data: CircleDrawData) => void): void {
+    private createEquilateralTriangle(center: [number, number], size: number): [number, number][] {
+        const height = size * Math.sqrt(3) / 2;
+        return [
+            [center[0], center[1] + height / 2],
+            [center[0] - size / 2, center[1] - height / 2],
+            [center[0] + size / 2, center[1] - height / 2],
+            [center[0], center[1] + height / 2],
+        ];
+    }
+
+    public startDraw(onComplete?: (data: TriangleDrawData) => void): void {
         if (this.drawInteraction) {
             this.mapView?.removeInteraction(this.drawInteraction);
             this.drawInteraction = null;
         }
         this.onDrawCompleteCallback = onComplete || null;
-        const tempSource = new VectorSource();
+        let points: [number, number][] = [];
         this.drawInteraction = new Draw({
-            source: tempSource,
-            type: "Circle",
+            source: this.source!,
+            type: "LineString",
+            maxPoints: 2,
+            geometryFunction: (coordinates, geometry) => {
+                points = coordinates as [number, number][];
+                if (points.length < 2) {
+                    if (!geometry) {
+                        geometry = new Polygon([[[0, 0], [0, 0], [0, 0], [0, 0]]]);
+                    }
+                    return geometry;
+                }
+                const p1 = points[0];
+                const p2 = points[1];
+                const dx = p2[0] - p1[0];
+                const dy = p2[1] - p1[1];
+                const sideLength = Math.sqrt(dx * dx + dy * dy);
+                if (sideLength < 0.001) {
+                    if (!geometry) {
+                        geometry = new Polygon([[[0, 0], [0, 0], [0, 0], [0, 0]]]);
+                    }
+                    return geometry;
+                }
+                const midX = (p1[0] + p2[0]) / 2;
+                const midY = (p1[1] + p2[1]) / 2;
+                const height = sideLength * Math.sqrt(3) / 2;
+                let perpX = -dy;
+                let perpY = dx;
+                const perpLen = Math.sqrt(perpX * perpX + perpY * perpY);
+                if (perpLen > 0) {
+                    perpX /= perpLen;
+                    perpY /= perpLen;
+                }
+                const topX = midX + perpX * height;
+                const topY = midY + perpY * height;
+                const ring = [
+                    [topX, topY],
+                    [p1[0], p1[1]],
+                    [p2[0], p2[1]],
+                    [topX, topY],
+                ];
+                if (!geometry) {
+                    geometry = new Polygon([ring]);
+                } else {
+                    geometry.setCoordinates([ring]);
+                }
+                return geometry;
+            },
             style: this.createStyle(),
         });
+
         this.drawInteraction.on("drawend", (event: any) => {
-            const feature = event.feature.clone();
+            const feature = event.feature;
             const geometry = feature.getGeometry();
-            const id = generateId("circle_");
-            if (geometry instanceof Circle) {
-                const center = toLonLat(geometry.getCenter());
+            const id = generateId("triangle_");
+
+            if (geometry instanceof Polygon) {
+                const extent = geometry.getExtent();
+                const centerX = (extent[0] + extent[2]) / 2;
+                const centerY = (extent[1] + extent[3]) / 2;
+                const size = Math.max(extent[2] - extent[0], extent[3] - extent[1]);
+                const [lng, lat] = toLonLat([centerX, centerY]);
+
                 feature.set("id", id);
+                feature.set("center", [lng, lat]);
+                feature.set("size", size);
                 feature.setStyle(this.createStyle());
-                this.source?.addFeature(feature);
                 this.features.set(id, feature);
                 this.layer?.setZIndex(999);
 
                 if (this.onDrawCompleteCallback) {
                     this.onDrawCompleteCallback({
                         id,
-                        center: [center[0], center[1]],
-                        radius: geometry.getRadius(),
+                        center: [lng, lat],
+                        size,
                         fillColor: this.defaultFillColor,
                         outlineColor: this.defaultOutlineColor,
                         outlineWidth: this.defaultOutlineWidth,
                     });
                 }
             }
-            tempSource.clear();
+
             this.mapView?.removeInteraction(this.drawInteraction);
             this.drawInteraction = null;
             this.onDrawCompleteCallback = null;
             this.mapView?.render();
         });
+
         this.mapView?.addInteraction(this.drawInteraction);
     }
 
-    public startEdit(id: string, onComplete?: (data: CircleDrawData) => void): void {
+    public startEdit(id: string, onComplete?: (data: TriangleDrawData) => void): void {
         this.stopEdit();
 
         const targetFeature = this.features.get(id);
         if (!targetFeature) {
-            console.error(`Circle with id ${id} not found`);
+            console.error(`Triangle with id ${id} not found`);
             return;
         }
 
@@ -135,7 +209,7 @@ export class CircleDrawLayer extends BaseLayer {
             translate: true,
             scale: true,
             rotate: false,
-            keepAspectRatio: () => true,
+            keepAspectRatio: () => false,
         });
         this.transformInteraction.setActive(true);
         this.transformInteraction.on("select", () => {
@@ -143,35 +217,47 @@ export class CircleDrawLayer extends BaseLayer {
         });
         this.transformInteraction.on("scaleend", () => {
             const geometry = targetFeature.getGeometry();
-            if (geometry instanceof Circle) {
-                const center = toLonLat(geometry.getCenter());
+            if (geometry instanceof Polygon) {
+                const extent = geometry.getExtent();
+                const centerX = (extent[0] + extent[2]) / 2;
+                const centerY = (extent[1] + extent[3]) / 2;
+                const size = Math.max(extent[2] - extent[0], extent[3] - extent[1]);
+                const [lng, lat] = toLonLat([centerX, centerY]);
                 const id = targetFeature.get("id");
+
+                const newTriangle = this.createEquilateralTriangle([centerX, centerY], size);
+                const newPolygon = new Polygon([newTriangle]);
+                targetFeature.setGeometry(newPolygon);
+
                 if (this.onEditCompleteCallback && id) {
                     this.onEditCompleteCallback({
                         id: id,
-                        center: [center[0], center[1]],
-                        radius: geometry.getRadius(),
+                        center: [lng, lat],
+                        size,
                     });
                 }
             }
         });
         this.transformInteraction.on("translateend", () => {
             const geometry = targetFeature.getGeometry();
-            if (geometry instanceof Circle) {
-                const center = toLonLat(geometry.getCenter());
+            if (geometry instanceof Polygon) {
+                const extent = geometry.getExtent();
+                const centerX = (extent[0] + extent[2]) / 2;
+                const centerY = (extent[1] + extent[3]) / 2;
+                const size = Math.max(extent[2] - extent[0], extent[3] - extent[1]);
+                const [lng, lat] = toLonLat([centerX, centerY]);
                 const id = targetFeature.get("id");
                 if (this.onEditCompleteCallback && id) {
                     this.onEditCompleteCallback({
                         id: id,
-                        center: [center[0], center[1]],
-                        radius: geometry.getRadius(),
+                        center: [lng, lat],
+                        size,
                     });
                 }
             }
         });
         this.mapView?.addInteraction(this.transformInteraction);
     }
-
 
     public stopEdit(): void {
         if (this.transformInteraction) {
@@ -182,19 +268,22 @@ export class CircleDrawLayer extends BaseLayer {
         this.onEditCompleteCallback = null;
     }
 
-    public addCircle(data: CircleDrawData): void {
-        const center = fromLonLat(data.center);
-        const circle = new Circle(center, data.radius);
+    public addTriangle(data: TriangleDrawData): void {
+        const center = fromLonLat(data.center) as [number, number];
+        const triangleCoords = this.createEquilateralTriangle(center, data.size);
+        const polygon = new Polygon([triangleCoords]);
         const feature = new Feature({
-            geometry: circle,
+            geometry: polygon,
             id: data.id,
+            center: data.center,
+            size: data.size,
         });
         feature.setStyle(this.createStyle());
         this.source?.addFeature(feature);
         this.features.set(data.id, feature);
     }
 
-    public removeCircle(id: string): void {
+    public removeTriangle(id: string): void {
         const feature = this.features.get(id);
         if (feature) {
             this.source?.removeFeature(feature);
@@ -205,38 +294,46 @@ export class CircleDrawLayer extends BaseLayer {
         }
     }
 
-    public getAllCircles(): CircleDrawData[] {
-        const result: CircleDrawData[] = [];
+    public getAllTriangles(): TriangleDrawData[] {
+        const result: TriangleDrawData[] = [];
         this.features.forEach((feature, id) => {
             const geometry = feature.getGeometry();
-            if (geometry instanceof Circle) {
-                const center = toLonLat(geometry.getCenter());
+            if (geometry instanceof Polygon) {
+                const extent = geometry.getExtent();
+                const centerX = (extent[0] + extent[2]) / 2;
+                const centerY = (extent[1] + extent[3]) / 2;
+                const size = Math.max(extent[2] - extent[0], extent[3] - extent[1]);
+                const [lng, lat] = toLonLat([centerX, centerY]);
                 result.push({
                     id,
-                    center: [center[0], center[1]],
-                    radius: geometry.getRadius(),
+                    center: [lng, lat],
+                    size,
                 });
             }
         });
         return result;
     }
 
-    public getCircle(id: string): CircleDrawData | undefined {
+    public getTriangle(id: string): TriangleDrawData | undefined {
         const feature = this.features.get(id);
         if (!feature) return undefined;
         const geometry = feature.getGeometry();
-        if (geometry instanceof Circle) {
-            const center = toLonLat(geometry.getCenter());
+        if (geometry instanceof Polygon) {
+            const extent = geometry.getExtent();
+            const centerX = (extent[0] + extent[2]) / 2;
+            const centerY = (extent[1] + extent[3]) / 2;
+            const size = Math.max(extent[2] - extent[0], extent[3] - extent[1]);
+            const [lng, lat] = toLonLat([centerX, centerY]);
             return {
                 id,
-                center: [center[0], center[1]],
-                radius: geometry.getRadius(),
+                center: [lng, lat],
+                size,
             };
         }
         return undefined;
     }
 
-    public updateCircleStyle(
+    public updateTriangleStyle(
         id: string,
         fillColor: number[],
         outlineColor: number[],
@@ -266,16 +363,16 @@ export class CircleDrawLayer extends BaseLayer {
         this.onDrawCompleteCallback = null;
     }
 
-    public clearAllCircles(): void {
+    public clearAllTriangles(): void {
         this.clear();
         this.features.clear();
         this.stopEdit();
     }
 
-    public updateData(data: { circles?: CircleDrawData[] }): void {
-        if (data.circles) {
-            this.clearAllCircles();
-            data.circles.forEach((circle) => this.addCircle(circle));
+    public updateData(data: { triangles?: TriangleDrawData[] }): void {
+        if (data.triangles) {
+            this.clearAllTriangles();
+            data.triangles.forEach((triangle) => this.addTriangle(triangle));
         }
     }
 

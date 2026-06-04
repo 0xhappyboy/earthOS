@@ -44,6 +44,8 @@ export enum LayerTypeEnum {
     TILE = "tile",
     BARCHART = "barchart",
     CIRCLE_DRAW = "circle-draw",
+    RECTANGLE_DRAW = "rectangle-draw",
+    TRIANGLE_DRAW = "triangle-draw",
     DISTANCE_MEASUREMENT = "distance-measurement",
     AREA_MEASUREMENT = "area-measurement",
 }

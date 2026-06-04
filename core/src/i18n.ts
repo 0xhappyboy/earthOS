@@ -65,6 +65,11 @@ export interface Translations {
     noMeasurements: string;
     delete: string;
     cancel: string;
+    drawRectangle: string;
+    drawTriangle: string;
+    editShape: string;
+    editingRectangle: string;
+    editingTriangle: string;
 }
 
 const zh: Translations = {
@@ -111,6 +116,8 @@ const zh: Translations = {
     zoomOutTitle: "缩小",
     drawingCircle: "正在绘制圆形...",
     editingCircle: "正在编辑圆形...",
+    editingRectangle: "正在绘制矩形...",
+    editingTriangle: "正在绘制三角形...",
     locateMe: "定位到我",
     tools: "工具",
     toolsTitle: "测量工具",
@@ -132,6 +139,9 @@ const zh: Translations = {
     noMeasurements: "暂无测量数据",
     delete: "删除",
     cancel: "取消",
+    drawRectangle: "绘制矩形",
+    drawTriangle: "绘制三角形",
+    editShape: "编辑图形",
 };
 
 const en: Translations = {
@@ -176,8 +186,10 @@ const en: Translations = {
     close: "Close",
     zoomInTitle: "Zoom In",
     zoomOutTitle: "Zoom Out",
-    drawingCircle: "Drawing circle...",
+    drawingCircle: "Drawing Circle...",
     editingCircle: "Editing circle...",
+    editingRectangle: "Drawing Rectangle...",
+    editingTriangle: "Drawing Triangle...",
     locateMe: "Locate Me",
     tools: "Tools",
     toolsTitle: "Measure Tools",
@@ -199,6 +211,9 @@ const en: Translations = {
     noMeasurements: "No measurements",
     delete: "Delete",
     cancel: "Cancel",
+    drawRectangle: "Draw Rectangle",
+    drawTriangle: "Draw Triangle",
+    editShape: "Edit Shape",
 };
 
 export const getTranslation = (locale: Locale): Translations => {

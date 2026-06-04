@@ -17,6 +17,7 @@ export interface DrawToolEvent {
 export enum DrawToolType {
     CIRCLE = "circle-draw",
     RECTANGLE = "rectangle-draw",
+    TRIANGLE = "triangle-draw",
     POLYGON = "polygon-draw",
     LINE = "line-draw",
     POINT = "point-draw",

@@ -133,6 +133,25 @@ export interface AreaMeasurementData {
     isDrawing?: boolean;
 }
 
+export interface RectangleDrawData {
+    id: string;
+    center: [number, number];
+    width: number;
+    height: number;
+    fillColor?: number[];
+    outlineColor?: number[];
+    outlineWidth?: number;
+}
+
+export interface TriangleDrawData {
+    id: string;
+    center: [number, number];
+    size: number;
+    fillColor?: number[];
+    outlineColor?: number[];
+    outlineWidth?: number;
+}
+
 export interface LayerInfo {
     id: string;
     name: string;
