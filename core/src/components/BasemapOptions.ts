@@ -33,60 +33,73 @@ export class BasemapOptions {
     private render(): void {
         this.element.innerHTML = "";
         const isDark = this.props.theme === "dark";
-        
+
         for (const option of this.props.options) {
             const row = document.createElement("div");
+            const isSelected = this.props.currentBasemap === option.value;
+
             row.style.cssText = `
                 display: flex;
                 align-items: center;
                 gap: 10px;
                 padding: 8px 12px;
                 cursor: pointer;
-                background: ${this.props.currentBasemap === option.value ? (isDark ? "#2a2a2a" : "#f0f0f0") : "transparent"};
-                border-left: ${this.props.currentBasemap === option.value ? "3px solid #00aaff" : "3px solid transparent"};
+                background: ${isSelected ? (isDark ? "#2a2a2a" : "#f0f0f0") : "transparent"};
+                border-left: ${isSelected ? "3px solid #00aaff" : "3px solid transparent"};
                 transition: all 0.2s;
             `;
-            
+
             row.onmouseenter = () => {
-                if (this.props.currentBasemap !== option.value) {
+                if (!isSelected) {
                     row.style.background = isDark ? "#2a2a2a" : "#f5f5f5";
                 }
             };
             row.onmouseleave = () => {
-                if (this.props.currentBasemap !== option.value) {
+                if (!isSelected) {
                     row.style.background = "transparent";
                 }
             };
-            row.onclick = () => this.props.onSelect(option.value);
-            
+            row.onclick = () => {
+                if (this.props.currentBasemap !== option.value) {
+                    this.props.onSelect(option.value);
+                }
+            };
+
             const iconSpan = document.createElement("span");
             iconSpan.style.cssText = `font-size: 14px;`;
             iconSpan.textContent = option.icon;
             row.appendChild(iconSpan);
-            
+
             const labelSpan = document.createElement("span");
             labelSpan.style.cssText = `color: ${isDark ? "#fff" : "#333"}; font-size: 12px; flex: 1;`;
             labelSpan.textContent = option.label;
             row.appendChild(labelSpan);
-            
-            if (this.props.currentBasemap === option.value) {
+
+            if (isSelected) {
                 const checkSpan = document.createElement("span");
                 checkSpan.innerHTML = Icons.Check;
                 checkSpan.style.cssText = `color: #00aaff;`;
                 row.appendChild(checkSpan);
             }
-            
+
             this.element.appendChild(row);
         }
     }
 
     public updateCurrentBasemap(basemap: BasemapTypeEnum): void {
-        this.props.currentBasemap = basemap;
-        this.render();
+        if (this.props.currentBasemap !== basemap) {
+            this.props.currentBasemap = basemap;
+            this.render();
+        }
     }
 
     public updateTheme(theme: Theme): void {
         this.props.theme = theme;
+        this.render();
+    }
+
+    public updateProps(props: Partial<BasemapOptionsProps>): void {
+        Object.assign(this.props, props);
         this.render();
     }
 

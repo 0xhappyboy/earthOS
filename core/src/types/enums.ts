@@ -48,4 +48,9 @@ export enum LayerTypeEnum {
     TRIANGLE_DRAW = "triangle-draw",
     DISTANCE_MEASUREMENT = "distance-measurement",
     AREA_MEASUREMENT = "area-measurement",
+    FREEHAND_DRAW = "freehand-draw",
+    ELLIPSE_DRAW = "ellipse-draw",
+    MARKER_DRAW = "marker-draw",
+    TEXT_DRAW = "text-draw",
+    ARROW_DRAW = "arrow-draw",
 }

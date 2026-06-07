@@ -70,9 +70,31 @@ export interface Translations {
     editShape: string;
     editingRectangle: string;
     editingTriangle: string;
+    circleDrawLayer: string;
+    rectangleDrawLayer: string;
+    triangleDrawLayer: string;
+    distanceMeasurementLayer: string;
+    areaMeasurementLayer: string;
+    drawFreehandLine: string;
+    drawFreehandPolygon: string;
+    drawEllipse: string;
+    drawMarker: string;
+    drawText: string;
+    drawArrow: string;
 }
 
 const zh: Translations = {
+    drawFreehandLine: "手绘线",
+    drawFreehandPolygon: "手绘多边形",
+    drawEllipse: "椭圆",
+    drawMarker: "标记点",
+    drawText: "文字标注",
+    drawArrow: "箭头",
+    circleDrawLayer: "圆形绘制图层",
+    rectangleDrawLayer: "矩形绘制图层",
+    triangleDrawLayer: "三角形绘制图层",
+    distanceMeasurementLayer: "距离测量图层",
+    areaMeasurementLayer: "面积测量图层",
     colorTitle: "切换颜色",
     strokeWidthTitle: "调整线宽",
     strokeStyleTitle: "切换线型",
@@ -145,6 +167,17 @@ const zh: Translations = {
 };
 
 const en: Translations = {
+    drawFreehandLine: "Freehand Line",
+    drawFreehandPolygon: "Freehand Polygon",
+    drawEllipse: "Ellipse",
+    drawMarker: "Marker",
+    drawText: "Text Label",
+    drawArrow: "Arrow",
+    circleDrawLayer: "Circle Draw Layer",
+    rectangleDrawLayer: "Rectangle Draw Layer",
+    triangleDrawLayer: "Triangle Draw Layer",
+    distanceMeasurementLayer: "Distance Measurement Layer",
+    areaMeasurementLayer: "Area Measurement Layer",
     colorTitle: "Change Color",
     strokeWidthTitle: "Stroke Width",
     strokeStyleTitle: "Stroke Style",

@@ -1,4 +1,6 @@
-import { BasemapOptions, DrawToolsPanel, LayersPanel, LoadingOverlay, PopupPanel, PopupType, ScaleBar, Toolbar, ToolsPanel } from "./components";
+// core/src/UIManager.ts
+
+import { BasemapOption, BasemapOptions, DrawToolsPanel, LayersPanel, LoadingOverlay, PopupPanel, PopupType, ScaleBar, Toolbar, ToolsPanel } from "./components";
 import { Translations } from "./i18n";
 import { BasemapTypeEnum, LayerInfo } from "./types";
 
@@ -10,6 +12,12 @@ export interface UIManagerCallbacks {
     onDrawCircle: () => void;
     onDrawRectangle: () => void;
     onDrawTriangle: () => void;
+    onDrawFreehand: () => void;
+    onDrawFreehandPolygon: () => void;
+    onDrawEllipse: () => void;
+    onDrawMarker: () => void;
+    onDrawText: () => void;
+    onDrawArrow: () => void;
     onEditShape: () => void;
     onDistanceMeasure: () => void;
     onAreaMeasure: () => void;
@@ -31,6 +39,11 @@ export class UIManager {
     private callbacks: UIManagerCallbacks;
     private getLayerListFn: () => LayerInfo[];
     private getCurrentBasemapFn: () => BasemapTypeEnum;
+    private currentBasemap: BasemapTypeEnum;
+
+    private basemapOptionsInstance: BasemapOptions | null = null;
+
+    private layersPanelInstance: LayersPanel | null = null;
 
     constructor(
         container: HTMLElement,
@@ -46,6 +59,7 @@ export class UIManager {
         this.callbacks = callbacks;
         this.getLayerListFn = getLayerList;
         this.getCurrentBasemapFn = getCurrentBasemap;
+        this.currentBasemap = getCurrentBasemap();
         this.init();
     }
 
@@ -64,6 +78,26 @@ export class UIManager {
         this.loadingOverlay = new LoadingOverlay(this.container, this.theme);
     }
 
+    private getBasemapOptions(): BasemapOption[] {
+        return [
+            { value: BasemapTypeEnum.SATELLITE, label: this.t.satellite, icon: "🛰️" },
+            { value: BasemapTypeEnum.STREETS, label: this.t.streets, icon: "🗺️" },
+            { value: BasemapTypeEnum.TOPO, label: this.t.topographic, icon: "⛰️" },
+            { value: BasemapTypeEnum.HYBRID, label: this.t.hybrid, icon: "🔄" },
+            { value: BasemapTypeEnum.TERRAIN, label: this.t.terrain, icon: "🗻" },
+            { value: BasemapTypeEnum.OCEANS, label: this.t.oceans, icon: "🌊" },
+            { value: BasemapTypeEnum.DARK_GRAY, label: this.t.darkGray, icon: "🌙" },
+            { value: BasemapTypeEnum.LIGHT_GRAY, label: this.t.lightGray, icon: "☀️" },
+            { value: BasemapTypeEnum.NATIONAL_GEOGRAPHIC, label: this.t.nationalGeographic, icon: "📰" },
+            { value: BasemapTypeEnum.IMAGERY, label: this.t.imagery, icon: "📷" },
+            { value: BasemapTypeEnum.PHYSICAL, label: this.t.physical, icon: "🌎" },
+            { value: BasemapTypeEnum.AMAP_STREETS, label: this.t.amapStreets, icon: "🗺️" },
+            { value: BasemapTypeEnum.AMAP_SATELLITE, label: this.t.amapSatellite, icon: "🛰️" },
+            { value: BasemapTypeEnum.GOOGLE_STREETS, label: this.t.googleStreets, icon: "🗺️" },
+            { value: BasemapTypeEnum.GOOGLE_SATELLITE, label: this.t.googleSatellite, icon: "🛰️" },
+        ];
+    }
+
     private handleTogglePopup(popup: PopupType): void {
         if (this.activePopupPanel) {
             this.activePopupPanel.destroy();
@@ -80,16 +114,19 @@ export class UIManager {
                     title: this.t.layers,
                     theme: this.theme,
                     t: this.t,
-                    onClose: () => this.handleTogglePopup(null),
+                    onClose: () => {
+                        this.layersPanelInstance = null;
+                        this.handleTogglePopup(null);
+                    },
                 });
-                const layersPanel = new LayersPanel({
+                this.layersPanelInstance = new LayersPanel({
                     layerList: this.getLayerListFn(),
                     onToggleVisibility: (id) => this.callbacks.onToggleLayerVisibility(id),
                     onRemoveLayer: (id) => this.callbacks.onRemoveLayer(id),
                     theme: this.theme,
                     t: this.t,
                 });
-                panel.appendChild(layersPanel.getElement());
+                panel.appendChild(this.layersPanelInstance.getElement());
                 this.activePopupPanel = panel;
                 this.container.appendChild(panel.getElement());
                 break;
@@ -98,32 +135,21 @@ export class UIManager {
                     title: this.t.basemap,
                     theme: this.theme,
                     t: this.t,
-                    onClose: () => this.handleTogglePopup(null),
+                    onClose: () => {
+                        this.basemapOptionsInstance = null;
+                        this.handleTogglePopup(null);
+                    },
                 });
-                const basemapOptions = new BasemapOptions({
-                    currentBasemap: this.getCurrentBasemapFn(),
-                    onSelect: (basemap) => this.callbacks.onSetBasemap(basemap),
+                this.basemapOptionsInstance = new BasemapOptions({
+                    currentBasemap: this.currentBasemap,
+                    onSelect: (basemap) => {
+                        this.callbacks.onSetBasemap(basemap);
+                    },
                     theme: this.theme,
                     t: this.t,
-                    options: [
-                        { value: BasemapTypeEnum.SATELLITE, label: this.t.satellite, icon: "🛰️" },
-                        { value: BasemapTypeEnum.STREETS, label: this.t.streets, icon: "🗺️" },
-                        { value: BasemapTypeEnum.TOPO, label: this.t.topographic, icon: "⛰️" },
-                        { value: BasemapTypeEnum.HYBRID, label: this.t.hybrid, icon: "🔄" },
-                        { value: BasemapTypeEnum.TERRAIN, label: this.t.terrain, icon: "🗻" },
-                        { value: BasemapTypeEnum.OCEANS, label: this.t.oceans, icon: "🌊" },
-                        { value: BasemapTypeEnum.DARK_GRAY, label: this.t.darkGray, icon: "🌙" },
-                        { value: BasemapTypeEnum.LIGHT_GRAY, label: this.t.lightGray, icon: "☀️" },
-                        { value: BasemapTypeEnum.NATIONAL_GEOGRAPHIC, label: this.t.nationalGeographic, icon: "📰" },
-                        { value: BasemapTypeEnum.IMAGERY, label: this.t.imagery, icon: "📷" },
-                        { value: BasemapTypeEnum.PHYSICAL, label: this.t.physical, icon: "🌎" },
-                        { value: BasemapTypeEnum.AMAP_STREETS, label: this.t.amapStreets, icon: "🗺️" },
-                        { value: BasemapTypeEnum.AMAP_SATELLITE, label: this.t.amapSatellite, icon: "🛰️" },
-                        { value: BasemapTypeEnum.GOOGLE_STREETS, label: this.t.googleStreets, icon: "🗺️" },
-                        { value: BasemapTypeEnum.GOOGLE_SATELLITE, label: this.t.googleSatellite, icon: "🛰️" },
-                    ],
+                    options: this.getBasemapOptions(),
                 });
-                panel.appendChild(basemapOptions.getElement());
+                panel.appendChild(this.basemapOptionsInstance.getElement());
                 this.activePopupPanel = panel;
                 this.container.appendChild(panel.getElement());
                 break;
@@ -138,6 +164,12 @@ export class UIManager {
                     onDrawCircle: () => this.callbacks.onDrawCircle(),
                     onDrawRectangle: () => this.callbacks.onDrawRectangle(),
                     onDrawTriangle: () => this.callbacks.onDrawTriangle(),
+                    onDrawFreehand: () => this.callbacks.onDrawFreehand(),
+                    onDrawFreehandPolygon: () => this.callbacks.onDrawFreehandPolygon(),
+                    onDrawEllipse: () => this.callbacks.onDrawEllipse(),
+                    onDrawMarker: () => this.callbacks.onDrawMarker(),
+                    onDrawText: () => this.callbacks.onDrawText(),
+                    onDrawArrow: () => this.callbacks.onDrawArrow(),
                     onEditShape: () => this.callbacks.onEditShape(),
                     theme: this.theme,
                     t: this.t,
@@ -173,9 +205,31 @@ export class UIManager {
         }
     }
 
-    public updateLayerList(layers: LayerInfo[]): void {
-        if (this.activePopupType === "layers" && this.activePopupPanel) {
-            this.handleTogglePopup("layers");
+  
+    public updateCurrentBasemap(basemap: BasemapTypeEnum): void {
+        this.currentBasemap = basemap;
+
+
+        if (this.basemapOptionsInstance) {
+            this.basemapOptionsInstance.updateCurrentBasemap(basemap);
+        }
+    }
+
+    public refreshBasemapOptions(): void {
+        if (this.basemapOptionsInstance && this.activePopupType === "basemap") {
+            this.basemapOptionsInstance.updateProps({
+                options: this.getBasemapOptions(),
+                t: this.t,
+                theme: this.theme,
+                currentBasemap: this.currentBasemap
+            });
+        }
+    }
+
+    public updateLayerList(): void {
+
+        if (this.activePopupType === "layers" && this.layersPanelInstance) {
+            this.layersPanelInstance.updateData(this.getLayerListFn());
         }
     }
 
@@ -195,6 +249,17 @@ export class UIManager {
         this.theme = theme;
         this.toolbar?.updateTheme(theme);
         this.scaleBar?.updateTheme(theme);
+
+
+        if (this.basemapOptionsInstance) {
+            this.basemapOptionsInstance.updateTheme(theme);
+        }
+
+
+        if (this.layersPanelInstance) {
+            this.layersPanelInstance.updateTheme(theme);
+        }
+
         if (this.activePopupType) {
             const currentPopup = this.activePopupType;
             this.handleTogglePopup(null);
@@ -210,6 +275,7 @@ export class UIManager {
             this.activePopupPanel = null;
         }
         this.init();
+        this.refreshBasemapOptions();
         if (this.activePopupType) {
             this.handleTogglePopup(this.activePopupType);
         }
@@ -222,6 +288,8 @@ export class UIManager {
         if (this.activePopupPanel) {
             this.activePopupPanel.destroy();
         }
+        this.basemapOptionsInstance = null;
+        this.layersPanelInstance = null;
     }
 
     public getContainer(): HTMLElement {

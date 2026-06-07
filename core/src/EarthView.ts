@@ -15,6 +15,11 @@ import {
     CustomTileLayer,
     BarChartLayer,
     PopupMarkerLayer,
+    ArrowDrawLayer,
+    EllipseDrawLayer,
+    FreehandDrawLayer,
+    MarkerDrawLayer,
+    TextDrawLayer,
 } from "./layers";
 import { FloatingToolbar, MeasurementFloatingToolbar } from "./components";
 import { BasemapTypeEnum, CoordinateSystemTypeEnum, CircleDrawData, RectangleDrawData, TriangleDrawData } from "./types";
@@ -25,7 +30,7 @@ import { RectangleDrawTool } from "./draw/RectangleDrawTool";
 import { TriangleDrawTool } from "./draw/TriangleDrawTool";
 import { LayerInfo } from "./components/types";
 import { MapManager } from "./MapManager";
-import { DrawToolType } from "./draw";
+import { ArrowDrawTool, DrawToolType, EllipseDrawTool, FreehandDrawTool, MarkerDrawTool, TextDrawTool } from "./draw";
 import { UIManager } from "./UIManager";
 import { DrawingManager } from "./DrawingManager";
 
@@ -93,6 +98,20 @@ export class EarthView {
     private isChangingBasemap: boolean = false;
     private drawingStatusText: string | null = null;
     private measureStatusText: string | null = null;
+
+    private freehandDrawLayer: FreehandDrawLayer | null = null;
+    private freehandPolygonDrawLayer: FreehandDrawLayer | null = null;
+    private ellipseDrawLayer: EllipseDrawLayer | null = null;
+    private markerDrawLayer: MarkerDrawLayer | null = null;
+    private textDrawLayer: TextDrawLayer | null = null;
+    private arrowDrawLayer: ArrowDrawLayer | null = null;
+
+    private freehandDrawTool: FreehandDrawTool | null = null;
+    private freehandPolygonDrawTool: FreehandDrawTool | null = null;
+    private ellipseDrawTool: EllipseDrawTool | null = null;
+    private markerDrawTool: MarkerDrawTool | null = null;
+    private textDrawTool: TextDrawTool | null = null;  
+    private arrowDrawTool: ArrowDrawTool | null = null;
 
     constructor(options: EarthViewOptions) {
         const {
@@ -214,6 +233,12 @@ export class EarthView {
                 onDrawCircle: () => this.startDrawCircle(),
                 onDrawRectangle: () => this.startDrawRectangle(),
                 onDrawTriangle: () => this.startDrawTriangle(),
+                onDrawFreehand: () => this.startDrawFreehand(),
+                onDrawFreehandPolygon: () => this.startDrawFreehandPolygon(),
+                onDrawEllipse: () => this.startDrawEllipse(),
+                onDrawMarker: () => this.startDrawMarker(),
+                onDrawText: () => this.startDrawText(),
+                onDrawArrow: () => this.startDrawArrow(),
                 onEditShape: () => this.startEditShape(),
                 onDistanceMeasure: () => this.startMeasureDistance(),
                 onAreaMeasure: () => this.startMeasureArea(),
@@ -285,25 +310,64 @@ export class EarthView {
         this.triangleDrawLayer = new TriangleDrawLayer("triangle-draw", "Triangle Draw");
         this.triangleDrawLayer.setView(this.mapManager.getMap());
         this.layerManager.addLayer(this.triangleDrawLayer);
+        this.freehandDrawLayer = new FreehandDrawLayer("freehand-draw", "Freehand Draw");
+        this.freehandDrawLayer.setView(this.mapManager.getMap());
+        this.layerManager.addLayer(this.freehandDrawLayer);
+
+        this.freehandPolygonDrawLayer = new FreehandDrawLayer("freehand-polygon-draw", "Freehand Polygon Draw");
+        this.freehandPolygonDrawLayer.setView(this.mapManager.getMap());
+        this.layerManager.addLayer(this.freehandPolygonDrawLayer);
+
+        this.ellipseDrawLayer = new EllipseDrawLayer("ellipse-draw", "Ellipse Draw");
+        this.ellipseDrawLayer.setView(this.mapManager.getMap());
+        this.layerManager.addLayer(this.ellipseDrawLayer);
+
+        this.markerDrawLayer = new MarkerDrawLayer("marker-draw", "Marker Draw");
+        this.markerDrawLayer.setView(this.mapManager.getMap());
+        this.layerManager.addLayer(this.markerDrawLayer);
+
+        this.textDrawLayer = new TextDrawLayer("text-draw", "Text Draw");
+        this.textDrawLayer.setView(this.mapManager.getMap());
+        this.layerManager.addLayer(this.textDrawLayer);
+
+        this.arrowDrawLayer = new ArrowDrawLayer("arrow-draw", "Arrow Draw");
+        this.arrowDrawLayer.setView(this.mapManager.getMap());
+        this.layerManager.addLayer(this.arrowDrawLayer);
+
         this.distanceMeasureLayer = new DistanceMeasurementLayer("distance-measurement", "Distance Measurement");
         this.distanceMeasureLayer.setView(this.mapManager.getMap());
         this.layerManager.addLayer(this.distanceMeasureLayer);
+
         this.areaMeasureLayer = new AreaMeasurementLayer("area-measurement", "Area Measurement");
         this.areaMeasureLayer.setView(this.mapManager.getMap());
         this.layerManager.addLayer(this.areaMeasureLayer);
+
         this.circleDrawTool = new CircleDrawTool(this.circleDrawLayer, this.t);
         this.rectangleDrawTool = new RectangleDrawTool(this.rectangleDrawLayer, this.t);
         this.triangleDrawTool = new TriangleDrawTool(this.triangleDrawLayer, this.t);
-        this.circleDrawTool.setOnDrawComplete(() => {
-            this.onDrawingEnd();
-        });
-        this.rectangleDrawTool.setOnDrawComplete(() => {
-            this.onDrawingEnd();
-        });
-        this.triangleDrawTool.setOnDrawComplete(() => {
-            this.onDrawingEnd();
-        });
-        this.drawingManager.registerTools(this.circleDrawTool, this.rectangleDrawTool, this.triangleDrawTool);
+        this.freehandDrawTool = new FreehandDrawTool(this.freehandDrawLayer, this.t, false);
+        this.freehandPolygonDrawTool = new FreehandDrawTool(this.freehandPolygonDrawLayer, this.t, true);
+        this.ellipseDrawTool = new EllipseDrawTool(this.ellipseDrawLayer, this.t);
+        this.markerDrawTool = new MarkerDrawTool(this.markerDrawLayer, this.t);
+        this.textDrawTool = new TextDrawTool(this.textDrawLayer, this.t);
+        this.arrowDrawTool = new ArrowDrawTool(this.arrowDrawLayer, this.t);
+
+        this.circleDrawTool.setOnDrawComplete(() => this.onDrawingEnd());
+        this.rectangleDrawTool.setOnDrawComplete(() => this.onDrawingEnd());
+        this.triangleDrawTool.setOnDrawComplete(() => this.onDrawingEnd());
+        this.freehandDrawTool.setOnDrawComplete(() => this.onDrawingEnd());
+        this.freehandPolygonDrawTool.setOnDrawComplete(() => this.onDrawingEnd());
+        this.ellipseDrawTool.setOnDrawComplete(() => this.onDrawingEnd());
+        this.markerDrawTool.setOnDrawComplete(() => this.onDrawingEnd());
+        this.textDrawTool.setOnDrawComplete(() => this.onDrawingEnd());
+        this.arrowDrawTool.setOnDrawComplete(() => this.onDrawingEnd());
+
+        this.drawingManager.registerTools(
+            this.circleDrawTool,
+            this.rectangleDrawTool,
+            this.triangleDrawTool
+        );
+
         this.drawingManager.setCallbacks(
             (type) => this.onDrawingStart(type),
             () => this.onDrawingEnd()
@@ -313,12 +377,36 @@ export class EarthView {
 
     private onDrawingStart(type: DrawToolType): void {
         let msg = "";
-        if (type === DrawToolType.CIRCLE) {
-            msg = this.t.drawingCircle;
-        } else if (type === DrawToolType.RECTANGLE) {
-            msg = "正在绘制矩形...";
-        } else if (type === DrawToolType.TRIANGLE) {
-            msg = "正在绘制三角形...";
+        switch (type) {
+            case DrawToolType.CIRCLE:
+                msg = this.t.drawingCircle;
+                break;
+            case DrawToolType.RECTANGLE:
+                msg = "正在绘制矩形...";
+                break;
+            case DrawToolType.TRIANGLE:
+                msg = "正在绘制三角形...";
+                break;
+            case DrawToolType.FREEHAND:
+                msg = "正在手绘线...";
+                break;
+            case DrawToolType.FREEHAND_POLYGON:
+                msg = "正在手绘多边形...";
+                break;
+            case DrawToolType.ELLIPSE:
+                msg = "正在绘制椭圆...";
+                break;
+            case DrawToolType.MARKER:
+                msg = "添加标记点...";
+                break;
+            case DrawToolType.TEXT:
+                msg = "添加文字标注...";
+                break;
+            case DrawToolType.ARROW:
+                msg = "正在绘制箭头...";
+                break;
+            default:
+                msg = "正在绘制...";
         }
         this.setDrawingStatus(msg);
     }
@@ -412,6 +500,7 @@ export class EarthView {
         if (this.drawingManager.isDrawing()) this.drawingManager.cancelDrawing();
         this.drawingManager.startDrawingTriangle();
     }
+
 
     public startEditShape(): void {
         const circles = this.circleDrawLayer?.getAllCircles() || [];
@@ -624,7 +713,12 @@ export class EarthView {
     public getZoom(): number { return this.mapManager.getZoom(); }
     public setCenter(center: [number, number], cs?: CoordinateSystemTypeEnum): void { this.mapManager.setCenter(center, cs); }
     public setZoom(zoom: number): void { this.mapManager.setZoom(zoom); this.updateScale(); }
-    public setBasemap(basemap: BasemapTypeEnum): void { this.showLoading(this.t.changingBasemap); this.mapManager.setBasemap(basemap); setTimeout(() => this.hideLoading(), 500); }
+    public setBasemap(basemap: BasemapTypeEnum): void {
+        this.showLoading(this.t.changingBasemap);
+        this.mapManager.setBasemap(basemap);
+        this.uiManager.updateCurrentBasemap(basemap);
+        setTimeout(() => this.hideLoading(), 500);
+    }
     public getBasemap(): BasemapTypeEnum { return this.mapManager.getCurrentBasemap(); }
     public setTheme(theme: "light" | "dark"): void { this.theme = theme; this.container.setAttribute("data-theme", theme); document.body.setAttribute("data-theme", theme); this.uiManager.updateTheme(theme); }
     public getTheme(): "light" | "dark" { return this.theme; }
@@ -639,8 +733,44 @@ export class EarthView {
         return layer;
     }
 
-    public removeLayer(id: string): void { this.layerManager.removeLayer(id); }
-    public setLayerVisibility(id: string, visible: boolean): void { this.layerManager.getLayer(id)?.setVisible(visible); }
+    public removeLayer(id: string): void {
+        this.layerManager.removeLayer(id);
+        this.uiManager.updateLayerList();
+    }
+    public setLayerVisibility(id: string, visible: boolean): void {
+        this.layerManager.getLayer(id)?.setVisible(visible);
+        this.uiManager.updateLayerList();
+    }
+
+    public startDrawFreehand(): void {
+        if (this.drawingManager.isDrawing()) this.drawingManager.cancelDrawing();
+        this.freehandDrawTool?.startDraw();
+    }
+
+    public startDrawFreehandPolygon(): void {
+        if (this.drawingManager.isDrawing()) this.drawingManager.cancelDrawing();
+        this.freehandPolygonDrawTool?.startDraw();
+    }
+
+    public startDrawEllipse(): void {
+        if (this.drawingManager.isDrawing()) this.drawingManager.cancelDrawing();
+        this.ellipseDrawTool?.startDraw();
+    }
+
+    public startDrawMarker(): void {
+        if (this.drawingManager.isDrawing()) this.drawingManager.cancelDrawing();
+        this.markerDrawTool?.startDraw();
+    }
+
+    public startDrawText(): void {
+        if (this.drawingManager.isDrawing()) this.drawingManager.cancelDrawing();
+        this.textDrawTool?.startDraw();
+    }
+
+    public startDrawArrow(): void {
+        if (this.drawingManager.isDrawing()) this.drawingManager.cancelDrawing();
+        this.arrowDrawTool?.startDraw();
+    }
 
     public startMeasureDistance(): void {
         this.setMeasureStatus(this.t.clickToStartMeasure);
@@ -694,6 +824,12 @@ export class EarthView {
         this.measurementFloatingToolbar?.destroy();
         this.drawingStatusDiv?.remove();
         this.measureStatusDiv?.remove();
+        this.freehandDrawTool?.destroy();
+        this.freehandPolygonDrawTool?.destroy();
+        this.ellipseDrawTool?.destroy();
+        this.markerDrawTool?.destroy();
+        this.textDrawTool?.destroy();
+        this.arrowDrawTool?.destroy();
         this.layerManager.clearAll();
         this.mapManager.destroy();
         if (this.isOwnContainer && this.container.parentNode) {
