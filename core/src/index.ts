@@ -1,5 +1,5 @@
-export { EarthViewCore } from "./EarthViewCore";
-export type { EarthViewOptions } from "./types";
+export { EarthView } from "./EarthView";
+export type { EarthViewOptions } from "./EarthView";
 
 export {
     CoordinateSystemTypeEnum,

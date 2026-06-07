@@ -17,7 +17,7 @@ import {
     PopupMarkerLayer,
 } from "./layers";
 import { FloatingToolbar, MeasurementFloatingToolbar } from "./components";
-import { EarthViewOptions, BasemapTypeEnum, CoordinateSystemTypeEnum, CircleDrawData, RectangleDrawData, TriangleDrawData } from "./types";
+import { BasemapTypeEnum, CoordinateSystemTypeEnum, CircleDrawData, RectangleDrawData, TriangleDrawData } from "./types";
 import { getTranslation, Locale, Translations } from "./i18n";
 import { DrawToolManager } from "./draw/DrawToolManager";
 import { CircleDrawTool } from "./draw/CircleDrawTool";
@@ -29,7 +29,26 @@ import { DrawToolType } from "./draw";
 import { UIManager } from "./UIManager";
 import { DrawingManager } from "./DrawingManager";
 
-export class EarthViewCore {
+export interface EarthViewOptions {
+    container?: HTMLElement;
+    containerSelector?: string;
+    id?: string;
+    parent?: HTMLElement;
+    parentSelector?: string;
+    basemap?: BasemapTypeEnum;
+    center?: [number, number];
+    zoom?: number;
+    coordinateSystem?: CoordinateSystemTypeEnum;
+    onLoad?: (core: EarthView) => void;
+    onMoveEnd?: (center: [number, number], zoom: number) => void;
+    onMapClick?: (event: { longitude: number; latitude: number }) => void;
+    onCircleDrawn?: (data: CircleDrawData) => void;
+    theme?: "light" | "dark";
+    i18n?: Locale;
+    enableDrawing?: boolean;
+}
+
+export class EarthView {
     private mapManager: MapManager;
     private layerManager: LayerManager;
     private uiManager!: UIManager;
@@ -48,12 +67,13 @@ export class EarthViewCore {
     private drawingStatusDiv: HTMLDivElement | null = null;
     private measureStatusDiv: HTMLDivElement | null = null;
     private container: HTMLElement;
+    private isOwnContainer: boolean = false;
     private theme: "light" | "dark" = "dark";
     private t: Translations;
     private locale: Locale = "zh";
     private isDestroyed: boolean = false;
     private enableDrawing: boolean = true;
-    private onLoadCallback?: (core: EarthViewCore) => void;
+    private onLoadCallback?: (core: EarthView) => void;
     private onMoveEndCallback?: (center: [number, number], zoom: number) => void;
     private onMapClickCallback?: (event: { longitude: number; latitude: number }) => void;
     private onCircleDrawnCallback?: (data: CircleDrawData) => void;
@@ -77,6 +97,10 @@ export class EarthViewCore {
     constructor(options: EarthViewOptions) {
         const {
             container,
+            containerSelector,
+            id,
+            parent,
+            parentSelector,
             basemap = BasemapTypeEnum.SATELLITE,
             center = [0, 0],
             zoom = 12,
@@ -90,7 +114,16 @@ export class EarthViewCore {
             enableDrawing = true,
         } = options;
 
-        this.container = container;
+        const { container: resolvedContainer, isOwn } = this.resolveContainer({
+            container,
+            containerSelector,
+            id,
+            parent,
+            parentSelector
+        });
+
+        this.container = resolvedContainer;
+        this.isOwnContainer = isOwn;
         this.theme = theme;
         this.locale = i18n;
         this.t = getTranslation(this.locale);
@@ -99,10 +132,12 @@ export class EarthViewCore {
         this.onMapClickCallback = onMapClick;
         this.onCircleDrawnCallback = onCircleDrawn;
         this.enableDrawing = enableDrawing;
-        container.setAttribute("data-theme", theme);
+
+        this.container.setAttribute("data-theme", theme);
         document.body.setAttribute("data-theme", theme);
-        container.style.overflow = 'hidden';
-        this.mapManager = new MapManager(container, basemap, center, zoom, coordinateSystem);
+        this.container.style.cssText = 'position:relative;width:100%;height:100%;margin:0;padding:0;overflow:hidden;box-sizing:border-box;';
+
+        this.mapManager = new MapManager(this.container, basemap, center, zoom, coordinateSystem);
         this.layerManager = new LayerManager(this.mapManager.getMap());
         this.drawToolManager = new DrawToolManager();
         this.drawingManager = new DrawingManager();
@@ -115,6 +150,55 @@ export class EarthViewCore {
             setTimeout(() => this.onLoadCallback?.(this), 100);
         }
         setTimeout(() => this.hideLoading(), 500);
+    }
+
+    private resolveContainer(options: {
+        container?: HTMLElement;
+        containerSelector?: string;
+        id?: string;
+        parent?: HTMLElement;
+        parentSelector?: string;
+    }): { container: HTMLElement; isOwn: boolean } {
+        const { container, containerSelector, id, parent, parentSelector } = options;
+        if (container) {
+            return { container, isOwn: false };
+        }
+        if (containerSelector) {
+            const el = document.querySelector(containerSelector);
+            if (!el) {
+                throw new Error(`[EarthView] Container element not found: ${containerSelector}`);
+            }
+            return { container: el as HTMLElement, isOwn: false };
+        }
+        if (id) {
+            const el = document.getElementById(id);
+            if (!el) {
+                throw new Error(`[EarthView] Container element not found: #${id}`);
+            }
+            return { container: el, isOwn: false };
+        }
+        if (parent) {
+            const autoContainer = this.createAutoContainer();
+            parent.appendChild(autoContainer);
+            return { container: autoContainer, isOwn: true };
+        }
+        if (parentSelector) {
+            const parentEl = document.querySelector(parentSelector);
+            if (!parentEl) {
+                throw new Error(`[EarthView] Parent element not found: ${parentSelector}`);
+            }
+            const autoContainer = this.createAutoContainer();
+            parentEl.appendChild(autoContainer);
+            return { container: autoContainer, isOwn: true };
+        }
+
+        throw new Error('[EarthView] Must provide one of: container, containerSelector, id, parent, or parentSelector');
+    }
+
+    private createAutoContainer(): HTMLElement {
+        const container = document.createElement('div');
+        container.style.cssText = 'width:100%;height:100%;position:relative;overflow:hidden;margin:0;padding:0;box-sizing:border-box;';
+        return container;
     }
 
     private initUI(): void {
@@ -612,5 +696,8 @@ export class EarthViewCore {
         this.measureStatusDiv?.remove();
         this.layerManager.clearAll();
         this.mapManager.destroy();
+        if (this.isOwnContainer && this.container.parentNode) {
+            this.container.remove();
+        }
     }
 }

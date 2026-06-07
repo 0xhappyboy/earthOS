@@ -1,21 +1,5 @@
 import { CoordinateSystemTypeEnum, BasemapTypeEnum, LayerTypeEnum } from "./enums";
 
-export interface EarthViewOptions {
-    container: HTMLElement;
-    basemap?: BasemapTypeEnum;
-    center?: [number, number];
-    zoom?: number;
-    coordinateSystem?: CoordinateSystemTypeEnum;
-    minZoom?: number;
-    maxZoom?: number;
-    onLoad?: (core: any) => void;
-    onMoveEnd?: (center: [number, number], zoom: number) => void;
-    onMapClick?: (event: { longitude: number; latitude: number }) => void;
-    onCircleDrawn?: (data: CircleDrawData) => void;
-    theme?: "light" | "dark";
-    i18n?: "en" | "zh";
-    enableDrawing?: boolean;
-}
 export interface ILayer {
     id: string;
     name: string;
