@@ -8,6 +8,7 @@ export { FloatingToolbar } from "./FloatingToolbar";
 export { MeasurementFloatingToolbar } from "./MeasurementFloatingToolbar";
 export { ScaleBar } from "./ScaleBar";
 export { LoadingOverlay } from "./LoadingOverlay";
+export { CoordinatePickingDataPanel } from "./CoordinatePickingDataPanel";
 
 export type {
     Theme,

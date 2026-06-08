@@ -56,4 +56,7 @@ export enum LayerTypeEnum {
     LINE_DRAW = "line-draw",
     BEZIER_DRAW = "bezier-draw",
     SECTOR_DRAW = "sector-draw",
+    POINT_COORDINATE_PICK = "point-coordinate-pick",
+    LINE_COORDINATE_PICK = "line-coordinate-pick",
+    POLYGON_COORDINATE_PICK = "polygon-coordinate-pick",
 }

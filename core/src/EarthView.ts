@@ -14,8 +14,9 @@ import {
     BezierDrawLayer,
     LineDrawLayer,
     SectorDrawLayer,
+    PointCoordinatePickLayer,
 } from "./layers";
-import { FloatingToolbar, MeasurementFloatingToolbar } from "./components";
+import { FloatingToolbar, MeasurementFloatingToolbar, PopupPanel } from "./components";
 import { BasemapTypeEnum, CoordinateSystemTypeEnum, CircleDrawData, RectangleDrawData, TriangleDrawData } from "./types";
 import { getTranslation, Locale, Translations } from "./i18n";
 import { DrawToolManager } from "./draw/DrawToolManager";
@@ -36,6 +37,10 @@ import { TextDrawData } from "./layers/drawlayers/TextDrawLayer";
 import { BezierDrawData } from "./layers/drawlayers/BezierDrawLayer";
 import { LineDrawData } from "./layers/drawlayers/LineDrawLayer";
 import { SectorDrawData } from "./layers/drawlayers/SectorDrawLayer";
+import { PointCoordinatePickData } from "./layers/toollayers/PointCoordinatePickLayer";
+import { LineCoordinatePickLayer, LineCoordinatePickData } from "./layers/toollayers/LineCoordinatePickLayer";
+import { PolygonCoordinatePickLayer, PolygonCoordinatePickData } from "./layers/toollayers/PolygonCoordinatePickLayer";
+import { LineData, PointData, PolygonData } from "./components/CoordinatePickingDataPanel";
 
 export interface EarthViewOptions {
     container?: HTMLElement;
@@ -133,6 +138,16 @@ export class EarthView {
     private selectedLineId: string | null = null;
     private selectedBezierId: string | null = null;
     private selectedSectorId: string | null = null;
+
+
+    private pointCoordinatePickLayer: PointCoordinatePickLayer | null = null;
+    private lineCoordinatePickLayer: LineCoordinatePickLayer | null = null;
+    private polygonCoordinatePickLayer: PolygonCoordinatePickLayer | null = null;
+
+    private pointCoordinateListPanel: PopupPanel | null = null;
+    private currentPointCoordinates: PointCoordinatePickData[] = [];
+    private currentLineCoordinates: LineCoordinatePickData[] = [];
+    private currentPolygonCoordinates: PolygonCoordinatePickData[] = [];
 
     constructor(options: EarthViewOptions) {
         const {
@@ -281,12 +296,153 @@ export class EarthView {
                 onSetBasemap: (basemap) => this.setBasemap(basemap),
                 onToggleLayerVisibility: (id) => this.setLayerVisibility(id, !this.getLayerVisibility(id)),
                 onRemoveLayer: (id) => this.removeLayer(id),
+                onPointCoordinatePick: () => this.startPointCoordinatePick(),
+                onLineCoordinatePick: () => this.startLineCoordinatePick(),
+                onPolygonCoordinatePick: () => this.startPolygonCoordinatePick(),
+                onShowCoordinateList: () => this.showCoordinateList(),
+                getPointData: () => this.getPointDataForPanel(),
+                getLineData: () => this.getLineDataForPanel(),
+                getPolygonData: () => this.getPolygonDataForPanel(),
+                onLocateCoordinate: (lng, lat) => this.locateToPoint(lng, lat),
+                onLocateLine: (points) => this.locateToLine(points),
+                onLocatePolygon: (points) => this.locateToPolygon(points),
             },
             () => this.getLayerList(),
             () => this.getBasemap()
         );
         this.createStatusIndicators();
     }
+
+    private updateCoordinateListPanel(): void {
+        if (this.pointCoordinateListPanel) {
+            const listContainer = this.pointCoordinateListPanel.getElement().querySelector(".coordinate-list-content");
+            if (listContainer) {
+                this.pointCoordinateListPanel.destroy();
+                this.pointCoordinateListPanel = null;
+                this.showCoordinateList();
+            }
+        }
+    }
+
+    private showToast(message: string): void {
+        const toast = document.createElement("div");
+        toast.style.cssText = `
+        position: absolute;
+        bottom: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0,0,0,0.8);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 12px;
+        z-index: 10000;
+        pointer-events: none;
+        white-space: nowrap;
+    `;
+        toast.textContent = message;
+        this.container.appendChild(toast);
+        setTimeout(() => toast.remove(), 2000);
+    }
+
+    
+    public startPointCoordinatePick(): void {
+        
+        this.lineCoordinatePickLayer?.stopPick();
+        this.polygonCoordinatePickLayer?.stopPick();
+
+        this.setMeasureStatus("点击地图拾取点坐标 (单击完成拾取)");
+        this.pointCoordinatePickLayer?.startPick((data: PointCoordinatePickData) => {
+            this.setMeasureStatus(null);
+            this.currentPointCoordinates.unshift(data);
+            this.showToast(`已拾取点坐标: ${data.longitude.toFixed(6)}, ${data.latitude.toFixed(6)}`);
+        });
+    }
+
+    
+    public startLineCoordinatePick(): void {
+        
+        this.pointCoordinatePickLayer?.stopPick();
+        this.polygonCoordinatePickLayer?.stopPick();
+
+        this.setMeasureStatus("点击地图绘制线 (双击完成拾取)");
+        this.lineCoordinatePickLayer?.startPick((data: LineCoordinatePickData) => {
+            this.setMeasureStatus(null);
+            this.currentLineCoordinates.unshift(data);
+            const pointCount = data.points.length;
+            this.showToast(`已拾取线坐标: ${pointCount}个点`);
+        });
+    }
+
+    
+    public startPolygonCoordinatePick(): void {
+        
+        this.pointCoordinatePickLayer?.stopPick();
+        this.lineCoordinatePickLayer?.stopPick();
+
+        this.setMeasureStatus("点击地图绘制面 (双击完成拾取)");
+        this.polygonCoordinatePickLayer?.startPick((data: PolygonCoordinatePickData) => {
+            this.setMeasureStatus(null);
+            this.currentPolygonCoordinates.unshift(data);
+            const pointCount = data.points.length;
+            this.showToast(`已拾取面坐标: ${pointCount}个点`);
+        });
+    }
+
+    
+    private showCoordinateList(): void {
+        const totalPoints = this.currentPointCoordinates.length;
+        const totalLines = this.currentLineCoordinates.length;
+        const totalPolygons = this.currentPolygonCoordinates.length;
+
+        if (totalPoints === 0 && totalLines === 0 && totalPolygons === 0) {
+            this.showToast("暂无拾取坐标数据");
+            return;
+        }
+
+        let message = "=== 坐标拾取数据列表 ===\n\n";
+
+        
+        if (totalPoints > 0) {
+            message += `📍 点数据 (${totalPoints}个):\n`;
+            this.currentPointCoordinates.slice(0, 5).forEach((coord, index) => {
+                message += `  ${index + 1}. ${coord.longitude.toFixed(6)}, ${coord.latitude.toFixed(6)}\n`;
+            });
+            if (totalPoints > 5) message += `  ... 共${totalPoints}个\n`;
+            message += "\n";
+        }
+
+        
+        if (totalLines > 0) {
+            message += `📏 线数据 (${totalLines}条):\n`;
+            this.currentLineCoordinates.slice(0, 5).forEach((line, index) => {
+                message += `  ${index + 1}. ${line.points.length}个点, 创建于 ${new Date(line.timestamp).toLocaleTimeString()}\n`;
+            });
+            if (totalLines > 5) message += `  ... 共${totalLines}条\n`;
+            message += "\n";
+        }
+
+        
+        if (totalPolygons > 0) {
+            message += `🔲 面数据 (${totalPolygons}个):\n`;
+            this.currentPolygonCoordinates.slice(0, 5).forEach((polygon, index) => {
+                message += `  ${index + 1}. ${polygon.points.length}个点, 创建于 ${new Date(polygon.timestamp).toLocaleTimeString()}\n`;
+            });
+            if (totalPolygons > 5) message += `  ... 共${totalPolygons}个\n`;
+            message += "\n";
+        }
+
+        message += "\n点击确定复制全部点坐标";
+
+        
+        // eslint-disable-next-line no-restricted-globals
+        if (confirm(message)) {
+            const text = this.currentPointCoordinates.map(c => `${c.longitude.toFixed(6)}, ${c.latitude.toFixed(6)}`).join("\n");
+            navigator.clipboard.writeText(text);
+            this.showToast("已复制全部点坐标到剪贴板");
+        }
+    }
+
 
     private handleTogglePopup(popup: any): void {
     }
@@ -347,6 +503,23 @@ export class EarthView {
         this.triangleDrawLayer = new TriangleDrawLayer("triangle-draw", "Triangle Draw");
         this.triangleDrawLayer.setView(this.mapManager.getMap());
         this.layerManager.addLayer(this.triangleDrawLayer);
+
+
+
+        
+        this.pointCoordinatePickLayer = new PointCoordinatePickLayer("point-coordinate-pick", "Point Coordinate Pick");
+        this.pointCoordinatePickLayer.setView(this.mapManager.getMap());
+        this.layerManager.addLayer(this.pointCoordinatePickLayer);
+
+        
+        this.lineCoordinatePickLayer = new LineCoordinatePickLayer("line-coordinate-pick", "Line Coordinate Pick");
+        this.lineCoordinatePickLayer.setView(this.mapManager.getMap());
+        this.layerManager.addLayer(this.lineCoordinatePickLayer);
+
+        
+        this.polygonCoordinatePickLayer = new PolygonCoordinatePickLayer("polygon-coordinate-pick", "Polygon Coordinate Pick");
+        this.polygonCoordinatePickLayer.setView(this.mapManager.getMap());
+        this.layerManager.addLayer(this.polygonCoordinatePickLayer);
 
 
         this.freehandDrawLayer = new FreehandDrawLayer("freehand-draw", "Freehand Draw");
@@ -438,7 +611,7 @@ export class EarthView {
             this.arrowDrawTool!,
             this.lineDrawTool!,
             this.bezierDrawTool!,
-            this.sectorDrawTool!
+            this.sectorDrawTool!,
         );
 
         this.drawingManager.setCallbacks(
@@ -1296,6 +1469,7 @@ export class EarthView {
     }
 
     private showFloatingToolbarForText(pos: { x: number; y: number }, data: TextDrawData): void {
+        
         // eslint-disable-next-line no-restricted-globals
         if (confirm("是否编辑文字内容？")) {
             this.textDrawTool?.startEdit(data.id);
@@ -1621,6 +1795,88 @@ export class EarthView {
         );
     }
 
+    
+
+    
+    private getPointDataForPanel(): PointData[] {
+        const points = this.pointCoordinatePickLayer?.getAllCoordinates() || [];
+        return points.map((point, index) => ({
+            id: point.id,
+            name: `点 ${index + 1}`,
+            longitude: point.longitude,
+            latitude: point.latitude,
+            timestamp: point.timestamp
+        }));
+    }
+
+    private getLineDataForPanel(): LineData[] {
+        const lines = this.lineCoordinatePickLayer?.getAllLines() || [];
+        return lines.map((line, index) => ({
+            id: line.id,
+            name: `线 ${index + 1}`,
+            points: line.points,
+            timestamp: line.timestamp
+        }));
+    }
+
+    private getPolygonDataForPanel(): PolygonData[] {
+        const polygons = this.polygonCoordinatePickLayer?.getAllPolygons() || [];
+        return polygons.map((polygon, index) => ({
+            id: polygon.id,
+            name: `面 ${index + 1}`,
+            points: polygon.points,
+            timestamp: polygon.timestamp
+        }));
+    }
+
+    private locateToPoint(longitude: number, latitude: number): void {
+        this.setCenter([longitude, latitude]);
+        this.setZoom(18);
+        this.showToast(`已定位到: ${longitude.toFixed(6)}, ${latitude.toFixed(6)}`);
+    }
+
+    
+    private locateToLine(points: { longitude: number; latitude: number }[]): void {
+        if (points.length === 0) return;
+
+        const lons = points.map(p => p.longitude);
+        const lats = points.map(p => p.latitude);
+        const minLon = Math.min(...lons);
+        const maxLon = Math.max(...lons);
+        const minLat = Math.min(...lats);
+        const maxLat = Math.max(...lats);
+        const centerLon = (minLon + maxLon) / 2;
+        const centerLat = (minLat + maxLat) / 2;
+
+        this.setCenter([centerLon, centerLat]);
+        
+        const lonDiff = maxLon - minLon;
+        const latDiff = maxLat - minLat;
+        const maxDiff = Math.max(lonDiff, latDiff);
+        let zoom = 18;
+        if (maxDiff > 0.5) zoom = 10;
+        else if (maxDiff > 0.1) zoom = 12;
+        else if (maxDiff > 0.05) zoom = 14;
+        else if (maxDiff > 0.01) zoom = 16;
+        this.setZoom(zoom);
+        this.showToast(`已定位到线，包含 ${points.length} 个点`);
+    }
+
+    
+    private locateToPolygon(points: { longitude: number; latitude: number }[]): void {
+        this.locateToLine(points); 
+        this.showToast(`已定位到面，包含 ${points.length} 个顶点`);
+    }
+
+    public clearAllCoordinatePicks(): void {
+        this.pointCoordinatePickLayer?.clearAllCoordinates();
+        this.lineCoordinatePickLayer?.clearAllLines();
+        this.polygonCoordinatePickLayer?.clearAllPolygons();
+        this.currentPointCoordinates = [];
+        this.currentLineCoordinates = [];
+        this.currentPolygonCoordinates = [];
+        this.showToast("已清除所有坐标拾取数据");
+    }
     public destroy(): void {
         if (this.isDestroyed) return;
         this.isDestroyed = true;
@@ -1642,4 +1898,5 @@ export class EarthView {
             this.container.remove();
         }
     }
+
 }

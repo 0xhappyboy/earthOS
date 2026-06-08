@@ -1,4 +1,5 @@
 import { BasemapOption, BasemapOptions, DrawToolsPanel, LayersPanel, LoadingOverlay, PopupPanel, PopupType, ScaleBar, Toolbar, ToolsPanel } from "./components";
+import { CoordinatePickingDataPanel, LineData, PointData, PolygonData } from "./components/CoordinatePickingDataPanel";
 import { Translations } from "./i18n";
 import { BasemapTypeEnum, LayerInfo } from "./types";
 
@@ -26,6 +27,16 @@ export interface UIManagerCallbacks {
     onSetBasemap: (basemap: BasemapTypeEnum) => void;
     onToggleLayerVisibility: (layerId: string) => void;
     onRemoveLayer: (layerId: string) => void;
+    onPointCoordinatePick: () => void;
+    onLineCoordinatePick: () => void;
+    onPolygonCoordinatePick: () => void;
+    onShowCoordinateList: () => void;
+    getPointData?: () => PointData[];
+    getLineData?: () => LineData[];
+    getPolygonData?: () => PolygonData[];
+    onLocateCoordinate?: (longitude: number, latitude: number) => void;
+    onLocateLine?: (points: { longitude: number; latitude: number }[]) => void;
+    onLocatePolygon?: (points: { longitude: number; latitude: number }[]) => void;
 }
 
 export class UIManager {
@@ -45,6 +56,9 @@ export class UIManager {
     private basemapOptionsInstance: BasemapOptions | null = null;
 
     private layersPanelInstance: LayersPanel | null = null;
+
+
+    private coordinatePickingDataPanel: CoordinatePickingDataPanel | null = null;
 
     constructor(
         container: HTMLElement,
@@ -74,6 +88,7 @@ export class UIManager {
             onZoomIn: () => this.callbacks.onZoomIn(),
             onZoomOut: () => this.callbacks.onZoomOut(),
             onLocate: () => this.callbacks.onLocate(),
+            onShowCoordinatePickingDataPanel: () => this.showCoordinatePickingDataPanel(),
         });
         this.scaleBar = new ScaleBar(this.container, this.theme);
         this.loadingOverlay = new LoadingOverlay(this.container, this.theme);
@@ -100,6 +115,10 @@ export class UIManager {
     }
 
     private handleTogglePopup(popup: PopupType): void {
+        if (this.coordinatePickingDataPanel) {
+            this.coordinatePickingDataPanel.destroy();
+            this.coordinatePickingDataPanel = null;
+        }
         if (this.activePopupPanel) {
             this.activePopupPanel.destroy();
             this.activePopupPanel = null;
@@ -196,8 +215,13 @@ export class UIManager {
                     onDistanceMeasure: () => this.callbacks.onDistanceMeasure(),
                     onAreaMeasure: () => this.callbacks.onAreaMeasure(),
                     onClearMeasurements: () => this.callbacks.onClearMeasurements(),
+                    onPointCoordinatePick: () => this.callbacks.onPointCoordinatePick(),
+                    onLineCoordinatePick: () => this.callbacks.onLineCoordinatePick(),
+                    onPolygonCoordinatePick: () => this.callbacks.onPolygonCoordinatePick(),
+                    onShowCoordinateList: () => this.callbacks.onShowCoordinateList(),
                     isMeasuring: false,
                     currentMeasureType: null,
+                    currentPickType: null,
                     measurePreview: null,
                     theme: this.theme,
                     t: this.t,
@@ -285,12 +309,81 @@ export class UIManager {
         }
     }
 
+
+    private showCoordinatePickingDataPanel(): void {
+        if (this.coordinatePickingDataPanel) {
+            this.coordinatePickingDataPanel.destroy();
+            this.coordinatePickingDataPanel = null;
+            return;
+        }
+
+        if (this.activePopupPanel) {
+            this.activePopupPanel.destroy();
+            this.activePopupPanel = null;
+        }
+        this.activePopupType = null;
+        this.toolbar?.updateActivePopup(null);
+
+        const dataPanel = new CoordinatePickingDataPanel({
+            onClose: () => {
+                if (this.coordinatePickingDataPanel) {
+                    this.coordinatePickingDataPanel.destroy();
+                    this.coordinatePickingDataPanel = null;
+                }
+            },
+            onSelectCategory: (category: string) => {
+                console.log("选中分类:", category);
+            },
+            onLocatePoint: (longitude, latitude) => {
+                if (this.callbacks.onLocateCoordinate) {
+                    this.callbacks.onLocateCoordinate(longitude, latitude);
+                }
+            },
+            onLocateLine: (points) => {
+                if (this.callbacks.onLocateLine) {
+                    this.callbacks.onLocateLine(points);
+                }
+            },
+            onLocatePolygon: (points) => {
+                if (this.callbacks.onLocatePolygon) {
+                    this.callbacks.onLocatePolygon(points);
+                }
+            },
+            getPointData: () => {
+                if (this.callbacks.getPointData) {
+                    return this.callbacks.getPointData();
+                }
+                return [];
+            },
+            getLineData: () => {
+                if (this.callbacks.getLineData) {
+                    return this.callbacks.getLineData();
+                }
+                return [];
+            },
+            getPolygonData: () => {
+                if (this.callbacks.getPolygonData) {
+                    return this.callbacks.getPolygonData();
+                }
+                return [];
+            },
+            theme: this.theme,
+            t: this.t,
+        });
+
+        this.container.appendChild(dataPanel.getElement());
+        this.coordinatePickingDataPanel = dataPanel;
+    }
+
     public destroy(): void {
         this.toolbar?.destroy();
         this.scaleBar?.destroy();
         this.loadingOverlay?.destroy();
         if (this.activePopupPanel) {
             this.activePopupPanel.destroy();
+        }
+        if (this.coordinatePickingDataPanel) {
+            this.coordinatePickingDataPanel.destroy();
         }
         this.basemapOptionsInstance = null;
         this.layersPanelInstance = null;

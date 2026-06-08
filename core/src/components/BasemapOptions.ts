@@ -1,4 +1,4 @@
-import { Icons } from "./icons";
+import { Icons } from "../icons";
 import { BasemapOption, Theme } from "./types";
 import { BasemapTypeEnum } from "../types";
 import { Translations } from "../i18n";

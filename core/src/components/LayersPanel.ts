@@ -1,4 +1,4 @@
-import { Icons } from "./icons";
+import { Icons } from "../icons";
 import { LayerInfo, Theme } from "./types";
 import { Translations } from "../i18n";
 

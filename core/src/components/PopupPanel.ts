@@ -1,6 +1,6 @@
 import { Theme } from "./types";
 import { Translations } from "../i18n";
-import { Icons } from "./icons";
+import { Icons } from "../icons";
 
 export interface PopupPanelOptions {
     title: string;

@@ -1,6 +1,11 @@
 export type Locale = "en" | "zh";
 
 export interface Translations {
+    drawCoordinatePick: string;
+    coordinatePick: string;
+    coordinateList: string;
+    noCoordinates: string;
+    clearAll: string;
     loading: string;
     changingBasemap: string;
     layers: string;
@@ -87,6 +92,11 @@ export interface Translations {
 }
 
 const zh: Translations = {
+    drawCoordinatePick: "坐标拾取",
+    coordinatePick: "坐标拾取",
+    coordinateList: "坐标列表",
+    noCoordinates: "暂无拾取坐标",
+    clearAll: "清空全部",
     drawLine: "线段",
     drawBezier: "贝塞尔曲线",
     drawSector: "扇形",
@@ -173,6 +183,11 @@ const zh: Translations = {
 };
 
 const en: Translations = {
+    drawCoordinatePick: "Coordinate Pick",
+    coordinatePick: "Coordinate Pick",
+    coordinateList: "Coordinate List",
+    noCoordinates: "No coordinates picked",
+    clearAll: "Clear All",
     drawLine: "Line",
     drawBezier: "Bezier Curve",
     drawSector: "Sector",

@@ -1,5 +1,3 @@
-// DrawingManager.ts - 完整修改版本
-
 import { CircleDrawTool } from "./draw/CircleDrawTool";
 import { RectangleDrawTool } from "./draw/RectangleDrawTool";
 import { TriangleDrawTool } from "./draw/TriangleDrawTool";
@@ -44,7 +42,7 @@ export class DrawingManager {
         arrow: ArrowDrawTool,
         line: LineDrawTool,
         bezier: BezierDrawTool,
-        sector: SectorDrawTool
+        sector: SectorDrawTool,
     ): void {
         this.circleTool = circle;
         this.rectangleTool = rectangle;
