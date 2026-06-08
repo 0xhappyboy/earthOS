@@ -1113,6 +1113,19 @@ export class MarkerLayer extends BaseLayer {
     private showPopup(feature: Feature, event: any): void {
         this.hidePopup();
         this.currentFeature = feature;
+        const id = feature.get("id");
+        const markerData = this.markersData.get(id);
+        const g = feature.getGeometry() as Point;
+        const coordinates = g.getCoordinates();
+        if (this.view && coordinates) {
+            this.view.getView().animate({
+                center: coordinates,
+                duration: 300
+            });
+        }
+        if (markerData && markerData.onClick) {
+            markerData.onClick(markerData, event);
+        }
         const attrs = feature.getProperties();
         const hasCover = attrs.bubbleBoxCoverImage && attrs.bubbleBoxCoverImage.trim() !== "";
         const hasTitle = attrs.bubbleBoxTitle && attrs.bubbleBoxTitle.trim() !== "";
