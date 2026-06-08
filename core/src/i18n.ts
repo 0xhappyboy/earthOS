@@ -81,9 +81,15 @@ export interface Translations {
     drawMarker: string;
     drawText: string;
     drawArrow: string;
+    drawLine: string;
+    drawBezier: string;
+    drawSector: string;
 }
 
 const zh: Translations = {
+    drawLine: "线段",
+    drawBezier: "贝塞尔曲线",
+    drawSector: "扇形",
     drawFreehandLine: "手绘线",
     drawFreehandPolygon: "手绘多边形",
     drawEllipse: "椭圆",
@@ -167,6 +173,9 @@ const zh: Translations = {
 };
 
 const en: Translations = {
+    drawLine: "Line",
+    drawBezier: "Bezier Curve",
+    drawSector: "Sector",
     drawFreehandLine: "Freehand Line",
     drawFreehandPolygon: "Freehand Polygon",
     drawEllipse: "Ellipse",

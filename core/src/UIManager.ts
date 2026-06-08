@@ -1,5 +1,3 @@
-// core/src/UIManager.ts
-
 import { BasemapOption, BasemapOptions, DrawToolsPanel, LayersPanel, LoadingOverlay, PopupPanel, PopupType, ScaleBar, Toolbar, ToolsPanel } from "./components";
 import { Translations } from "./i18n";
 import { BasemapTypeEnum, LayerInfo } from "./types";
@@ -18,6 +16,9 @@ export interface UIManagerCallbacks {
     onDrawMarker: () => void;
     onDrawText: () => void;
     onDrawArrow: () => void;
+    onDrawLine: () => void;
+    onDrawBezier: () => void;
+    onDrawSector: () => void;
     onEditShape: () => void;
     onDistanceMeasure: () => void;
     onAreaMeasure: () => void;
@@ -170,6 +171,9 @@ export class UIManager {
                     onDrawMarker: () => this.callbacks.onDrawMarker(),
                     onDrawText: () => this.callbacks.onDrawText(),
                     onDrawArrow: () => this.callbacks.onDrawArrow(),
+                    onDrawLine: () => this.callbacks.onDrawLine(),
+                    onDrawBezier: () => this.callbacks.onDrawBezier(),
+                    onDrawSector: () => this.callbacks.onDrawSector(),
                     onEditShape: () => this.callbacks.onEditShape(),
                     theme: this.theme,
                     t: this.t,
@@ -205,7 +209,7 @@ export class UIManager {
         }
     }
 
-  
+
     public updateCurrentBasemap(basemap: BasemapTypeEnum): void {
         this.currentBasemap = basemap;
 

@@ -6,3 +6,6 @@ export { EllipseDrawLayer } from "./EllipseDrawLayer";
 export { MarkerDrawLayer } from "./MarkerDrawLayer";
 export { TextDrawLayer } from "./TextDrawLayer";
 export { ArrowDrawLayer } from "./ArrowDrawLayer";
+export { LineDrawLayer } from "./LineDrawLayer";
+export { BezierDrawLayer } from "./BezierDrawLayer";
+export { SectorDrawLayer } from "./SectorDrawLayer";

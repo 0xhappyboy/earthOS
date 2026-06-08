@@ -26,4 +26,5 @@ export enum DrawToolType {
     TEXT = "text-draw",
     ARROW = "arrow-draw",
     BEZIER = "bezier-draw",
+    LINE = "line-draw",
 }

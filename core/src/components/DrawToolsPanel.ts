@@ -12,6 +12,9 @@ export interface DrawToolsPanelProps {
     onDrawMarker: () => void;
     onDrawText: () => void;
     onDrawArrow: () => void;
+    onDrawLine: () => void;
+    onDrawBezier: () => void;
+    onDrawSector: () => void;
     onEditShape: () => void;
     theme: Theme;
     t: Translations;
@@ -38,18 +41,16 @@ export class DrawToolsPanel {
 
     private render(): void {
         this.element.innerHTML = "";
-        this.addSectionTitle("线段");
+        this.addSectionTitle("线段工具");
+        this.element.appendChild(this.createToolRow(this.createLineIcon(), "线段", this.props.onDrawLine));
         this.element.appendChild(this.createToolRow(this.createArrowIcon(), "箭头", this.props.onDrawArrow));
+        this.element.appendChild(this.createToolRow(this.createBezierIcon(), "贝塞尔曲线", this.props.onDrawBezier));
         this.addSectionTitle("几何图形");
         this.element.appendChild(this.createToolRow(Icons.Circle, this.props.t.drawCircle, this.props.onDrawCircle));
         this.element.appendChild(this.createToolRow(this.createEllipseIcon(), "椭圆", this.props.onDrawEllipse));
         this.element.appendChild(this.createToolRow(this.createRectangleIcon(), "绘制矩形", this.props.onDrawRectangle));
         this.element.appendChild(this.createToolRow(this.createTriangleIcon(), "绘制三角形", this.props.onDrawTriangle));
-        this.addSectionTitle("几何图形");
-        this.element.appendChild(this.createToolRow(Icons.Circle, this.props.t.drawCircle, this.props.onDrawCircle));
-        this.element.appendChild(this.createToolRow(this.createEllipseIcon(), "椭圆", this.props.onDrawEllipse));
-        this.element.appendChild(this.createToolRow(this.createRectangleIcon(), "绘制矩形", this.props.onDrawRectangle));
-        this.element.appendChild(this.createToolRow(this.createTriangleIcon(), "绘制三角形", this.props.onDrawTriangle));
+        this.element.appendChild(this.createToolRow(this.createSectorIcon(), "扇形", this.props.onDrawSector));
         this.addSectionTitle("自由绘制");
         this.element.appendChild(this.createToolRow(this.createFreehandIcon(), "手绘线", this.props.onDrawFreehand));
         this.element.appendChild(this.createToolRow(this.createFreehandPolygonIcon(), "手绘多边形", this.props.onDrawFreehandPolygon));
@@ -110,6 +111,34 @@ export class DrawToolsPanel {
         row.appendChild(textSpan);
 
         return row;
+    }
+
+    private createLineIcon(): string {
+        return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"/>
+        </svg>`;
+    }
+
+    private createBezierIcon(): string {
+        return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 4 L8 8" />
+            <path d="M20 20 L16 16" />
+            <circle cx="4" cy="4" r="1.5" fill="currentColor"/>
+            <circle cx="20" cy="20" r="1.5" fill="currentColor"/>
+            <circle cx="8" cy="8" r="1.5" fill="currentColor"/>
+            <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
+            <path d="M4 4 Q8 16 16 16" fill="none" stroke-width="2"/>
+            <path d="M4 4 Q12 0 20 20" fill="none" stroke-width="1" stroke-dasharray="3,3"/>
+        </svg>`;
+    }
+
+    private createSectorIcon(): string {
+        return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="12" x2="12" y2="2"/>
+            <line x1="12" y1="12" x2="19" y2="8"/>
+            <path d="M12 2 A10 10 0 0 1 19 8" fill="currentColor" opacity="0.3"/>
+        </svg>`;
     }
 
     private createRectangleIcon(): string {

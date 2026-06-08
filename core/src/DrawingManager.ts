@@ -9,6 +9,9 @@ import { MarkerDrawTool } from "./draw/MarkerDrawTool";
 import { TextDrawTool } from "./draw/TextDrawTool";
 import { ArrowDrawTool } from "./draw/ArrowDrawTool";
 import { DrawToolType } from "./draw/DrawTool";
+import { BezierDrawTool } from "./draw/BezierDrawTool";
+import { LineDrawTool } from "./draw/LineDrawTool";
+import { SectorDrawTool } from "./draw/SectorDrawTool";
 
 export class DrawingManager {
     private activeToolType: DrawToolType | null = null;
@@ -20,6 +23,10 @@ export class DrawingManager {
     private markerTool: MarkerDrawTool | null = null;
     private textTool: TextDrawTool | null = null;
     private arrowTool: ArrowDrawTool | null = null;
+
+    private lineTool: LineDrawTool | null = null;
+    private bezierTool: BezierDrawTool | null = null;
+    private sectorTool: SectorDrawTool | null = null;
 
     private onDrawingStartCallback?: (toolType: DrawToolType) => void;
     private onDrawingEndCallback?: () => void;
@@ -34,7 +41,10 @@ export class DrawingManager {
         ellipse: EllipseDrawTool,
         marker: MarkerDrawTool,
         text: TextDrawTool,
-        arrow: ArrowDrawTool
+        arrow: ArrowDrawTool,
+        line: LineDrawTool,
+        bezier: BezierDrawTool,
+        sector: SectorDrawTool
     ): void {
         this.circleTool = circle;
         this.rectangleTool = rectangle;
@@ -44,6 +54,9 @@ export class DrawingManager {
         this.markerTool = marker;
         this.textTool = text;
         this.arrowTool = arrow;
+        this.lineTool = line;
+        this.bezierTool = bezier;
+        this.sectorTool = sector;
         this.circleTool?.setOnDrawComplete(() => this.endDrawing());
         this.rectangleTool?.setOnDrawComplete(() => this.endDrawing());
         this.triangleTool?.setOnDrawComplete(() => this.endDrawing());
@@ -60,6 +73,33 @@ export class DrawingManager {
         this.markerTool?.setOnEditComplete(() => this.endDrawing());
         this.textTool?.setOnEditComplete(() => this.endDrawing());
         this.arrowTool?.setOnEditComplete(() => this.endDrawing());
+        this.lineTool?.setOnDrawComplete(() => this.endDrawing());
+        this.bezierTool?.setOnDrawComplete(() => this.endDrawing());
+        this.sectorTool?.setOnDrawComplete(() => this.endDrawing());
+        this.lineTool?.setOnEditComplete(() => this.endDrawing());
+        this.bezierTool?.setOnEditComplete(() => this.endDrawing());
+        this.sectorTool?.setOnEditComplete(() => this.endDrawing());
+    }
+
+    public startDrawingLine(): void {
+        this.deactivateAll();
+        this.activeToolType = DrawToolType.LINE;
+        this.lineTool?.startDraw();
+        this.onDrawingStartCallback?.(DrawToolType.LINE);
+    }
+
+    public startDrawingBezier(): void {
+        this.deactivateAll();
+        this.activeToolType = DrawToolType.BEZIER;
+        this.bezierTool?.startDraw();
+        this.onDrawingStartCallback?.(DrawToolType.BEZIER);
+    }
+
+    public startDrawingSector(): void {
+        this.deactivateAll();
+        this.activeToolType = DrawToolType.SECTOR;
+        this.sectorTool?.startDraw();
+        this.onDrawingStartCallback?.(DrawToolType.SECTOR);
     }
 
     public setCallbacks(onStart: (toolType: DrawToolType) => void, onEnd: () => void): void {
@@ -144,6 +184,9 @@ export class DrawingManager {
         this.markerTool?.deactivate();
         this.textTool?.deactivate();
         this.arrowTool?.deactivate();
+        this.lineTool?.deactivate();
+        this.bezierTool?.deactivate();
+        this.sectorTool?.deactivate();
         this.activeToolType = null;
         if (hadActive) {
             this.onDrawingEndCallback?.();
@@ -175,5 +218,8 @@ export class DrawingManager {
         this.markerTool = null;
         this.textTool = null;
         this.arrowTool = null;
+        this.lineTool = null;
+        this.bezierTool = null;
+        this.sectorTool = null;
     }
 }

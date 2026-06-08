@@ -7,5 +7,8 @@ export { EllipseDrawTool } from "./EllipseDrawTool";
 export { MarkerDrawTool } from "./MarkerDrawTool";
 export { TextDrawTool } from "./TextDrawTool";
 export { ArrowDrawTool } from "./ArrowDrawTool";
+export { LineDrawTool } from "./LineDrawTool";
+export { BezierDrawTool } from "./BezierDrawTool";
+export { SectorDrawTool } from "./SectorDrawTool";
 export { DrawToolType } from "./DrawTool";
 export type { DrawTool, DrawToolEvent } from "./DrawTool";

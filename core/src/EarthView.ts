@@ -11,6 +11,9 @@ import {
     FreehandDrawLayer,
     MarkerDrawLayer,
     TextDrawLayer,
+    BezierDrawLayer,
+    LineDrawLayer,
+    SectorDrawLayer,
 } from "./layers";
 import { FloatingToolbar, MeasurementFloatingToolbar } from "./components";
 import { BasemapTypeEnum, CoordinateSystemTypeEnum, CircleDrawData, RectangleDrawData, TriangleDrawData } from "./types";
@@ -21,7 +24,7 @@ import { RectangleDrawTool } from "./draw/RectangleDrawTool";
 import { TriangleDrawTool } from "./draw/TriangleDrawTool";
 import { LayerInfo } from "./components/types";
 import { MapManager } from "./MapManager";
-import { ArrowDrawTool, DrawToolType, EllipseDrawTool, FreehandDrawTool, MarkerDrawTool, TextDrawTool } from "./draw";
+import { ArrowDrawTool, BezierDrawTool, DrawToolType, EllipseDrawTool, FreehandDrawTool, LineDrawTool, MarkerDrawTool, SectorDrawTool, TextDrawTool } from "./draw";
 import { UIManager } from "./UIManager";
 import { DrawingManager } from "./DrawingManager";
 import { EventManager } from "./EventManager";
@@ -30,6 +33,9 @@ import { EllipseDrawData } from "./layers/drawlayers/EllipseDrawLayer";
 import { FreehandDrawData } from "./layers/drawlayers/FreehandDrawLayer";
 import { MarkerDrawData } from "./layers/drawlayers/MarkerDrawLayer";
 import { TextDrawData } from "./layers/drawlayers/TextDrawLayer";
+import { BezierDrawData } from "./layers/drawlayers/BezierDrawLayer";
+import { LineDrawData } from "./layers/drawlayers/LineDrawLayer";
+import { SectorDrawData } from "./layers/drawlayers/SectorDrawLayer";
 
 export interface EarthViewOptions {
     container?: HTMLElement;
@@ -116,6 +122,17 @@ export class EarthView {
     private selectedMarkerId: string | null = null;
     private selectedTextId: string | null = null;
     private selectedArrowId: string | null = null;
+
+    private lineDrawLayer: LineDrawLayer | null = null;
+    private bezierDrawLayer: BezierDrawLayer | null = null;
+    private sectorDrawLayer: SectorDrawLayer | null = null;
+    private lineDrawTool: LineDrawTool | null = null;
+    private bezierDrawTool: BezierDrawTool | null = null;
+    private sectorDrawTool: SectorDrawTool | null = null;
+
+    private selectedLineId: string | null = null;
+    private selectedBezierId: string | null = null;
+    private selectedSectorId: string | null = null;
 
     constructor(options: EarthViewOptions) {
         const {
@@ -254,6 +271,9 @@ export class EarthView {
                 onDrawMarker: () => this.startDrawMarker(),
                 onDrawText: () => this.startDrawText(),
                 onDrawArrow: () => this.startDrawArrow(),
+                onDrawLine: () => this.startDrawLine(),
+                onDrawBezier: () => this.startDrawBezier(),
+                onDrawSector: () => this.startDrawSector(),
                 onEditShape: () => this.startEditShape(),
                 onDistanceMeasure: () => this.startMeasureDistance(),
                 onAreaMeasure: () => this.startMeasureArea(),
@@ -357,6 +377,32 @@ export class EarthView {
         this.areaMeasureLayer.setView(this.mapManager.getMap());
         this.layerManager.addLayer(this.areaMeasureLayer);
 
+
+        this.lineDrawLayer = new LineDrawLayer("line-draw", "Line Draw");
+        this.lineDrawLayer.setView(this.mapManager.getMap());
+        this.layerManager.addLayer(this.lineDrawLayer);
+
+
+        this.bezierDrawLayer = new BezierDrawLayer("bezier-draw", "Bezier Draw");
+        this.bezierDrawLayer.setView(this.mapManager.getMap());
+        this.layerManager.addLayer(this.bezierDrawLayer);
+
+
+        this.sectorDrawLayer = new SectorDrawLayer("sector-draw", "Sector Draw");
+        this.sectorDrawLayer.setView(this.mapManager.getMap());
+        this.layerManager.addLayer(this.sectorDrawLayer);
+
+
+        this.lineDrawTool = new LineDrawTool(this.lineDrawLayer, this.t);
+        this.bezierDrawTool = new BezierDrawTool(this.bezierDrawLayer, this.t);
+        this.sectorDrawTool = new SectorDrawTool(this.sectorDrawLayer, this.t);
+
+
+        this.lineDrawTool.setOnDrawComplete(() => this.onDrawingEnd());
+        this.bezierDrawTool.setOnDrawComplete(() => this.onDrawingEnd());
+        this.sectorDrawTool.setOnDrawComplete(() => this.onDrawingEnd());
+
+
         this.circleDrawTool = new CircleDrawTool(this.circleDrawLayer, this.t);
         this.rectangleDrawTool = new RectangleDrawTool(this.rectangleDrawLayer, this.t);
         this.triangleDrawTool = new TriangleDrawTool(this.triangleDrawLayer, this.t);
@@ -389,7 +435,10 @@ export class EarthView {
             this.ellipseDrawTool!,
             this.markerDrawTool!,
             this.textDrawTool!,
-            this.arrowDrawTool!
+            this.arrowDrawTool!,
+            this.lineDrawTool!,
+            this.bezierDrawTool!,
+            this.sectorDrawTool!
         );
 
         this.drawingManager.setCallbacks(
@@ -446,7 +495,6 @@ export class EarthView {
     private setupSelections(): void {
         const map = this.mapManager.getMap();
 
-
         const getFeatureType = (feature: any): string | null => {
             const id = feature.get("id");
             if (!id) return null;
@@ -459,10 +507,12 @@ export class EarthView {
                 if (id.startsWith("marker_")) return 'marker';
                 if (id.startsWith("text_")) return 'text';
                 if (id.startsWith("arrow_") && !id.endsWith("_head")) return 'arrow';
+                if (id.startsWith("line_")) return 'line';
+                if (id.startsWith("bezier_")) return 'bezier';
+                if (id.startsWith("sector_")) return 'sector';
             }
             return null;
         };
-
 
         const getCurrentEditingId = (): string | null => {
             return this.circleDrawLayer?.getEditingId() ||
@@ -473,12 +523,32 @@ export class EarthView {
                 this.markerDrawLayer?.getEditingId() ||
                 this.textDrawLayer?.getEditingId() ||
                 this.arrowDrawLayer?.getEditingId() ||
+                this.lineDrawLayer?.getEditingId() ||
+                this.bezierDrawLayer?.getEditingId() ||
+                this.sectorDrawLayer?.getEditingId() ||
                 null;
         };
 
 
+        const isAnyLayerDrawing = (): boolean => {
+            return !!(this.circleDrawLayer?.isDrawActive() ||
+                this.rectangleDrawLayer?.isDrawActive() ||
+                this.triangleDrawLayer?.isDrawActive() ||
+                this.freehandDrawLayer?.isDrawActive() ||
+                this.ellipseDrawLayer?.isDrawActive() ||
+                this.markerDrawLayer?.isDrawActive() ||
+                this.textDrawLayer?.isDrawActive() ||
+                this.arrowDrawLayer?.isDrawActive() ||
+                this.lineDrawLayer?.isDrawActive() ||
+                this.bezierDrawLayer?.isDrawActive() ||
+                this.sectorDrawLayer?.isDrawActive());
+        };
+
         const startEditById = (id: string, type: string) => {
             if (!id) return;
+
+
+            this.stopAllEditing();
 
             switch (type) {
                 case 'circle':
@@ -505,21 +575,32 @@ export class EarthView {
                 case 'arrow':
                     this.arrowDrawTool?.startEdit(id);
                     break;
+                case 'line':
+                    this.lineDrawTool?.startEdit(id);
+                    break;
+                case 'bezier':
+                    this.bezierDrawTool?.startEdit(id);
+                    break;
+                case 'sector':
+                    this.sectorDrawTool?.startEdit(id);
+                    break;
             }
         };
 
-
         map.on("singleclick", (event: any) => {
+
+            if (isAnyLayerDrawing()) {
+                return;
+            }
+
 
             if (this.textDrawLayer?.isInputActive) {
                 return;
             }
 
-
             const features = map.getFeaturesAtPixel(event.pixel, {
                 hitTolerance: 5
             });
-
 
             let targetFeature = null;
             let targetType = null;
@@ -544,7 +625,6 @@ export class EarthView {
 
 
                 if (clickedId) {
-                    this.stopAllEditing();
                     startEditById(clickedId, targetType);
                 }
             } else {
@@ -553,7 +633,6 @@ export class EarthView {
             }
         });
     }
-
 
     private initDrawingManager(): void {
     }
@@ -624,6 +703,38 @@ export class EarthView {
             }
 
 
+            const line = features?.find((f: any) => f.get("id")?.startsWith("line_"));
+            if (line && this.lineDrawLayer) {
+                const data = this.lineDrawLayer.getLine(line.get("id"));
+                if (data) {
+                    this.selectedLineId = data.id;
+                    this.showFloatingToolbarForLine({ x, y }, data);
+                    return;
+                }
+            }
+
+
+            const bezier = features?.find((f: any) => f.get("id")?.startsWith("bezier_"));
+            if (bezier && this.bezierDrawLayer) {
+                const data = this.bezierDrawLayer.getBezier(bezier.get("id"));
+                if (data) {
+                    this.selectedBezierId = data.id;
+                    this.showFloatingToolbarForBezier({ x, y }, data);
+                    return;
+                }
+            }
+
+
+            const sector = features?.find((f: any) => f.get("id")?.startsWith("sector_"));
+            if (sector && this.sectorDrawLayer) {
+                const data = this.sectorDrawLayer.getSector(sector.get("id"));
+                if (data) {
+                    this.selectedSectorId = data.id;
+                    this.showFloatingToolbarForSector({ x, y }, data);
+                    return;
+                }
+            }
+
             const ellipse = features?.find((f: any) => f.get("id")?.startsWith("ellipse_"));
             if (ellipse && this.ellipseDrawLayer) {
                 const data = this.ellipseDrawLayer.getEllipse(ellipse.get("id"));
@@ -685,10 +796,7 @@ export class EarthView {
         alert(this.t.noCirclesToEdit);
     }
 
-
-
     private stopAllEditing(): void {
-
         if (this.textDrawLayer?.isInputActive) {
             return;
         }
@@ -700,6 +808,9 @@ export class EarthView {
         this.markerDrawLayer?.stopEdit();
         this.textDrawLayer?.stopEdit();
         this.arrowDrawLayer?.stopEdit();
+        this.lineDrawLayer?.stopEdit();
+        this.bezierDrawLayer?.stopEdit();
+        this.sectorDrawLayer?.stopEdit();
     }
 
     private showFloatingToolbarForCircle(pos: { x: number; y: number }, data: CircleDrawData): void {
@@ -844,6 +955,240 @@ export class EarthView {
 
                     this.selectedFreehandId = null;
 
+                    setTimeout(() => {
+                        if (this.mapManager) {
+                            this.mapManager.getMap().render();
+                        }
+                    }, 50);
+                }
+            },
+            onClose: () => {
+                this.hideFloatingToolbar();
+            },
+            onPositionChange: (p) => {
+                this.floatingToolbarPosition = p;
+            },
+            theme: this.theme,
+            t: this.t,
+            containerRef: this.container,
+            currentColor: this.currentColor,
+            currentStrokeWidth: this.currentStrokeWidth,
+            currentStrokeStyle: this.currentStrokeStyle,
+            position: pos,
+        });
+    }
+
+
+
+
+    private showFloatingToolbarForLine(pos: { x: number; y: number }, data: LineDrawData): void {
+        if (this.floatingToolbar) {
+            this.floatingToolbar.destroy();
+            this.floatingToolbar = null;
+        }
+
+        this.floatingToolbarPosition = pos;
+        this.showFloatingToolbar = true;
+        this.currentColor = data.color || [255, 193, 7, 1];
+        this.currentStrokeWidth = data.width || 3;
+        this.currentStrokeStyle = data.style || "solid";
+
+        const targetId = data.id;
+        this.selectedLineId = targetId;
+
+        const targetLayer = this.lineDrawLayer;
+        if (!targetLayer) return;
+
+        this.floatingToolbar = new FloatingToolbar({
+            onColorChange: (color) => {
+                this.currentColor = color;
+                targetLayer.updateLineStyle(
+                    targetId,
+                    [color[0], color[1], color[2], 1],
+                    this.currentStrokeWidth,
+                    this.currentStrokeStyle
+                );
+            },
+            onStrokeWidthChange: (width) => {
+                this.currentStrokeWidth = width;
+                targetLayer.updateLineStyle(
+                    targetId,
+                    [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1],
+                    width,
+                    this.currentStrokeStyle
+                );
+            },
+            onStrokeStyleChange: (style) => {
+                this.currentStrokeStyle = style;
+                targetLayer.updateLineStyle(
+                    targetId,
+                    [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1],
+                    this.currentStrokeWidth,
+                    style
+                );
+            },
+            onDelete: () => {
+                if (targetLayer && targetId) {
+                    this.hideFloatingToolbar();
+                    targetLayer.removeLine(targetId);
+                    this.selectedLineId = null;
+                    setTimeout(() => {
+                        if (this.mapManager) {
+                            this.mapManager.getMap().render();
+                        }
+                    }, 50);
+                }
+            },
+            onClose: () => {
+                this.hideFloatingToolbar();
+            },
+            onPositionChange: (p) => {
+                this.floatingToolbarPosition = p;
+            },
+            theme: this.theme,
+            t: this.t,
+            containerRef: this.container,
+            currentColor: this.currentColor,
+            currentStrokeWidth: this.currentStrokeWidth,
+            currentStrokeStyle: this.currentStrokeStyle,
+            position: pos,
+        });
+    }
+
+
+
+
+    private showFloatingToolbarForBezier(pos: { x: number; y: number }, data: BezierDrawData): void {
+        if (this.floatingToolbar) {
+            this.floatingToolbar.destroy();
+            this.floatingToolbar = null;
+        }
+
+        this.floatingToolbarPosition = pos;
+        this.showFloatingToolbar = true;
+        this.currentColor = data.color || [156, 39, 176, 1];
+        this.currentStrokeWidth = data.width || 3;
+        this.currentStrokeStyle = data.style || "solid";
+
+        const targetId = data.id;
+        this.selectedBezierId = targetId;
+
+        const targetLayer = this.bezierDrawLayer;
+        if (!targetLayer) return;
+
+        this.floatingToolbar = new FloatingToolbar({
+            onColorChange: (color) => {
+                this.currentColor = color;
+                targetLayer.updateBezierStyle(
+                    targetId,
+                    [color[0], color[1], color[2], 1],
+                    this.currentStrokeWidth,
+                    this.currentStrokeStyle
+                );
+            },
+            onStrokeWidthChange: (width) => {
+                this.currentStrokeWidth = width;
+                targetLayer.updateBezierStyle(
+                    targetId,
+                    [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1],
+                    width,
+                    this.currentStrokeStyle
+                );
+            },
+            onStrokeStyleChange: (style) => {
+                this.currentStrokeStyle = style;
+                targetLayer.updateBezierStyle(
+                    targetId,
+                    [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1],
+                    this.currentStrokeWidth,
+                    style
+                );
+            },
+            onDelete: () => {
+                if (targetLayer && targetId) {
+                    this.hideFloatingToolbar();
+                    targetLayer.removeBezier(targetId);
+                    this.selectedBezierId = null;
+                    setTimeout(() => {
+                        if (this.mapManager) {
+                            this.mapManager.getMap().render();
+                        }
+                    }, 50);
+                }
+            },
+            onClose: () => {
+                this.hideFloatingToolbar();
+            },
+            onPositionChange: (p) => {
+                this.floatingToolbarPosition = p;
+            },
+            theme: this.theme,
+            t: this.t,
+            containerRef: this.container,
+            currentColor: this.currentColor,
+            currentStrokeWidth: this.currentStrokeWidth,
+            currentStrokeStyle: this.currentStrokeStyle,
+            position: pos,
+        });
+    }
+
+
+
+
+    private showFloatingToolbarForSector(pos: { x: number; y: number }, data: SectorDrawData): void {
+        if (this.floatingToolbar) {
+            this.floatingToolbar.destroy();
+            this.floatingToolbar = null;
+        }
+
+        this.floatingToolbarPosition = pos;
+        this.showFloatingToolbar = true;
+        this.currentColor = data.fillColor || [33, 150, 243, 0.3];
+        this.currentStrokeWidth = data.outlineWidth || 2;
+        this.currentStrokeStyle = data.outlineStyle || "solid";
+
+        const targetId = data.id;
+        this.selectedSectorId = targetId;
+
+        const targetLayer = this.sectorDrawLayer;
+        if (!targetLayer) return;
+
+        this.floatingToolbar = new FloatingToolbar({
+            onColorChange: (color) => {
+                this.currentColor = color;
+                targetLayer.updateSectorStyle(
+                    targetId,
+                    [color[0], color[1], color[2], 0.3],
+                    [color[0], color[1], color[2], 1],
+                    this.currentStrokeWidth,
+                    this.currentStrokeStyle
+                );
+            },
+            onStrokeWidthChange: (width) => {
+                this.currentStrokeWidth = width;
+                targetLayer.updateSectorStyle(
+                    targetId,
+                    [this.currentColor[0], this.currentColor[1], this.currentColor[2], 0.3],
+                    [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1],
+                    width,
+                    this.currentStrokeStyle
+                );
+            },
+            onStrokeStyleChange: (style) => {
+                this.currentStrokeStyle = style;
+                targetLayer.updateSectorStyle(
+                    targetId,
+                    [this.currentColor[0], this.currentColor[1], this.currentColor[2], 0.3],
+                    [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1],
+                    this.currentStrokeWidth,
+                    style
+                );
+            },
+            onDelete: () => {
+                if (targetLayer && targetId) {
+                    this.hideFloatingToolbar();
+                    targetLayer.removeSector(targetId);
+                    this.selectedSectorId = null;
                     setTimeout(() => {
                         if (this.mapManager) {
                             this.mapManager.getMap().render();
@@ -1096,6 +1441,9 @@ export class EarthView {
         this.selectedMarkerId = null;
         this.selectedTextId = null;
         this.selectedArrowId = null;
+        this.selectedLineId = null;
+        this.selectedBezierId = null;
+        this.selectedSectorId = null;
         if (this.floatingToolbar) {
             this.floatingToolbar.setVisible(false);
 
@@ -1213,6 +1561,21 @@ export class EarthView {
     public startDrawArrow(): void {
         if (this.drawingManager.isDrawing()) this.drawingManager.cancelDrawing();
         this.drawingManager.startDrawingArrow();
+    }
+
+    public startDrawLine(): void {
+        if (this.drawingManager.isDrawing()) this.drawingManager.cancelDrawing();
+        this.drawingManager.startDrawingLine();
+    }
+
+    public startDrawBezier(): void {
+        if (this.drawingManager.isDrawing()) this.drawingManager.cancelDrawing();
+        this.drawingManager.startDrawingBezier();
+    }
+
+    public startDrawSector(): void {
+        if (this.drawingManager.isDrawing()) this.drawingManager.cancelDrawing();
+        this.drawingManager.startDrawingSector();
     }
 
     public startMeasureDistance(): void {
