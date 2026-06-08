@@ -1,5 +1,3 @@
-// core/src/components/DrawToolsPanel.ts
-
 import { Icons } from "./icons";
 import { Theme } from "./types";
 import { Translations } from "../i18n";
@@ -40,31 +38,24 @@ export class DrawToolsPanel {
 
     private render(): void {
         this.element.innerHTML = "";
-
-        // 基础图形
-        this.addSectionTitle("基础图形");
+        this.addSectionTitle("线段");
+        this.element.appendChild(this.createToolRow(this.createArrowIcon(), "箭头", this.props.onDrawArrow));
+        this.addSectionTitle("几何图形");
         this.element.appendChild(this.createToolRow(Icons.Circle, this.props.t.drawCircle, this.props.onDrawCircle));
         this.element.appendChild(this.createToolRow(this.createEllipseIcon(), "椭圆", this.props.onDrawEllipse));
         this.element.appendChild(this.createToolRow(this.createRectangleIcon(), "绘制矩形", this.props.onDrawRectangle));
         this.element.appendChild(this.createToolRow(this.createTriangleIcon(), "绘制三角形", this.props.onDrawTriangle));
-
-        // 自由绘制
+        this.addSectionTitle("几何图形");
+        this.element.appendChild(this.createToolRow(Icons.Circle, this.props.t.drawCircle, this.props.onDrawCircle));
+        this.element.appendChild(this.createToolRow(this.createEllipseIcon(), "椭圆", this.props.onDrawEllipse));
+        this.element.appendChild(this.createToolRow(this.createRectangleIcon(), "绘制矩形", this.props.onDrawRectangle));
+        this.element.appendChild(this.createToolRow(this.createTriangleIcon(), "绘制三角形", this.props.onDrawTriangle));
         this.addSectionTitle("自由绘制");
         this.element.appendChild(this.createToolRow(this.createFreehandIcon(), "手绘线", this.props.onDrawFreehand));
         this.element.appendChild(this.createToolRow(this.createFreehandPolygonIcon(), "手绘多边形", this.props.onDrawFreehandPolygon));
-
-        // 特殊图形
-        this.addSectionTitle("特殊图形");
-        this.element.appendChild(this.createToolRow(this.createArrowIcon(), "箭头", this.props.onDrawArrow));
-
-        // 标注工具
         this.addSectionTitle("标注工具");
         this.element.appendChild(this.createToolRow(this.createMarkerIcon(), "标注点", this.props.onDrawMarker));
         this.element.appendChild(this.createToolRow(this.createTextIcon(), "文字标注", this.props.onDrawText));
-
-        // 编辑工具
-        this.addSeparator();
-        this.element.appendChild(this.createToolRow(this.createEditIcon(), "编辑图形", this.props.onEditShape));
     }
 
     private addSectionTitle(title: string): void {
