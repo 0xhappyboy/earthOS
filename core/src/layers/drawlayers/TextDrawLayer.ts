@@ -1,5 +1,3 @@
-
-
 import Feature from "ol/Feature";
 import Point from "ol/geom/Point";
 import VectorLayer from "ol/layer/Vector";
@@ -15,6 +13,9 @@ import { fromLonLat, toLonLat } from "ol/proj";
 import { BaseLayer } from "../BaseLayer";
 import { LayerTypeEnum } from "../../types";
 import { generateId, arrayToRgba } from "../../utils";
+import { Theme } from "../../components";
+import { TextInputModalBox } from "../../components/TextInputModalBox";
+import { Translations } from "../../i18n";
 
 export interface TextDrawData {
     id: string;
@@ -23,6 +24,8 @@ export interface TextDrawData {
     fontSize?: number;
     fontFamily?: string;
     color?: number[];
+    fontWeight?: "normal" | "bold";
+    fontStyle?: "normal" | "italic";
     backgroundColor?: number[];
     outlineColor?: number[];
     outlineWidth?: number;
@@ -42,8 +45,10 @@ export class TextDrawLayer extends BaseLayer {
     private onEditCompleteCallback: ((data: TextDrawData) => void) | null = null;
     private editingFeature: Feature | null = null;
     private mapView: any = null;
-    private pendingTextInput: HTMLInputElement | null = null;
+    private textInputModal: TextInputModalBox | null = null;
     public isInputActive: boolean = false;
+    private currentTheme: Theme = "dark";
+    private currentTranslations: Translations | null = null;
 
     constructor(id: string, name: string, options?: {
         defaultFontSize?: number;
@@ -60,7 +65,7 @@ export class TextDrawLayer extends BaseLayer {
             ...options,
             zIndex: options?.zIndex ?? 100,
         });
-        this.defaultFontSize = options?.defaultFontSize || 14;
+        this.defaultFontSize = options?.defaultFontSize || 16;
         this.defaultFontFamily = options?.defaultFontFamily || "sans-serif";
         this.defaultColor = options?.defaultColor || [255, 255, 255, 1];
         this.defaultBackgroundColor = options?.defaultBackgroundColor || [0, 0, 0, 0.7];
@@ -85,11 +90,18 @@ export class TextDrawLayer extends BaseLayer {
         const backgroundColor = feature?.get("backgroundColor") || this.defaultBackgroundColor;
         const outlineColor = feature?.get("outlineColor") || this.defaultOutlineColor;
         const outlineWidth = feature?.get("outlineWidth") || this.defaultOutlineWidth;
+        const fontWeight = feature?.get("fontWeight") || "normal";
+        const fontStyle = feature?.get("fontStyle") || "normal";
+
+        let fontString = "";
+        if (fontStyle !== "normal") fontString += `${fontStyle} `;
+        if (fontWeight !== "normal") fontString += `${fontWeight} `;
+        fontString += `${fontSize}px ${fontFamily}`;
 
         return new Style({
             text: new Text({
                 text: content,
-                font: `${fontSize}px ${fontFamily}`,
+                font: fontString,
                 fill: new Fill({ color: arrayToRgba(color) }),
                 stroke: new Stroke({
                     color: arrayToRgba(outlineColor),
@@ -103,40 +115,49 @@ export class TextDrawLayer extends BaseLayer {
         });
     }
 
+    public setTheme(theme: Theme, t: Translations): void {
+        this.currentTheme = theme;
+        this.currentTranslations = t;
+    }
 
-
-    private showTextInput(position: [number, number], onComplete: (text: string) => void): void {
-
-        if (this.pendingTextInput) {
-            this.pendingTextInput.remove();
-            this.pendingTextInput = null;
+    private showTextInputModal(
+        position: [number, number],
+        initialData?: {
+            text: string;
+            fontSize: number;
+            color: number[];
+            fontWeight: "normal" | "bold";
+            fontStyle: "normal" | "italic";
+        },
+        onComplete?: (data: {
+            text: string;
+            fontSize: number;
+            color: number[];
+            fontWeight: "normal" | "bold";
+            fontStyle: "normal" | "italic";
+        }) => void,
+        onDelete?: () => void
+    ): void {
+        if (this.textInputModal) {
+            this.textInputModal.destroy();
+            this.textInputModal = null;
         }
 
         this.isInputActive = true;
-
-        this.pendingTextInput = document.createElement("input");
-        this.pendingTextInput.type = "text";
-        this.pendingTextInput.placeholder = "请输入文字...";
-        this.pendingTextInput.style.cssText = `
-        position: absolute;
-        z-index: 10001;
-        padding: 8px 12px;
-        font-size: 14px;
-        min-width: 180px;
-        border: 2px solid #00aaff;
-        border-radius: 6px;
-        background: #ffffff;
-        color: #333333;
-        outline: none;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-        font-family: sans-serif;
-    `;
 
         const map = this.mapView;
         if (!map || typeof map.getTargetElement !== 'function') {
             console.error("TextDrawLayer: mapView is not a valid map object");
             this.isInputActive = false;
-            onComplete("");
+            if (onComplete) {
+                onComplete({
+                    text: "",
+                    fontSize: this.defaultFontSize,
+                    color: this.defaultColor,
+                    fontWeight: "normal",
+                    fontStyle: "normal"
+                });
+            }
             return;
         }
 
@@ -144,82 +165,94 @@ export class TextDrawLayer extends BaseLayer {
         if (!targetElement) {
             console.error("TextDrawLayer: cannot get map target element");
             this.isInputActive = false;
-            onComplete("");
+            if (onComplete) {
+                onComplete({
+                    text: "",
+                    fontSize: this.defaultFontSize,
+                    color: this.defaultColor,
+                    fontWeight: "normal",
+                    fontStyle: "normal"
+                });
+            }
             return;
         }
 
-        const containerRect = targetElement.getBoundingClientRect();
         const pixel = map.getPixelFromCoordinate(position);
         if (!pixel || pixel.length < 2) {
             console.error("TextDrawLayer: cannot get pixel from coordinate", position);
             this.isInputActive = false;
-            onComplete("");
+            if (onComplete) {
+                onComplete({
+                    text: "",
+                    fontSize: this.defaultFontSize,
+                    color: this.defaultColor,
+                    fontWeight: "normal",
+                    fontStyle: "normal"
+                });
+            }
             return;
         }
 
-        const left = pixel[0] - containerRect.left - 90;
-        const top = pixel[1] - containerRect.top - 35;
+        let left = pixel[0] - 140;
+        let top = pixel[1] - 130;
+        left = Math.max(10, Math.min(left, window.innerWidth - 290));
+        top = Math.max(10, Math.min(top, window.innerHeight - 270));
 
-        this.pendingTextInput.style.left = `${Math.max(5, left)}px`;
-        this.pendingTextInput.style.top = `${Math.max(5, top)}px`;
+        // 创建一个简单的 translations 对象用于 TextInputModalBox
+        const simpleT = {
+            addText: "添加文字",
+            enterText: "请输入文字...",
+            bold: "粗体",
+            italic: "斜体",
+            fontSize: "字号",
+            color: "颜色",
+            confirm: "确定",
+            cancel: "取消"
+        } as any;
 
-        targetElement.appendChild(this.pendingTextInput);
-        this.pendingTextInput.focus();
-        this.pendingTextInput.select();
+        this.textInputModal = new TextInputModalBox(
+            {
+                initialText: initialData?.text || "",
+                initialFontSize: initialData?.fontSize || this.defaultFontSize,
+                initialColor: initialData?.color || this.defaultColor,
+                initialFontWeight: initialData?.fontWeight || "normal",
+                initialFontStyle: initialData?.fontStyle || "normal",
+                onConfirm: (data) => {
+                    if (onComplete) {
+                        onComplete(data);
+                    }
+                    this.hideTextInputModal();
+                },
+                onCancel: () => {
+                    if (onComplete) {
+                        onComplete({
+                            text: "",
+                            fontSize: this.defaultFontSize,
+                            color: this.defaultColor,
+                            fontWeight: "normal",
+                            fontStyle: "normal"
+                        });
+                    }
+                    this.hideTextInputModal();
+                },
+                onDelete: onDelete,
+                theme: this.currentTheme,
+                t: simpleT,
+            },
+            { x: left, y: top }
+        );
+    }
 
-        let isCompleted = false;
 
-        const cleanup = () => {
-            if (isCompleted) return;
-            isCompleted = true;
-
-            if (this.pendingTextInput) {
-                this.pendingTextInput.remove();
-                this.pendingTextInput = null;
-            }
-            document.removeEventListener("keydown", handleKeydown);
-            document.removeEventListener("click", handleClickOutside);
-            this.isInputActive = false;
-        };
-
-        const handleComplete = (text: string) => {
-            if (isCompleted) return;
-            cleanup();
-            onComplete(text);
-        };
-
-        const handleKeydown = (e: KeyboardEvent) => {
-            if (e.key === "Enter") {
-                e.preventDefault();
-                e.stopPropagation();
-                const text = this.pendingTextInput?.value || "";
-                handleComplete(text);
-            } else if (e.key === "Escape") {
-                e.preventDefault();
-                e.stopPropagation();
-                handleComplete("");
-            }
-        };
-
-        const handleClickOutside = (e: MouseEvent) => {
-
-            if (isCompleted) return;
-
-            if (this.pendingTextInput && !this.pendingTextInput.contains(e.target as Node)) {
-                const text = this.pendingTextInput.value || "";
-                handleComplete(text);
-            }
-        };
-
-        document.addEventListener("keydown", handleKeydown);
-
-        setTimeout(() => {
-            document.addEventListener("click", handleClickOutside);
-        }, 100);
+    private hideTextInputModal(): void {
+        if (this.textInputModal) {
+            this.textInputModal.destroy();
+            this.textInputModal = null;
+        }
+        this.isInputActive = false;
     }
 
     public setView(view: any): void {
-
         this.mapView = view;
     }
 
@@ -234,6 +267,7 @@ export class TextDrawLayer extends BaseLayer {
             this.drawInteraction = null;
         }
         this.onDrawCompleteCallback = onComplete || null;
+
         const tempSource = new VectorSource();
         this.drawInteraction = new Draw({
             source: tempSource,
@@ -246,8 +280,7 @@ export class TextDrawLayer extends BaseLayer {
                 const [x, y] = geometry.getCoordinates();
                 const [lng, lat] = toLonLat([x, y]);
 
-                this.showTextInput([x, y], (text: string) => {
-
+                this.showTextInputModal([x, y], undefined, (result) => {
                     if (tempSource) {
                         tempSource.clear();
                     }
@@ -256,17 +289,20 @@ export class TextDrawLayer extends BaseLayer {
                         this.drawInteraction = null;
                     }
 
-                    if (text && text.trim()) {
+                    if (result.text && result.text.trim()) {
                         const id = generateId("text_");
                         const feature = new Feature({
                             geometry: new Point([x, y]),
                             id: id,
                             position: [lng, lat],
-                            content: text,
+                            content: result.text,
                         });
-                        feature.set("fontSize", this.defaultFontSize);
+
+                        feature.set("fontSize", result.fontSize);
                         feature.set("fontFamily", this.defaultFontFamily);
-                        feature.set("color", this.defaultColor);
+                        feature.set("color", result.color);
+                        feature.set("fontWeight", result.fontWeight);
+                        feature.set("fontStyle", result.fontStyle);
                         feature.set("backgroundColor", this.defaultBackgroundColor);
                         feature.set("outlineColor", this.defaultOutlineColor);
                         feature.set("outlineWidth", this.defaultOutlineWidth);
@@ -279,17 +315,18 @@ export class TextDrawLayer extends BaseLayer {
                             this.onDrawCompleteCallback({
                                 id,
                                 position: [lng, lat],
-                                content: text,
-                                fontSize: this.defaultFontSize,
+                                content: result.text,
+                                fontSize: result.fontSize,
                                 fontFamily: this.defaultFontFamily,
-                                color: this.defaultColor,
+                                color: result.color,
+                                fontWeight: result.fontWeight,
+                                fontStyle: result.fontStyle,
                                 backgroundColor: this.defaultBackgroundColor,
                                 outlineColor: this.defaultOutlineColor,
                                 outlineWidth: this.defaultOutlineWidth,
                             });
                         }
                     } else {
-
                         if (this.onDrawCompleteCallback) {
                             this.onDrawCompleteCallback(null as any);
                         }
@@ -309,50 +346,167 @@ export class TextDrawLayer extends BaseLayer {
         this.mapView?.addInteraction(this.drawInteraction);
     }
 
-    public startEdit(id: string, onComplete?: (data: TextDrawData) => void): void {
+    public startEdit(id: string, onComplete?: (data: TextDrawData) => void, onDelete?: () => void): void {
         const targetFeature = this.features.get(id);
         if (!targetFeature) {
             return;
         }
         this.editingFeature = targetFeature;
         this.onEditCompleteCallback = onComplete || null;
+
         const geometry = targetFeature.getGeometry();
         if (geometry instanceof Point) {
             const [x, y] = geometry.getCoordinates();
             const currentText = targetFeature.get("content") || "";
-
-            this.showTextInput([x, y], (text: string) => {
-                if (text && text.trim() && text !== currentText) {
-                    targetFeature.set("content", text);
-                    targetFeature.changed();
-                    this.mapView?.render();
-
-                    const position = targetFeature.get("position");
-                    if (this.onEditCompleteCallback) {
-                        this.onEditCompleteCallback({
-                            id,
-                            position,
-                            content: text,
-                        });
-                    }
+            const currentFontSize = targetFeature.get("fontSize") || this.defaultFontSize;
+            const currentColor = targetFeature.get("color") || this.defaultColor;
+            const currentFontWeight = targetFeature.get("fontWeight") || "normal";
+            const currentFontStyle = targetFeature.get("fontStyle") || "normal";
+            const handleDelete = () => {
+                this.removeText(id);
+                if (onDelete) {
+                    onDelete();
                 }
-                this.editingFeature = null;
-                this.onEditCompleteCallback = null;
-            });
+                if (this.onEditCompleteCallback) {
+                    this.onEditCompleteCallback(null as any);
+                }
+            };
+            this.showTextInputModal(
+                [x, y],
+                {
+                    text: currentText,
+                    fontSize: currentFontSize,
+                    color: currentColor,
+                    fontWeight: currentFontWeight,
+                    fontStyle: currentFontStyle,
+                },
+                (result) => {
+                    if (result.text && result.text.trim() && result.text !== currentText) {
+                        targetFeature.set("content", result.text);
+                        targetFeature.set("fontSize", result.fontSize);
+                        targetFeature.set("color", result.color);
+                        targetFeature.set("fontWeight", result.fontWeight);
+                        targetFeature.set("fontStyle", result.fontStyle);
+                        targetFeature.changed();
+                        this.mapView?.render();
+
+                        const position = targetFeature.get("position");
+                        if (this.onEditCompleteCallback) {
+                            this.onEditCompleteCallback({
+                                id,
+                                position,
+                                content: result.text,
+                                fontSize: result.fontSize,
+                                fontFamily: targetFeature.get("fontFamily"),
+                                color: result.color,
+                                fontWeight: result.fontWeight,
+                                fontStyle: result.fontStyle,
+                                backgroundColor: targetFeature.get("backgroundColor"),
+                                outlineColor: targetFeature.get("outlineColor"),
+                                outlineWidth: targetFeature.get("outlineWidth"),
+                            });
+                        }
+                    }
+                    this.editingFeature = null;
+                    this.onEditCompleteCallback = null;
+                },
+                handleDelete
+            );
         }
     }
 
+    // 添加新方法用于编辑
+    private showTextInputModalForEdit(
+        position: [number, number],
+        initialData: {
+            text: string;
+            fontSize: number;
+            color: number[];
+            fontWeight: "normal" | "bold";
+            fontStyle: "normal" | "italic";
+        },
+        onComplete: (data: {
+            text: string;
+            fontSize: number;
+            color: number[];
+            fontWeight: "normal" | "bold";
+            fontStyle: "normal" | "italic";
+        }) => void
+    ): void {
+        if (this.textInputModal) {
+            this.textInputModal.destroy();
+            this.textInputModal = null;
+        }
+
+        this.isInputActive = true;
+
+        const map = this.mapView;
+        if (!map || typeof map.getTargetElement !== 'function') {
+            this.isInputActive = false;
+            onComplete(initialData);
+            return;
+        }
+
+        const targetElement = map.getTargetElement();
+        if (!targetElement) {
+            this.isInputActive = false;
+            onComplete(initialData);
+            return;
+        }
+
+        const pixel = map.getPixelFromCoordinate(position);
+        if (!pixel || pixel.length < 2) {
+            this.isInputActive = false;
+            onComplete(initialData);
+            return;
+        }
+
+        let left = pixel[0] - 140;
+        let top = pixel[1] - 130;
+        left = Math.max(10, Math.min(left, window.innerWidth - 290));
+        top = Math.max(10, Math.min(top, window.innerHeight - 270));
+
+        // 使用 this.currentTheme 和 this.currentTranslations
+        const t = this.currentTranslations || {
+            addText: "添加文字",
+            enterText: "请输入文字...",
+            bold: "粗体",
+            italic: "斜体",
+            fontSize: "字号",
+            color: "颜色",
+            confirm: "确定",
+            cancel: "取消"
+        } as unknown as Translations;
+
+        this.textInputModal = new TextInputModalBox(
+            {
+                initialText: initialData.text,
+                initialFontSize: initialData.fontSize,
+                initialColor: initialData.color,
+                initialFontWeight: initialData.fontWeight,
+                initialFontStyle: initialData.fontStyle,
+                onConfirm: onComplete,
+                onCancel: () => {
+                    onComplete(initialData);
+                    this.hideTextInputModal();
+                },
+                theme: this.currentTheme,
+                t: t,
+            },
+            { x: left, y: top }
+        );
+    }
+
+
     public stopEdit(): void {
-        if (this.pendingTextInput) {
-            this.pendingTextInput.remove();
-            this.pendingTextInput = null;
+        if (this.textInputModal) {
+            this.textInputModal.destroy();
+            this.textInputModal = null;
         }
         this.isInputActive = false;
         this.editingFeature = null;
         this.onEditCompleteCallback = null;
     }
-
-
 
     public addText(data: TextDrawData): void {
         const point = fromLonLat(data.position);
@@ -365,6 +519,8 @@ export class TextDrawLayer extends BaseLayer {
         feature.set("fontSize", data.fontSize || this.defaultFontSize);
         feature.set("fontFamily", data.fontFamily || this.defaultFontFamily);
         feature.set("color", data.color || this.defaultColor);
+        feature.set("fontWeight", data.fontWeight || "normal");
+        feature.set("fontStyle", data.fontStyle || "normal");
         feature.set("backgroundColor", data.backgroundColor || this.defaultBackgroundColor);
         feature.set("outlineColor", data.outlineColor || this.defaultOutlineColor);
         feature.set("outlineWidth", data.outlineWidth || this.defaultOutlineWidth);
@@ -393,6 +549,8 @@ export class TextDrawLayer extends BaseLayer {
                 fontSize: feature.get("fontSize"),
                 fontFamily: feature.get("fontFamily"),
                 color: feature.get("color"),
+                fontWeight: feature.get("fontWeight"),
+                fontStyle: feature.get("fontStyle"),
                 backgroundColor: feature.get("backgroundColor"),
                 outlineColor: feature.get("outlineColor"),
                 outlineWidth: feature.get("outlineWidth"),
@@ -411,6 +569,8 @@ export class TextDrawLayer extends BaseLayer {
             fontSize: feature.get("fontSize"),
             fontFamily: feature.get("fontFamily"),
             color: feature.get("color"),
+            fontWeight: feature.get("fontWeight"),
+            fontStyle: feature.get("fontStyle"),
             backgroundColor: feature.get("backgroundColor"),
             outlineColor: feature.get("outlineColor"),
             outlineWidth: feature.get("outlineWidth"),
@@ -424,7 +584,9 @@ export class TextDrawLayer extends BaseLayer {
         color: number[],
         backgroundColor: number[],
         outlineColor: number[],
-        outlineWidth: number
+        outlineWidth: number,
+        fontWeight?: "normal" | "bold",
+        fontStyle?: "normal" | "italic"
     ): void {
         const feature = this.features.get(id);
         if (!feature) return;
@@ -434,6 +596,8 @@ export class TextDrawLayer extends BaseLayer {
         feature.set("backgroundColor", backgroundColor);
         feature.set("outlineColor", outlineColor);
         feature.set("outlineWidth", outlineWidth);
+        if (fontWeight) feature.set("fontWeight", fontWeight);
+        if (fontStyle) feature.set("fontStyle", fontStyle);
         feature.changed();
         this.mapView?.render();
     }
@@ -457,7 +621,7 @@ export class TextDrawLayer extends BaseLayer {
     }
 
     public isEditActive(): boolean {
-        return this.pendingTextInput !== null;
+        return this.textInputModal !== null;
     }
 
     public setEditable(editable: boolean): void {
@@ -489,6 +653,10 @@ export class TextDrawLayer extends BaseLayer {
     public destroy(): void {
         this.stopDraw();
         this.stopEdit();
+        if (this.textInputModal) {
+            this.textInputModal.destroy();
+            this.textInputModal = null;
+        }
         super.destroy();
     }
 }

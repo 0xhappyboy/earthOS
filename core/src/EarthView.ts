@@ -41,6 +41,7 @@ import { PointCoordinatePickData } from "./layers/toollayers/PointCoordinatePick
 import { LineCoordinatePickLayer, LineCoordinatePickData } from "./layers/toollayers/LineCoordinatePickLayer";
 import { PolygonCoordinatePickLayer, PolygonCoordinatePickData } from "./layers/toollayers/PolygonCoordinatePickLayer";
 import { LineData, PointData, PolygonData } from "./components/CoordinatePickingDataPanel";
+import { fromLonLat } from "ol/proj";
 
 export interface EarthViewOptions {
     container?: HTMLElement;
@@ -345,9 +346,9 @@ export class EarthView {
         setTimeout(() => toast.remove(), 2000);
     }
 
-    
+
     public startPointCoordinatePick(): void {
-        
+
         this.lineCoordinatePickLayer?.stopPick();
         this.polygonCoordinatePickLayer?.stopPick();
 
@@ -359,9 +360,9 @@ export class EarthView {
         });
     }
 
-    
+
     public startLineCoordinatePick(): void {
-        
+
         this.pointCoordinatePickLayer?.stopPick();
         this.polygonCoordinatePickLayer?.stopPick();
 
@@ -374,9 +375,9 @@ export class EarthView {
         });
     }
 
-    
+
     public startPolygonCoordinatePick(): void {
-        
+
         this.pointCoordinatePickLayer?.stopPick();
         this.lineCoordinatePickLayer?.stopPick();
 
@@ -389,7 +390,7 @@ export class EarthView {
         });
     }
 
-    
+
     private showCoordinateList(): void {
         const totalPoints = this.currentPointCoordinates.length;
         const totalLines = this.currentLineCoordinates.length;
@@ -402,7 +403,7 @@ export class EarthView {
 
         let message = "=== 坐标拾取数据列表 ===\n\n";
 
-        
+
         if (totalPoints > 0) {
             message += `📍 点数据 (${totalPoints}个):\n`;
             this.currentPointCoordinates.slice(0, 5).forEach((coord, index) => {
@@ -412,7 +413,7 @@ export class EarthView {
             message += "\n";
         }
 
-        
+
         if (totalLines > 0) {
             message += `📏 线数据 (${totalLines}条):\n`;
             this.currentLineCoordinates.slice(0, 5).forEach((line, index) => {
@@ -421,8 +422,6 @@ export class EarthView {
             if (totalLines > 5) message += `  ... 共${totalLines}条\n`;
             message += "\n";
         }
-
-        
         if (totalPolygons > 0) {
             message += `🔲 面数据 (${totalPolygons}个):\n`;
             this.currentPolygonCoordinates.slice(0, 5).forEach((polygon, index) => {
@@ -431,10 +430,7 @@ export class EarthView {
             if (totalPolygons > 5) message += `  ... 共${totalPolygons}个\n`;
             message += "\n";
         }
-
         message += "\n点击确定复制全部点坐标";
-
-        
         // eslint-disable-next-line no-restricted-globals
         if (confirm(message)) {
             const text = this.currentPointCoordinates.map(c => `${c.longitude.toFixed(6)}, ${c.latitude.toFixed(6)}`).join("\n");
@@ -506,17 +502,17 @@ export class EarthView {
 
 
 
-        
+
         this.pointCoordinatePickLayer = new PointCoordinatePickLayer("point-coordinate-pick", "Point Coordinate Pick");
         this.pointCoordinatePickLayer.setView(this.mapManager.getMap());
         this.layerManager.addLayer(this.pointCoordinatePickLayer);
 
-        
+
         this.lineCoordinatePickLayer = new LineCoordinatePickLayer("line-coordinate-pick", "Line Coordinate Pick");
         this.lineCoordinatePickLayer.setView(this.mapManager.getMap());
         this.layerManager.addLayer(this.lineCoordinatePickLayer);
 
-        
+
         this.polygonCoordinatePickLayer = new PolygonCoordinatePickLayer("polygon-coordinate-pick", "Polygon Coordinate Pick");
         this.polygonCoordinatePickLayer.setView(this.mapManager.getMap());
         this.layerManager.addLayer(this.polygonCoordinatePickLayer);
@@ -536,6 +532,7 @@ export class EarthView {
 
         this.textDrawLayer = new TextDrawLayer("text-draw", "Text Draw");
         this.textDrawLayer.setView(this.mapManager.getMap());
+        this.textDrawLayer.setTheme(this.theme, this.t);
         this.layerManager.addLayer(this.textDrawLayer);
 
         this.arrowDrawLayer = new ArrowDrawLayer("arrow-draw", "Arrow Draw");
@@ -1469,12 +1466,15 @@ export class EarthView {
     }
 
     private showFloatingToolbarForText(pos: { x: number; y: number }, data: TextDrawData): void {
-        
-        // eslint-disable-next-line no-restricted-globals
-        if (confirm("是否编辑文字内容？")) {
-            this.textDrawTool?.startEdit(data.id);
-        }
-        this.hideFloatingToolbar();
+        // if (data.position) {
+        //     const webMercatorPos = fromLonLat([data.position[0], data.position[1]]);
+        //     this.mapManager.getView().setCenter(webMercatorPos);
+        //     this.setZoom(18);
+        // }
+        // setTimeout(() => {
+        //     this.textDrawTool?.startEdit(data.id);
+        // }, 100);
+        // this.hideFloatingToolbar();
     }
 
     private showFloatingToolbarForArrow(pos: { x: number; y: number }, data: ArrowDrawData): void {
@@ -1685,7 +1685,14 @@ export class EarthView {
         setTimeout(() => this.hideLoading(), 500);
     }
     public getBasemap(): BasemapTypeEnum { return this.mapManager.getCurrentBasemap(); }
-    public setTheme(theme: "light" | "dark"): void { this.theme = theme; this.container.setAttribute("data-theme", theme); document.body.setAttribute("data-theme", theme); this.uiManager.updateTheme(theme); }
+
+    public setTheme(theme: "light" | "dark"): void {
+        this.theme = theme;
+        this.container.setAttribute("data-theme", theme);
+        document.body.setAttribute("data-theme", theme);
+        this.uiManager.updateTheme(theme);
+        this.textDrawLayer?.setTheme(theme, this.t);
+    }
     public getTheme(): "light" | "dark" { return this.theme; }
     public setLocale(locale: Locale): void { this.locale = locale; this.t = getTranslation(locale); this.uiManager.updateLocale(this.t); }
     public getContainer(): HTMLElement { return this.container; }
@@ -1795,9 +1802,9 @@ export class EarthView {
         );
     }
 
-    
 
-    
+
+
     private getPointDataForPanel(): PointData[] {
         const points = this.pointCoordinatePickLayer?.getAllCoordinates() || [];
         return points.map((point, index) => ({
@@ -1835,7 +1842,7 @@ export class EarthView {
         this.showToast(`已定位到: ${longitude.toFixed(6)}, ${latitude.toFixed(6)}`);
     }
 
-    
+
     private locateToLine(points: { longitude: number; latitude: number }[]): void {
         if (points.length === 0) return;
 
@@ -1849,7 +1856,7 @@ export class EarthView {
         const centerLat = (minLat + maxLat) / 2;
 
         this.setCenter([centerLon, centerLat]);
-        
+
         const lonDiff = maxLon - minLon;
         const latDiff = maxLat - minLat;
         const maxDiff = Math.max(lonDiff, latDiff);
@@ -1862,9 +1869,9 @@ export class EarthView {
         this.showToast(`已定位到线，包含 ${points.length} 个点`);
     }
 
-    
+
     private locateToPolygon(points: { longitude: number; latitude: number }[]): void {
-        this.locateToLine(points); 
+        this.locateToLine(points);
         this.showToast(`已定位到面，包含 ${points.length} 个顶点`);
     }
 

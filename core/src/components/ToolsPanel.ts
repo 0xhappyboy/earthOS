@@ -1,5 +1,3 @@
-// components/ToolsPanel.ts
-
 import { Icons } from "../icons";
 import { Theme } from "./types";
 import { Translations } from "../i18n";
@@ -42,12 +40,8 @@ export class ToolsPanel {
     private render(): void {
         this.element.innerHTML = "";
         const isDark = this.props.theme === "dark";
-
-        // 测量工具分隔标题
         const measureTitle = this.createTitle("测量工具", isDark);
         this.element.appendChild(measureTitle);
-
-        // 距离测量
         const distanceRow = this.createMeasureRow(
             Icons.Ruler,
             this.props.t.distanceMeasure,
@@ -55,8 +49,6 @@ export class ToolsPanel {
             this.props.onDistanceMeasure
         );
         this.element.appendChild(distanceRow);
-
-        // 面积测量
         const areaRow = this.createMeasureRow(
             Icons.Area,
             this.props.t.areaMeasure,

@@ -1,4 +1,4 @@
-import { BaseLayer, ILayer } from "./BaseLayer";
+import { BaseLayer } from "./BaseLayer";
 import { ILayerManager } from "./types";
 
 export class LayerManager implements ILayerManager {
@@ -41,21 +41,6 @@ export class LayerManager implements ILayerManager {
     private getZIndexForLayer(id: string): number {
         const index = this.layerOrder.indexOf(id);
         return index;
-    }
-
-    private getLayerOrderIndex(id: string): number {
-        const index = this.layerOrder.indexOf(id);
-        if (index === -1) return this.map.getLayers().getLength();
-
-        let arcGISIndex = 0;
-        for (let i = 0; i < index; i++) {
-            const layerId = this.layerOrder[i];
-            const layer = this.layers.get(layerId);
-            if (layer && layer.getLayer() && this.map.getLayers().getArray().includes(layer.getLayer())) {
-                arcGISIndex++;
-            }
-        }
-        return arcGISIndex;
     }
 
     public removeLayer(id: string): void {
