@@ -42,7 +42,6 @@ export {
     HeatmapLayer,
     ClusterLayer,
     GeoJSONLayer,
-    CustomTileLayer,
     BarChartLayer,
     MarkerLayer,
     CircleDrawLayer,

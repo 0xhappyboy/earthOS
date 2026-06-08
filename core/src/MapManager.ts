@@ -8,7 +8,7 @@ import { BasemapTypeEnum, CoordinateSystemTypeEnum } from "./types";
 import { toWGS84 } from "./CoordTransform";
 import { defaults as defaultInteractions } from "ol/interaction";
 
-const BASEMAP_CONFIG: Record<BasemapTypeEnum, { url: string; attribution?: string }> = {
+const BASEMAP_CONFIG: Partial<Record<BasemapTypeEnum, { url: string; attribution?: string }>> = {
     [BasemapTypeEnum.SATELLITE]: {
         url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
         attribution: "Esri",
@@ -78,7 +78,7 @@ const BASEMAP_CONFIG: Record<BasemapTypeEnum, { url: string; attribution?: strin
 export class MapManager {
     private map: Map;
     private view: View;
-    private currentBasemap: BasemapTypeEnum;
+    private currentBasemap: BasemapTypeEnum | null;
     private basemapLayer: TileLayer<XYZ>;
 
     constructor(
@@ -86,7 +86,8 @@ export class MapManager {
         basemap: BasemapTypeEnum,
         center: [number, number],
         zoom: number,
-        coordinateSystem: CoordinateSystemTypeEnum
+        coordinateSystem: CoordinateSystemTypeEnum,
+        baseMapUrl?: string
     ) {
         if (getComputedStyle(container).position === 'static') {
             container.style.position = 'relative';
@@ -95,8 +96,13 @@ export class MapManager {
         if (coordinateSystem !== CoordinateSystemTypeEnum.WGS84) {
             actualCenter = toWGS84(center[0], center[1], coordinateSystem);
         }
-        this.currentBasemap = basemap;
-        this.basemapLayer = this.createBasemapLayer(basemap);
+        if (basemap === BasemapTypeEnum.CUSTOMIZE && baseMapUrl) {
+            this.basemapLayer = this.createBasemapLayerFromUrl(baseMapUrl);
+            this.currentBasemap = null;
+        } else {
+            this.basemapLayer = this.createBasemapLayer(basemap);
+            this.currentBasemap = basemap;
+        }
         this.view = new View({
             center: fromLonLat(actualCenter),
             zoom: zoom,
@@ -114,21 +120,68 @@ export class MapManager {
         });
     }
 
+    private createBasemapLayerFromUrl(url: string): TileLayer<XYZ> {
+        const source = new XYZ({
+            url: url,
+        });
+        return new TileLayer({ source });
+    }
+
+
     private createBasemapLayer(basemap: BasemapTypeEnum): TileLayer<XYZ> {
         const config = BASEMAP_CONFIG[basemap];
-        let source: XYZ;
-
         if (basemap === BasemapTypeEnum.STREETS) {
-            source = new OSM() as unknown as XYZ;
-        } else {
-            let url = config.url;
-            source = new XYZ({
-                url: url,
+            const source = new OSM() as unknown as XYZ;
+            return new TileLayer({ source });
+        }
+        if (config) {
+            const source = new XYZ({
+                url: config.url,
                 attributions: config.attribution,
             });
+            return new TileLayer({ source });
         }
+        const defaultSource = new XYZ({
+            url: BASEMAP_CONFIG[BasemapTypeEnum.SATELLITE]?.url,
+            attributions: BASEMAP_CONFIG[BasemapTypeEnum.SATELLITE]?.attribution,
+        });
+        return new TileLayer({ source: defaultSource });
+    }
 
-        return new TileLayer({ source });
+    /**
+  * Set custom basemap by URL template
+  * @param urlTemplate Tile URL template, supports {z}, {x}, {y} placeholders
+  * @example
+  * // Use Google Satellite
+  * setBasemapByUrl("http://www.google.cn/maps/vt?lyrs=s&x={x}&y={y}&z={z}");
+  * 
+  * // Use AMap
+  * setBasemapByUrl("https://webrd01.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}");
+  */
+    public setBasemapByUrl(urlTemplate: string): void {
+        const source = new XYZ({
+            url: urlTemplate,
+        });
+        const newLayer = new TileLayer({ source });
+        this.map.removeLayer(this.basemapLayer);
+        this.basemapLayer = newLayer;
+        this.map.addLayer(this.basemapLayer);
+        this.currentBasemap = null;
+    }
+
+    /**
+     * 切换回内置底图类型
+     * @param basemap 内置底图类型
+     */
+    public setBasemap(basemap: BasemapTypeEnum): void {
+        this.map.removeLayer(this.basemapLayer);
+        this.basemapLayer = this.createBasemapLayer(basemap);
+        this.map.addLayer(this.basemapLayer);
+        this.currentBasemap = basemap;
+    }
+
+    public getCurrentBasemap(): BasemapTypeEnum | null {
+        return this.currentBasemap;
     }
 
     public getMap(): Map {
@@ -158,17 +211,6 @@ export class MapManager {
 
     public setZoom(zoom: number): void {
         this.view.setZoom(zoom);
-    }
-
-    public setBasemap(basemap: BasemapTypeEnum): void {
-        this.map.removeLayer(this.basemapLayer);
-        this.basemapLayer = this.createBasemapLayer(basemap);
-        this.map.addLayer(this.basemapLayer);
-        this.currentBasemap = basemap;
-    }
-
-    public getCurrentBasemap(): BasemapTypeEnum {
-        return this.currentBasemap;
     }
 
     public setRotation(rotation: number): void {

@@ -32,7 +32,6 @@ import { ArrowDrawData } from "./layers/drawlayers/ArrowDrawLayer";
 import { EllipseDrawData } from "./layers/drawlayers/EllipseDrawLayer";
 import { FreehandDrawData } from "./layers/drawlayers/FreehandDrawLayer";
 import { MarkerDrawData } from "./layers/drawlayers/MarkerDrawLayer";
-import { TextDrawData } from "./layers/drawlayers/TextDrawLayer";
 import { BezierDrawData } from "./layers/drawlayers/BezierDrawLayer";
 import { LineDrawData } from "./layers/drawlayers/LineDrawLayer";
 import { SectorDrawData } from "./layers/drawlayers/SectorDrawLayer";
@@ -40,9 +39,8 @@ import { PointCoordinatePickData } from "./layers/toollayers/PointCoordinatePick
 import { LineCoordinatePickLayer, LineCoordinatePickData } from "./layers/toollayers/LineCoordinatePickLayer";
 import { PolygonCoordinatePickLayer, PolygonCoordinatePickData } from "./layers/toollayers/PolygonCoordinatePickLayer";
 import { LineData, PointData, PolygonData } from "./components/CoordinatePickingDataPanel";
-import { fromLonLat } from "ol/proj";
 import { ImageDrawTool } from "./draw/ImageDrawTool";
-import { ImageDrawLayer, ImageDrawData } from "./layers/drawlayers/ImageDrawLayer";
+import { ImageDrawLayer } from "./layers/drawlayers/ImageDrawLayer";
 
 export interface EarthViewOptions {
     container?: HTMLElement;
@@ -51,6 +49,7 @@ export interface EarthViewOptions {
     parent?: HTMLElement;
     parentSelector?: string;
     basemap?: BasemapTypeEnum;
+    baseMapUrl?: string;
     center?: [number, number];
     zoom?: number;
     coordinateSystem?: CoordinateSystemTypeEnum;
@@ -109,48 +108,38 @@ export class EarthView {
     private isChangingBasemap: boolean = false;
     private drawingStatusText: string | null = null;
     private measureStatusText: string | null = null;
-
     private freehandDrawLayer: FreehandDrawLayer | null = null;
     private ellipseDrawLayer: EllipseDrawLayer | null = null;
     private markerDrawLayer: MarkerDrawLayer | null = null;
     private textDrawLayer: TextDrawLayer | null = null;
     private arrowDrawLayer: ArrowDrawLayer | null = null;
-
     private freehandDrawTool: FreehandDrawTool | null = null;
     private ellipseDrawTool: EllipseDrawTool | null = null;
     private markerDrawTool: MarkerDrawTool | null = null;
     private textDrawTool: TextDrawTool | null = null;
     private arrowDrawTool: ArrowDrawTool | null = null;
-
     private eventManager: EventManager;
-
     private selectedFreehandId: string | null = null;
     private selectedEllipseId: string | null = null;
     private selectedMarkerId: string | null = null;
     private selectedTextId: string | null = null;
     private selectedArrowId: string | null = null;
-
     private lineDrawLayer: LineDrawLayer | null = null;
     private bezierDrawLayer: BezierDrawLayer | null = null;
     private sectorDrawLayer: SectorDrawLayer | null = null;
     private lineDrawTool: LineDrawTool | null = null;
     private bezierDrawTool: BezierDrawTool | null = null;
     private sectorDrawTool: SectorDrawTool | null = null;
-
     private selectedLineId: string | null = null;
     private selectedBezierId: string | null = null;
     private selectedSectorId: string | null = null;
-
-
     private pointCoordinatePickLayer: PointCoordinatePickLayer | null = null;
     private lineCoordinatePickLayer: LineCoordinatePickLayer | null = null;
     private polygonCoordinatePickLayer: PolygonCoordinatePickLayer | null = null;
-
     private pointCoordinateListPanel: PopupPanel | null = null;
     private currentPointCoordinates: PointCoordinatePickData[] = [];
     private currentLineCoordinates: LineCoordinatePickData[] = [];
     private currentPolygonCoordinates: PolygonCoordinatePickData[] = [];
-
     private imageDrawLayer: ImageDrawLayer | null = null;
     private imageDrawTool: ImageDrawTool | null = null;
     private selectedImageId: string | null = null;
@@ -163,6 +152,7 @@ export class EarthView {
             parent,
             parentSelector,
             basemap = BasemapTypeEnum.SATELLITE,
+            baseMapUrl,
             center = [0, 0],
             zoom = 12,
             coordinateSystem = CoordinateSystemTypeEnum.WGS84,
@@ -174,7 +164,6 @@ export class EarthView {
             i18n = "zh",
             enableDrawing = true,
         } = options;
-
         const { container: resolvedContainer, isOwn } = this.resolveContainer({
             container,
             containerSelector,
@@ -182,7 +171,6 @@ export class EarthView {
             parent,
             parentSelector
         });
-
         this.container = resolvedContainer;
         this.isOwnContainer = isOwn;
         this.theme = theme;
@@ -193,17 +181,21 @@ export class EarthView {
         this.onMapClickCallback = onMapClick;
         this.onCircleDrawnCallback = onCircleDrawn;
         this.enableDrawing = enableDrawing;
-
         this.container.setAttribute("data-theme", theme);
         document.body.setAttribute("data-theme", theme);
         this.container.style.cssText = 'position:relative;width:100%;height:100%;margin:0;padding:0;overflow:hidden;box-sizing:border-box;';
-
-        this.mapManager = new MapManager(this.container, basemap, center, zoom, coordinateSystem);
+        this.mapManager = new MapManager(
+            this.container,
+            basemap,
+            center,
+            zoom,
+            coordinateSystem,
+            baseMapUrl
+        );
         this.layerManager = new LayerManager(this.mapManager.getMap());
         this.drawToolManager = new DrawToolManager();
         this.drawingManager = new DrawingManager();
         this.eventManager = new EventManager();
-
         this.initUI();
         this.initLayers();
         this.initEventManager();
@@ -1077,15 +1069,10 @@ export class EarthView {
                 );
             },
             onDelete: () => {
-                console.log('Deleting freehand:', targetId);
                 if (targetLayer && targetId) {
-
                     this.hideFloatingToolbar();
-
                     targetLayer.removeFreehand(targetId);
-
                     this.selectedFreehandId = null;
-
                     setTimeout(() => {
                         if (this.mapManager) {
                             this.mapManager.getMap().render();
@@ -1109,27 +1096,20 @@ export class EarthView {
         });
     }
 
-
-
-
     private showFloatingToolbarForLine(pos: { x: number; y: number }, data: LineDrawData): void {
         if (this.floatingToolbar) {
             this.floatingToolbar.destroy();
             this.floatingToolbar = null;
         }
-
         this.floatingToolbarPosition = pos;
         this.showFloatingToolbar = true;
         this.currentColor = data.color || [255, 193, 7, 1];
         this.currentStrokeWidth = data.width || 3;
         this.currentStrokeStyle = data.style || "solid";
-
         const targetId = data.id;
         this.selectedLineId = targetId;
-
         const targetLayer = this.lineDrawLayer;
         if (!targetLayer) return;
-
         this.floatingToolbar = new FloatingToolbar({
             onColorChange: (color) => {
                 this.currentColor = color;
@@ -1186,27 +1166,20 @@ export class EarthView {
         });
     }
 
-
-
-
     private showFloatingToolbarForBezier(pos: { x: number; y: number }, data: BezierDrawData): void {
         if (this.floatingToolbar) {
             this.floatingToolbar.destroy();
             this.floatingToolbar = null;
         }
-
         this.floatingToolbarPosition = pos;
         this.showFloatingToolbar = true;
         this.currentColor = data.color || [156, 39, 176, 1];
         this.currentStrokeWidth = data.width || 3;
         this.currentStrokeStyle = data.style || "solid";
-
         const targetId = data.id;
         this.selectedBezierId = targetId;
-
         const targetLayer = this.bezierDrawLayer;
         if (!targetLayer) return;
-
         this.floatingToolbar = new FloatingToolbar({
             onColorChange: (color) => {
                 this.currentColor = color;
@@ -1263,27 +1236,20 @@ export class EarthView {
         });
     }
 
-
-
-
     private showFloatingToolbarForSector(pos: { x: number; y: number }, data: SectorDrawData): void {
         if (this.floatingToolbar) {
             this.floatingToolbar.destroy();
             this.floatingToolbar = null;
         }
-
         this.floatingToolbarPosition = pos;
         this.showFloatingToolbar = true;
         this.currentColor = data.fillColor || [33, 150, 243, 0.3];
         this.currentStrokeWidth = data.outlineWidth || 2;
         this.currentStrokeStyle = data.outlineStyle || "solid";
-
         const targetId = data.id;
         this.selectedSectorId = targetId;
-
         const targetLayer = this.sectorDrawLayer;
         if (!targetLayer) return;
-
         this.floatingToolbar = new FloatingToolbar({
             onColorChange: (color) => {
                 this.currentColor = color;
@@ -1349,7 +1315,6 @@ export class EarthView {
         this.currentColor = data.fillColor || [156, 39, 176, 0.3];
         this.currentStrokeWidth = data.outlineWidth || 2;
         this.currentStrokeStyle = data.outlineStyle || "solid";
-
         this.showGenericFloatingToolbar(pos, {
             id: this.selectedEllipseId,
             updateStyle: (color, width, style) => {
@@ -1378,8 +1343,6 @@ export class EarthView {
         this.showFloatingToolbar = true;
         this.currentColor = data.color || [255, 87, 34, 1];
         this.currentSize = data.size || 10;
-
-
         if (this.floatingToolbar) {
             this.floatingToolbar.updatePosition(pos);
             this.floatingToolbar.setVisible(true);
@@ -1437,7 +1400,6 @@ export class EarthView {
         this.currentColor = data.color || [255, 87, 34, 1];
         this.currentStrokeWidth = data.width || 3;
         this.currentStrokeStyle = data.style || "solid";
-
         this.showGenericFloatingToolbar(pos, {
             id: this.selectedArrowId,
             updateStyle: (color, width, style) => {
@@ -1460,7 +1422,6 @@ export class EarthView {
             }
         });
     }
-
 
     private showGenericFloatingToolbar(
         pos: { x: number; y: number },
@@ -1639,7 +1600,9 @@ export class EarthView {
         this.uiManager.updateCurrentBasemap(basemap);
         setTimeout(() => this.hideLoading(), 500);
     }
-    public getBasemap(): BasemapTypeEnum { return this.mapManager.getCurrentBasemap(); }
+    public getBasemap(): BasemapTypeEnum | null {
+        return this.mapManager.getCurrentBasemap();
+    }
     public setTheme(theme: "light" | "dark"): void {
         this.theme = theme;
         this.container.setAttribute("data-theme", theme);
@@ -1790,10 +1753,8 @@ export class EarthView {
         this.showToast(`已定位到: ${longitude.toFixed(6)}, ${latitude.toFixed(6)}`);
     }
 
-
     private locateToLine(points: { longitude: number; latitude: number }[]): void {
         if (points.length === 0) return;
-
         const lons = points.map(p => p.longitude);
         const lats = points.map(p => p.latitude);
         const minLon = Math.min(...lons);
@@ -1802,9 +1763,7 @@ export class EarthView {
         const maxLat = Math.max(...lats);
         const centerLon = (minLon + maxLon) / 2;
         const centerLat = (minLat + maxLat) / 2;
-
         this.setCenter([centerLon, centerLat]);
-
         const lonDiff = maxLon - minLon;
         const latDiff = maxLat - minLat;
         const maxDiff = Math.max(lonDiff, latDiff);
@@ -1817,6 +1776,22 @@ export class EarthView {
         this.showToast(`已定位到线，包含 ${points.length} 个点`);
     }
 
+    /**
+     * Set custom basemap by URL template
+     * @param url Tile URL template, supports {z}, {x}, {y} placeholders
+     * @example
+     * // Use Google Satellite
+     * setBasemapByUrl("http://www.google.cn/maps/vt?lyrs=s&x={x}&y={y}&z={z}");
+     * 
+     * // Use AMap
+     * setBasemapByUrl("https://webrd01.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}");
+     */
+    public setBasemapByUrl(
+        url: string,
+    ): void {
+        this.mapManager.setBasemapByUrl(url);
+        this.uiManager.updateCurrentBasemap(null);
+    }
 
     private locateToPolygon(points: { longitude: number; latitude: number }[]): void {
         this.locateToLine(points);
@@ -1853,5 +1828,4 @@ export class EarthView {
             this.container.remove();
         }
     }
-
 }

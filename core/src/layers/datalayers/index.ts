@@ -6,4 +6,3 @@ export { ClusterLayer } from "./ClusterLayer";
 export { GeoJSONLayer } from "./GeoJSONLayer";
 export { BarChartLayer } from "./BarChartLayer";
 export { MarkerLayer } from "./MarkerLayer";
-export { CustomTileLayer } from "./CustomTileLayer";

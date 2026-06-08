@@ -28,6 +28,7 @@ export enum BasemapTypeEnum {
     AMAP_SATELLITE = "amap-satellite",
     GOOGLE_STREETS = "google-streets",
     GOOGLE_SATELLITE = "google-satellite",
+    CUSTOMIZE = "customize",
 }
 
 /**

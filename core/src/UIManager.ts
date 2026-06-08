@@ -51,7 +51,7 @@ export class UIManager {
     private t: Translations;
     private callbacks: UIManagerCallbacks;
     private getLayerListFn: () => LayerInfo[];
-    private getCurrentBasemapFn: () => BasemapTypeEnum;
+    private getCurrentBasemapFn: () => BasemapTypeEnum | null;
     private currentBasemap: BasemapTypeEnum;
 
     private basemapOptionsInstance: BasemapOptions | null = null;
@@ -67,7 +67,7 @@ export class UIManager {
         t: Translations,
         callbacks: UIManagerCallbacks,
         getLayerList: () => LayerInfo[],
-        getCurrentBasemap: () => BasemapTypeEnum
+        getCurrentBasemap: () => BasemapTypeEnum | null
     ) {
         this.container = container;
         this.theme = theme;
@@ -75,7 +75,7 @@ export class UIManager {
         this.callbacks = callbacks;
         this.getLayerListFn = getLayerList;
         this.getCurrentBasemapFn = getCurrentBasemap;
-        this.currentBasemap = getCurrentBasemap();
+        this.currentBasemap = getCurrentBasemap() || BasemapTypeEnum.SATELLITE;
         this.init();
     }
 
@@ -235,11 +235,11 @@ export class UIManager {
         }
     }
 
-
-    public updateCurrentBasemap(basemap: BasemapTypeEnum): void {
+    public updateCurrentBasemap(basemap: BasemapTypeEnum | null): void {
+        if (basemap === null) {
+            return;
+        }
         this.currentBasemap = basemap;
-
-
         if (this.basemapOptionsInstance) {
             this.basemapOptionsInstance.updateCurrentBasemap(basemap);
         }
