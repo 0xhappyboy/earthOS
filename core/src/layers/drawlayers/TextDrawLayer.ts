@@ -16,7 +16,7 @@ import { LayerTypeEnum } from "../../types";
 import { generateId, arrayToRgba } from "../../utils";
 import { Theme } from "../../components";
 import { TextInputModalBox } from "../../components/TextInputModalBox";
-import { Translations } from "../../i18n";
+import { Translations, getTranslation } from "../../i18n";
 
 export interface TextDrawData {
     id: string;
@@ -36,7 +36,7 @@ export class TextDrawLayer extends BaseLayer {
     private drawInteraction: Draw | null = null;
     private transformInteraction: Transform | null = null;
     private features: Map<string, Feature> = new Map();
-    private editingHelperFeature: Feature | null = null; // 辅助框 feature
+    private editingHelperFeature: Feature | null = null;
     private defaultFontSize: number;
     private defaultFontFamily: string;
     private defaultColor: number[];
@@ -51,6 +51,7 @@ export class TextDrawLayer extends BaseLayer {
     public isInputActive: boolean = false;
     private currentTheme: Theme = "dark";
     private currentTranslations: Translations | null = null;
+    private t: Translations;
 
     constructor(id: string, name: string, options?: {
         defaultFontSize?: number;
@@ -62,7 +63,7 @@ export class TextDrawLayer extends BaseLayer {
         visible?: boolean;
         opacity?: number;
         zIndex?: number;
-    }) {
+    }, t?: Translations) {
         super(id, name, LayerTypeEnum.TEXT_DRAW, {
             ...options,
             zIndex: options?.zIndex ?? 100,
@@ -73,6 +74,7 @@ export class TextDrawLayer extends BaseLayer {
         this.defaultBackgroundColor = options?.defaultBackgroundColor || [0, 0, 0, 0.7];
         this.defaultOutlineColor = options?.defaultOutlineColor || [0, 0, 0, 1];
         this.defaultOutlineWidth = options?.defaultOutlineWidth || 2;
+        this.t = t || getTranslation("zh");
         this.source = new VectorSource();
         this.layer = new VectorLayer({
             source: this.source,
@@ -84,8 +86,14 @@ export class TextDrawLayer extends BaseLayer {
         });
     }
 
+    public setTranslations(t: Translations): void {
+        this.t = t;
+        if (this.currentTranslations) {
+            this.currentTranslations = t;
+        }
+    }
+
     private getStyleForFeature(feature?: any): Style {
-        // 如果是辅助框，显示边框但不显示文字内容
         if (feature?.get("isHelper")) {
             return this.getHelperStyle();
         }
@@ -122,10 +130,8 @@ export class TextDrawLayer extends BaseLayer {
         });
     }
 
-    // 获取辅助框的样式（显示控制框）
     private getHelperStyle(): Style {
         const isDark = this.currentTheme === "dark";
-        // 计算文字的大致尺寸用于辅助框
         return new Style({
             fill: new Fill({ color: "rgba(0, 170, 255, 0.05)" }),
             stroke: new Stroke({
@@ -136,10 +142,7 @@ export class TextDrawLayer extends BaseLayer {
         });
     }
 
-    // 创建辅助框几何体（矩形）
     private createHelperGeometry(center: [number, number], text: string, fontSize: number): Polygon {
-        // 估算文字宽度（每个字符大约 fontSize * 0.6 像素，这里简化为字符数 * fontSize * 0.6）
-        // 由于是地理坐标，需要根据缩放级别估算，这里简化处理
         const charWidth = fontSize * 0.6;
         const textWidth = text.length * charWidth;
         const textHeight = fontSize * 1.2;
@@ -159,6 +162,7 @@ export class TextDrawLayer extends BaseLayer {
     public setTheme(theme: Theme, t: Translations): void {
         this.currentTheme = theme;
         this.currentTranslations = t;
+        this.t = t;
     }
 
     private showTextInputModal(
@@ -188,7 +192,7 @@ export class TextDrawLayer extends BaseLayer {
 
         const map = this.mapView;
         if (!map || typeof map.getTargetElement !== 'function') {
-            console.error("TextDrawLayer: mapView is not a valid map object");
+            console.error(this.t.cannotGetMapTarget);
             this.isInputActive = false;
             if (onComplete) {
                 onComplete({
@@ -204,7 +208,7 @@ export class TextDrawLayer extends BaseLayer {
 
         const targetElement = map.getTargetElement();
         if (!targetElement) {
-            console.error("TextDrawLayer: cannot get map target element");
+            console.error(this.t.cannotGetMapTarget);
             this.isInputActive = false;
             if (onComplete) {
                 onComplete({
@@ -220,7 +224,7 @@ export class TextDrawLayer extends BaseLayer {
 
         const pixel = map.getPixelFromCoordinate(position);
         if (!pixel || pixel.length < 2) {
-            console.error("TextDrawLayer: cannot get pixel from coordinate", position);
+            console.error(this.t.cannotGetPixelFromCoordinate, position);
             this.isInputActive = false;
             if (onComplete) {
                 onComplete({
@@ -240,15 +244,15 @@ export class TextDrawLayer extends BaseLayer {
         top = Math.max(10, Math.min(top, window.innerHeight - 270));
 
         const simpleT = {
-            addText: "添加文字",
-            enterText: "请输入文字...",
-            bold: "粗体",
-            italic: "斜体",
-            fontSize: "字号",
-            color: "颜色",
-            confirm: "确定",
-            cancel: "取消",
-            delete: "删除"
+            addText: this.t.editText,
+            enterText: this.t.pleaseEnterText,
+            bold: this.t.bold,
+            italic: this.t.italic,
+            fontSize: this.t.fontSize,
+            color: this.t.color,
+            confirm: this.t.confirm,
+            cancel: this.t.cancel,
+            delete: this.t.delete
         } as any;
 
         this.textInputModal = new TextInputModalBox(
@@ -392,7 +396,6 @@ export class TextDrawLayer extends BaseLayer {
         this.mapView?.addInteraction(this.drawInteraction);
     }
 
-    // 开始编辑（移动/缩放模式）- 左键单击触发
     public startEdit(id: string, onComplete?: (data: TextDrawData) => void): void {
         this.stopEdit();
         const targetFeature = this.features.get(id);
@@ -409,7 +412,6 @@ export class TextDrawLayer extends BaseLayer {
         const content = targetFeature.get("content") || "";
         const fontSize = targetFeature.get("fontSize") || this.defaultFontSize;
 
-        // 创建辅助框 feature（基于文字内容和字体大小估算）
         const helperGeometry = this.createHelperGeometry([x, y], content, fontSize);
         this.editingHelperFeature = new Feature({
             geometry: helperGeometry,
@@ -431,7 +433,6 @@ export class TextDrawLayer extends BaseLayer {
         });
         this.transformInteraction.setActive(true);
 
-        // 缩放结束
         this.transformInteraction.on("scaleend", () => {
             if (!this.editingHelperFeature || !targetFeature) return;
             const helperGeom = this.editingHelperFeature.getGeometry();
@@ -439,7 +440,6 @@ export class TextDrawLayer extends BaseLayer {
                 const extent = helperGeom.getExtent();
                 const centerX = (extent[0] + extent[2]) / 2;
                 const centerY = (extent[1] + extent[3]) / 2;
-                // 根据辅助框宽度计算新的字体大小
                 const newWidth = extent[2] - extent[0];
                 const originalWidth = this.createHelperGeometry([x, y], content, fontSize).getExtent()[2] - extent[0];
                 const scale = newWidth / originalWidth;
@@ -455,7 +455,6 @@ export class TextDrawLayer extends BaseLayer {
                 targetFeature.set("position", [lng, lat]);
                 targetFeature.changed();
 
-                // 更新辅助框
                 const newHelperGeometry = this.createHelperGeometry([centerX, centerY], content, newFontSize);
                 this.editingHelperFeature?.setGeometry(newHelperGeometry);
 
@@ -479,7 +478,6 @@ export class TextDrawLayer extends BaseLayer {
             }
         });
 
-        // 移动结束
         this.transformInteraction.on("translateend", () => {
             if (!this.editingHelperFeature || !targetFeature) return;
             const helperGeom = this.editingHelperFeature.getGeometry();
@@ -496,7 +494,6 @@ export class TextDrawLayer extends BaseLayer {
                 targetFeature.set("position", [lng, lat]);
                 targetFeature.changed();
 
-                // 更新辅助框位置
                 const currentContent = targetFeature.get("content") || "";
                 const currentFontSize = targetFeature.get("fontSize") || this.defaultFontSize;
                 const newHelperGeometry = this.createHelperGeometry([centerX, centerY], currentContent, currentFontSize);
@@ -526,7 +523,6 @@ export class TextDrawLayer extends BaseLayer {
         this.mapView?.render();
     }
 
-    // 编辑文字属性（内容、颜色等）- 右键单击触发
     public editProperties(id: string, onComplete?: (data: TextDrawData) => void, onDelete?: () => void): void {
         const targetFeature = this.features.get(id);
         if (!targetFeature) {

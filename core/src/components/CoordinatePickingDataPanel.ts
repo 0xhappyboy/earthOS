@@ -108,9 +108,9 @@ export class CoordinatePickingDataPanel {
         const polygonData = this.getPolygonData();
 
         const categories = [
-            { id: "point", label: "点数据", icon: "📍", count: pointData.length },
-            { id: "line", label: "线数据", icon: "📏", count: lineData.length },
-            { id: "polygon", label: "面数据", icon: "🔲", count: polygonData.length }
+            { id: "point", label: this.options.t.pointData, icon: "📍", count: pointData.length },
+            { id: "line", label: this.options.t.lineData, icon: "📏", count: lineData.length },
+            { id: "polygon", label: this.options.t.polygonData, icon: "🔲", count: polygonData.length }
         ];
 
         categories.forEach((category) => {
@@ -146,7 +146,7 @@ export class CoordinatePickingDataPanel {
 
         const title = document.createElement("span");
         title.style.cssText = `color: ${isDark ? "#fff" : "#333"}; font-size: 12px; font-weight: 500;`;
-        title.textContent = "坐标数据";
+        title.textContent = this.options.t.coordinateData;
         header.appendChild(title);
 
         const closeBtn = document.createElement("button");
@@ -240,7 +240,7 @@ export class CoordinatePickingDataPanel {
                 color: ${isDark ? "#888" : "#999"};
                 font-size: 11px;
             `;
-            emptyState.textContent = "暂无数据，请先使用坐标拾取工具";
+            emptyState.textContent = this.options.t.pleaseUseCoordinatePickTool;
             subMenuContainer.appendChild(emptyState);
         } else {
             data.forEach((item, index) => {
@@ -288,9 +288,9 @@ export class CoordinatePickingDataPanel {
         if (categoryId === "point") {
             infoText = `${data.longitude.toFixed(6)}, ${data.latitude.toFixed(6)}`;
         } else if (categoryId === "line") {
-            infoText = `${data.points.length} 个点`;
+            infoText = `${data.points.length} ${this.options.t.points}`;
         } else if (categoryId === "polygon") {
-            infoText = `${data.points.length} 个点`;
+            infoText = `${data.points.length} ${this.options.t.points}`;
         }
 
         const coordText = document.createElement("div");
@@ -316,7 +316,7 @@ export class CoordinatePickingDataPanel {
             color: ${isDark ? "#00aaff" : "#0066cc"};
             margin-left: 8px;
         `;
-        detailBtn.textContent = "详情";
+        detailBtn.textContent = this.options.t.details;
         detailBtn.onmouseenter = () => {
             detailBtn.style.background = isDark ? "#444" : "#e0e0e0";
         };
@@ -370,7 +370,7 @@ export class CoordinatePickingDataPanel {
 
         const title = document.createElement("span");
         title.style.cssText = `color: ${isDark ? "#fff" : "#333"}; font-size: 13px; font-weight: 600;`;
-        title.textContent = "坐标详情";
+        title.textContent = this.options.t.details;
         header.appendChild(title);
 
         const closeBtn = document.createElement("button");
@@ -393,7 +393,7 @@ export class CoordinatePickingDataPanel {
 
         let bodyHtml = `
             <div style="margin-bottom: 12px;">
-                <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">名称</div>
+                <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.coordinateData}</div>
                 <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 14px; font-weight: 500;">${data.name}</div>
             </div>
         `;
@@ -401,41 +401,41 @@ export class CoordinatePickingDataPanel {
         if (categoryId === "point") {
             bodyHtml += `
                 <div style="margin-bottom: 12px;">
-                    <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">经度 (Longitude)</div>
+                    <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.longitude}</div>
                     <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 13px; font-family: monospace;">${data.longitude.toFixed(8)}</div>
                 </div>
                 <div style="margin-bottom: 12px;">
-                    <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">纬度 (Latitude)</div>
+                    <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.latitude}</div>
                     <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 13px; font-family: monospace;">${data.latitude.toFixed(8)}</div>
                 </div>
             `;
         } else if (categoryId === "line") {
             bodyHtml += `
                 <div style="margin-bottom: 12px;">
-                    <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">线段数量</div>
-                    <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 13px;">${data.points.length} 个点</div>
+                    <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.pointsCount}</div>
+                    <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 13px;">${data.points.length} ${this.options.t.points}</div>
                 </div>
                 <div style="margin-bottom: 12px;">
-                    <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">起点坐标</div>
+                    <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.startPoint}</div>
                     <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 12px; font-family: monospace;">${data.points[0]?.longitude.toFixed(6)}, ${data.points[0]?.latitude.toFixed(6)}</div>
                 </div>
                 <div style="margin-bottom: 12px;">
-                    <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">终点坐标</div>
+                    <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.endPoint}</div>
                     <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 12px; font-family: monospace;">${data.points[data.points.length - 1]?.longitude.toFixed(6)}, ${data.points[data.points.length - 1]?.latitude.toFixed(6)}</div>
                 </div>
             `;
         } else if (categoryId === "polygon") {
             bodyHtml += `
                 <div style="margin-bottom: 12px;">
-                    <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">顶点数量</div>
-                    <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 13px;">${data.points.length} 个点</div>
+                    <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.vertexCount}</div>
+                    <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 13px;">${data.points.length} ${this.options.t.points}</div>
                 </div>
             `;
         }
 
         bodyHtml += `
             <div style="margin-bottom: 12px;">
-                <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">创建时间</div>
+                <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.createdTime}</div>
                 <div style="color: ${isDark ? "#ddd" : "#555"}; font-size: 11px;">${new Date(data.timestamp).toLocaleString()}</div>
             </div>
         `;
@@ -464,7 +464,7 @@ export class CoordinatePickingDataPanel {
             font-size: 12px;
             transition: all 0.2s;
         `;
-        locateBtn.textContent = "📍 在地图上定位";
+        locateBtn.textContent = this.options.t.locateOnMap;
         locateBtn.onmouseenter = () => {
             locateBtn.style.background = "#0088cc";
         };
@@ -494,7 +494,7 @@ export class CoordinatePickingDataPanel {
             font-size: 12px;
             transition: all 0.2s;
         `;
-        copyBtn.textContent = "📋 复制坐标";
+        copyBtn.textContent = this.options.t.copyCoordinates;
         copyBtn.onmouseenter = () => {
             copyBtn.style.background = isDark ? "#555" : "#d0d0d0";
         };
@@ -511,7 +511,7 @@ export class CoordinatePickingDataPanel {
                 text = data.points.map((p: any) => `${p.longitude.toFixed(8)}, ${p.latitude.toFixed(8)}`).join("\n");
             }
             navigator.clipboard.writeText(text);
-            this.showToast("已复制坐标到剪贴板");
+            this.showToast(this.options.t.coordinatesCopied);
         };
 
         footer.appendChild(locateBtn);

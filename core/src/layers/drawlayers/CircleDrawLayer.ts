@@ -12,6 +12,7 @@ import { fromLonLat, toLonLat } from "ol/proj";
 import { BaseLayer } from "../BaseLayer";
 import { LayerTypeEnum, CircleDrawData } from "../../types";
 import { generateId, arrayToRgba } from "../../utils";
+import { getTranslation, Translations } from "../../i18n";
 
 export class CircleDrawLayer extends BaseLayer {
     private drawInteraction: Draw | null = null;
@@ -24,6 +25,7 @@ export class CircleDrawLayer extends BaseLayer {
     private onEditCompleteCallback: ((data: CircleDrawData) => void) | null = null;
     private editingFeature: Feature | null = null;
     private mapView: any = null;
+    private t: Translations;
 
     constructor(id: string, name: string, options?: {
         defaultFillColor?: number[];
@@ -32,7 +34,7 @@ export class CircleDrawLayer extends BaseLayer {
         visible?: boolean;
         opacity?: number;
         zIndex?: number;
-    }) {
+    }, t?: Translations) {
         super(id, name, LayerTypeEnum.CIRCLE_DRAW, {
             ...options,
             zIndex: options?.zIndex ?? 100,
@@ -40,6 +42,7 @@ export class CircleDrawLayer extends BaseLayer {
         this.defaultFillColor = options?.defaultFillColor || [255, 0, 0, 0.3];
         this.defaultOutlineColor = options?.defaultOutlineColor || [255, 0, 0, 1];
         this.defaultOutlineWidth = options?.defaultOutlineWidth || 1;
+        this.t = t || getTranslation("zh");
         this.source = new VectorSource();
         this.layer = new VectorLayer({
             source: this.source,
@@ -49,6 +52,10 @@ export class CircleDrawLayer extends BaseLayer {
             opacity: this.opacity,
             zIndex: this.zIndex,
         });
+    }
+
+    public setTranslations(t: Translations): void {
+        this.t = t;
     }
 
     private createStyle(): Style {
@@ -118,6 +125,7 @@ export class CircleDrawLayer extends BaseLayer {
         this.stopEdit();
         const targetFeature = this.features.get(id);
         if (!targetFeature) {
+            console.warn(this.t.featureNotFound, id);
             return;
         }
         this.editingFeature = targetFeature;
@@ -140,10 +148,10 @@ export class CircleDrawLayer extends BaseLayer {
             const geometry = targetFeature.getGeometry();
             if (geometry instanceof Circle) {
                 const center = toLonLat(geometry.getCenter());
-                const id = targetFeature.get("id");
-                if (this.onEditCompleteCallback && id) {
+                const idVal = targetFeature.get("id");
+                if (this.onEditCompleteCallback && idVal) {
                     this.onEditCompleteCallback({
-                        id: id,
+                        id: idVal,
                         center: [center[0], center[1]],
                         radius: geometry.getRadius(),
                     });
@@ -154,10 +162,10 @@ export class CircleDrawLayer extends BaseLayer {
             const geometry = targetFeature.getGeometry();
             if (geometry instanceof Circle) {
                 const center = toLonLat(geometry.getCenter());
-                const id = targetFeature.get("id");
-                if (this.onEditCompleteCallback && id) {
+                const idVal = targetFeature.get("id");
+                if (this.onEditCompleteCallback && idVal) {
                     this.onEditCompleteCallback({
-                        id: id,
+                        id: idVal,
                         center: [center[0], center[1]],
                         radius: geometry.getRadius(),
                     });

@@ -1,4 +1,3 @@
-
 import { Theme } from "./types";
 import { Translations } from "../i18n";
 
@@ -131,7 +130,7 @@ export class ImageInputModalBox {
             font-size: 12px;
             font-weight: 500;
         `;
-        title.textContent = this.options.t.addImage || "添加图片";
+        title.textContent = this.options.t.addImage;
         header.appendChild(title);
         return header;
     }
@@ -139,81 +138,79 @@ export class ImageInputModalBox {
     private createPreviewArea(isDark: boolean): HTMLDivElement {
         const container = document.createElement("div");
         container.style.cssText = `
-        padding: 12px;
-        border-bottom: 1px solid ${isDark ? "#3d3d3d" : "#eee"};
-    `;
+            padding: 12px;
+            border-bottom: 1px solid ${isDark ? "#3d3d3d" : "#eee"};
+        `;
         const previewLabel = document.createElement("div");
         previewLabel.style.cssText = `
-        color: ${isDark ? "#aaa" : "#666"};
-        font-size: 10px;
-        margin-bottom: 6px;
-    `;
-        previewLabel.textContent = "预览";
+            color: ${isDark ? "#aaa" : "#666"};
+            font-size: 10px;
+            margin-bottom: 6px;
+        `;
+        previewLabel.textContent = this.options.t.imagePreview;
         container.appendChild(previewLabel);
         this.imagePreview = document.createElement("div");
-        this.imagePreview.className = "image-input-modal-preview";  
+        this.imagePreview.className = "image-input-modal-preview";
         this.imagePreview.style.cssText = `
-        background: ${isDark ? "#1e1e1e" : "#f0f0f0"};
-        border-radius: 4px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 100px;
-        border: 1px dashed ${isDark ? "#555" : "#ccc"};
-    `;
+            background: ${isDark ? "#1e1e1e" : "#f0f0f0"};
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100px;
+            border: 1px dashed ${isDark ? "#555" : "#ccc"};
+        `;
         this.previewImg = document.createElement("img");
-        this.previewImg.className = "image-input-modal-preview-img";  
+        this.previewImg.className = "image-input-modal-preview-img";
         this.previewImg.style.cssText = `
-        max-width: 100%;
-        max-height: 100px;
-        object-fit: contain;
-        display: none;
-    `;
+            max-width: 100%;
+            max-height: 100px;
+            object-fit: contain;
+            display: none;
+        `;
         this.imagePreview.appendChild(this.previewImg);
         const noImageText = document.createElement("span");
         noImageText.id = "no-image-text";
         noImageText.style.cssText = `
-        color: ${isDark ? "#666" : "#999"};
-        font-size: 11px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        height: 100px;
-    `;
-        noImageText.textContent = "暂无图片";
+            color: ${isDark ? "#666" : "#999"};
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100px;
+        `;
+        noImageText.textContent = this.options.t.noImage;
         this.imagePreview.appendChild(noImageText);
         container.appendChild(this.imagePreview);
         return container;
     }
 
-    
     private createFormArea(isDark: boolean): HTMLDivElement {
         const form = document.createElement("div");
         form.style.cssText = `padding: 8px 12px;`;
         const urlRow = this.createInputRow(
-            this.options.t.imageUrl || "图片URL",
+            this.options.t.imageUrl,
             "text",
             this.currentImageUrl,
             isDark
         );
         this.urlInput = urlRow.input as HTMLInputElement;
-        this.urlInput.className = "image-input-modal-url";  
+        this.urlInput.className = "image-input-modal-url";
         form.appendChild(urlRow.container);
         const uploadRow = this.createUploadRow(isDark);
         form.appendChild(uploadRow);
-        const widthRow = this.createNumberRow("宽度", "width", this.options.initialWidth || 32, 16, 512, isDark);
+        const widthRow = this.createNumberRow(this.options.t.width, "width", this.options.initialWidth || 32, 16, 512, isDark);
         this.widthInput = widthRow.input as HTMLInputElement;
-        this.widthInput.className = "image-input-modal-width";  
+        this.widthInput.className = "image-input-modal-width";
         form.appendChild(widthRow.container);
-        const heightRow = this.createNumberRow("高度", "height", this.options.initialHeight || 32, 16, 512, isDark);
+        const heightRow = this.createNumberRow(this.options.t.height, "height", this.options.initialHeight || 32, 16, 512, isDark);
         this.heightInput = heightRow.input as HTMLInputElement;
-        this.heightInput.className = "image-input-modal-height";  
+        this.heightInput.className = "image-input-modal-height";
         form.appendChild(heightRow.container);
         const opacityRow = this.createOpacityRow(isDark);
         this.opacityInput = opacityRow.input as HTMLInputElement;
-        this.opacityInput.className = "image-input-modal-opacity";  
+        this.opacityInput.className = "image-input-modal-opacity";
         form.appendChild(opacityRow.container);
-
         return form;
     }
 
@@ -227,7 +224,6 @@ export class ImageInputModalBox {
         container.style.cssText = `
             margin-bottom: 8px;
         `;
-
         const labelSpan = document.createElement("span");
         labelSpan.style.cssText = `
             display: block;
@@ -237,7 +233,6 @@ export class ImageInputModalBox {
         `;
         labelSpan.textContent = label;
         container.appendChild(labelSpan);
-
         const input = document.createElement("input");
         input.type = type;
         input.value = value;
@@ -253,7 +248,6 @@ export class ImageInputModalBox {
             outline: none;
         `;
         container.appendChild(input);
-
         return { container, input };
     }
 
@@ -304,18 +298,18 @@ export class ImageInputModalBox {
         container.style.cssText = `margin-bottom: 8px;`;
         this.uploadBtn = document.createElement("button");
         this.uploadBtn.className = "image-input-modal-upload";
-        this.uploadBtn.textContent = this.options.t.uploadImage || "上传图片";
+        this.uploadBtn.textContent = this.options.t.uploadImage;
         this.uploadBtn.style.cssText = `
-        width: 100%;
-        padding: 6px 8px;
-        background: ${isDark ? "#3d3d3d" : "#e8e8e8"};
-        border: 1px solid ${isDark ? "#555" : "#ddd"};
-        border-radius: 4px;
-        color: ${isDark ? "#ccc" : "#666"};
-        font-size: 11px;
-        cursor: pointer;
-        transition: all 0.2s;
-    `;
+            width: 100%;
+            padding: 6px 8px;
+            background: ${isDark ? "#3d3d3d" : "#e8e8e8"};
+            border: 1px solid ${isDark ? "#555" : "#ddd"};
+            border-radius: 4px;
+            color: ${isDark ? "#ccc" : "#666"};
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+        `;
         this.uploadBtn.onmouseenter = () => {
             this.uploadBtn.style.background = isDark ? "#4a4a4a" : "#e0e0e0";
         };
@@ -347,70 +341,64 @@ export class ImageInputModalBox {
     private createOpacityRow(isDark: boolean): { container: HTMLDivElement; input: HTMLInputElement } {
         const container = document.createElement("div");
         container.style.cssText = `
-        margin-bottom: 8px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    `;
-
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        `;
         const labelSpan = document.createElement("span");
         labelSpan.style.cssText = `
-        color: ${isDark ? "#aaa" : "#666"};
-        font-size: 10px;
-        width: 50px;
-    `;
-        labelSpan.textContent = this.options.t.opacity || "透明度";
+            color: ${isDark ? "#aaa" : "#666"};
+            font-size: 10px;
+            width: 50px;
+        `;
+        labelSpan.textContent = this.options.t.opacity;
         container.appendChild(labelSpan);
-
         this.opacityInput = document.createElement("input");
         this.opacityInput.type = "range";
         this.opacityInput.min = "0";
         this.opacityInput.max = "100";
         this.opacityInput.value = ((this.options.initialOpacity || 1) * 100).toString();
         this.opacityInput.style.cssText = `
-        flex: 1;
-        height: 4px;
-        -webkit-appearance: none;
-        background: ${isDark ? "#444" : "#ddd"};
-        border-radius: 2px;
-        outline: none;
-    `;
+            flex: 1;
+            height: 4px;
+            -webkit-appearance: none;
+            background: ${isDark ? "#444" : "#ddd"};
+            border-radius: 2px;
+            outline: none;
+        `;
         this.opacityInput.oninput = () => {
             if (this.opacityValue) {
                 this.opacityValue.textContent = `${this.opacityInput.value}%`;
             }
         };
         container.appendChild(this.opacityInput);
-
         this.opacityValue = document.createElement("span");
-        this.opacityValue.className = "image-input-modal-opacity-value";  
+        this.opacityValue.className = "image-input-modal-opacity-value";
         this.opacityValue.style.cssText = `
-        color: ${isDark ? "#aaa" : "#666"};
-        font-size: 10px;
-        width: 40px;
-        text-align: right;
-    `;
+            color: ${isDark ? "#aaa" : "#666"};
+            font-size: 10px;
+            width: 40px;
+            text-align: right;
+        `;
         this.opacityValue.textContent = `${this.opacityInput.value}%`;
         container.appendChild(this.opacityValue);
-
         return { container, input: this.opacityInput };
     }
-
 
     private createFooter(isDark: boolean): HTMLDivElement {
         const footer = document.createElement("div");
         footer.style.cssText = `
-        display: flex;
-        justify-content: flex-end;
-        gap: 6px;
-        padding: 8px 12px;
-        background: ${isDark ? "#252525" : "#fafafa"};
-        border-top: 1px solid ${isDark ? "#3d3d3d" : "#eee"};
-    `;
-
+            display: flex;
+            justify-content: flex-end;
+            gap: 6px;
+            padding: 8px 12px;
+            background: ${isDark ? "#252525" : "#fafafa"};
+            border-top: 1px solid ${isDark ? "#3d3d3d" : "#eee"};
+        `;
         if (this.options.onDelete) {
             this.deleteBtn = this.createFooterButton(
-                this.options.t.delete || "删除",
+                this.options.t.delete,
                 isDark,
                 false,
                 true
@@ -418,18 +406,16 @@ export class ImageInputModalBox {
             this.deleteBtn.className = "image-input-modal-delete";
             footer.appendChild(this.deleteBtn);
         }
-
         this.cancelBtn = this.createFooterButton(
-            this.options.t.cancel || "取消",
+            this.options.t.cancel,
             isDark,
             false,
             false
         );
         this.cancelBtn.className = "image-input-modal-cancel";
         footer.appendChild(this.cancelBtn);
-
         this.confirmBtn = this.createFooterButton(
-            this.options.t.confirm || "确定",
+            this.options.t.confirm,
             isDark,
             true,
             false
@@ -509,14 +495,14 @@ export class ImageInputModalBox {
                 this.previewImg.style.display = "none";
                 if (noImageText) {
                     (noImageText as HTMLElement).style.display = "flex";
-                    (noImageText as HTMLElement).textContent = "图片加载失败";
+                    (noImageText as HTMLElement).textContent = this.options.t.imageLoadFailed;
                 }
             };
         } else {
             this.previewImg.style.display = "none";
             if (noImageText) {
                 (noImageText as HTMLElement).style.display = "flex";
-                (noImageText as HTMLElement).textContent = "暂无图片";
+                (noImageText as HTMLElement).textContent = this.options.t.noImage;
             }
         }
     }
@@ -553,11 +539,7 @@ export class ImageInputModalBox {
 
     private bindEvents(): void {
         if (!this.urlInput || !this.confirmBtn || !this.cancelBtn) {
-            console.error("ImageInputModalBox: Required elements not found", {
-                urlInput: !!this.urlInput,
-                confirmBtn: !!this.confirmBtn,
-                cancelBtn: !!this.cancelBtn,
-            });
+            console.error("ImageInputModalBox: Required elements not found");
             return;
         }
         this.urlInput.addEventListener("input", () => {
@@ -622,7 +604,6 @@ export class ImageInputModalBox {
         });
     }
 
-    
     private updatePreviewSize(): void {
         const width = parseInt(this.widthInput.value) || 32;
         const height = parseInt(this.heightInput.value) || 32;

@@ -42,23 +42,23 @@ export class DrawToolsPanel {
 
     private render(): void {
         this.element.innerHTML = "";
-        this.addSectionTitle("线段工具");
-        this.element.appendChild(this.createToolRow(this.createLineIcon(), "线段", this.props.onDrawLine));
-        this.element.appendChild(this.createToolRow(this.createArrowIcon(), "箭头", this.props.onDrawArrow));
-        this.element.appendChild(this.createToolRow(this.createBezierIcon(), "贝塞尔曲线", this.props.onDrawBezier));
-        this.addSectionTitle("几何图形");
+        this.addSectionTitle(this.props.t.lineTool);
+        this.element.appendChild(this.createToolRow(this.createLineIcon(), this.props.t.lineTool, this.props.onDrawLine));
+        this.element.appendChild(this.createToolRow(this.createArrowIcon(), this.props.t.arrowTool, this.props.onDrawArrow));
+        this.element.appendChild(this.createToolRow(this.createBezierIcon(), this.props.t.bezierTool, this.props.onDrawBezier));
+        this.addSectionTitle(this.props.t.drawTools);
         this.element.appendChild(this.createToolRow(Icons.Circle, this.props.t.drawCircle, this.props.onDrawCircle));
-        this.element.appendChild(this.createToolRow(this.createEllipseIcon(), "椭圆", this.props.onDrawEllipse));
-        this.element.appendChild(this.createToolRow(this.createRectangleIcon(), "绘制矩形", this.props.onDrawRectangle));
-        this.element.appendChild(this.createToolRow(this.createTriangleIcon(), "绘制三角形", this.props.onDrawTriangle));
-        this.element.appendChild(this.createToolRow(this.createSectorIcon(), "扇形", this.props.onDrawSector));
-        this.addSectionTitle("自由绘制");
-        this.element.appendChild(this.createToolRow(this.createFreehandIcon(), "手绘线", this.props.onDrawFreehand));
-        this.element.appendChild(this.createToolRow(this.createFreehandPolygonIcon(), "手绘多边形", this.props.onDrawFreehandPolygon));
-        this.addSectionTitle("标注工具");
-        this.element.appendChild(this.createToolRow(this.createMarkerIcon(), "标注点", this.props.onDrawMarker));
-        this.element.appendChild(this.createToolRow(this.createTextIcon(), "文字标注", this.props.onDrawText));
-        this.element.appendChild(this.createToolRow(this.createImageIcon(), "图片标注", this.props.onDrawImage));
+        this.element.appendChild(this.createToolRow(this.createEllipseIcon(), this.props.t.ellipseTool, this.props.onDrawEllipse));
+        this.element.appendChild(this.createToolRow(this.createRectangleIcon(), this.props.t.rectangleTool, this.props.onDrawRectangle));
+        this.element.appendChild(this.createToolRow(this.createTriangleIcon(), this.props.t.triangleTool, this.props.onDrawTriangle));
+        this.element.appendChild(this.createToolRow(this.createSectorIcon(), this.props.t.sectorTool, this.props.onDrawSector));
+        this.addSectionTitle(this.props.t.drawFreehandLine);
+        this.element.appendChild(this.createToolRow(this.createFreehandIcon(), this.props.t.drawFreehandLine, this.props.onDrawFreehand));
+        this.element.appendChild(this.createToolRow(this.createFreehandPolygonIcon(), this.props.t.drawFreehandPolygon, this.props.onDrawFreehandPolygon));
+        this.addSectionTitle(this.props.t.drawMarker);
+        this.element.appendChild(this.createToolRow(this.createMarkerIcon(), this.props.t.drawMarker, this.props.onDrawMarker));
+        this.element.appendChild(this.createToolRow(this.createTextIcon(), this.props.t.drawText, this.props.onDrawText));
+        this.element.appendChild(this.createToolRow(this.createImageIcon(), this.props.t.drawImage, this.props.onDrawImage));
     }
 
     private addSectionTitle(title: string): void {
@@ -75,20 +75,8 @@ export class DrawToolsPanel {
         this.element.appendChild(titleDiv);
     }
 
-    private addSeparator(): void {
-        const isDark = this.props.theme === "dark";
-        const separator = document.createElement("div");
-        separator.style.cssText = `
-            height: 1px;
-            background: ${isDark ? "#333" : "#eee"};
-            margin: 4px 0;
-        `;
-        this.element.appendChild(separator);
-    }
-
     private createToolRow(iconHtml: string, label: string, onClick: () => void): HTMLDivElement {
         const isDark = this.props.theme === "dark";
-
         const row = document.createElement("div");
         row.style.cssText = `
             display: flex;
@@ -102,16 +90,13 @@ export class DrawToolsPanel {
         row.onmouseenter = () => { row.style.background = isDark ? "#2a2a2a" : "#f5f5f5"; };
         row.onmouseleave = () => { row.style.background = "transparent"; };
         row.onclick = onClick;
-
         const iconSpan = document.createElement("span");
         iconSpan.innerHTML = iconHtml;
         row.appendChild(iconSpan);
-
         const textSpan = document.createElement("span");
         textSpan.style.cssText = `color: ${isDark ? "#fff" : "#333"}; font-size: 12px;`;
         textSpan.textContent = label;
         row.appendChild(textSpan);
-
         return row;
     }
 
@@ -184,11 +169,11 @@ export class DrawToolsPanel {
 
     private createImageIcon(): string {
         return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-        <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
-        <polyline points="21 15 16 10 5 21"/>
-        <line x1="10" y1="21" x2="21" y2="21"/>
-    </svg>`;
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
+            <polyline points="21 15 16 10 5 21"/>
+            <line x1="10" y1="21" x2="21" y2="21"/>
+        </svg>`;
     }
 
     private createTextIcon(): string {
@@ -203,13 +188,6 @@ export class DrawToolsPanel {
         return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="5" y1="12" x2="19" y2="12"/>
             <polyline points="15 6 19 12 15 18"/>
-        </svg>`;
-    }
-
-    private createEditIcon(): string {
-        return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M17 3l4 4-7 7-4 1 1-4 7-7z"/>
-            <path d="M12 7L4 15v4h4l8-8"/>
         </svg>`;
     }
 

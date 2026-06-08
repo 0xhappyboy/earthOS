@@ -74,6 +74,7 @@ export class MeasurementFloatingToolbar {
             background: ${isDark ? "#3d3d3d" : "#e8e8e8"};
         `;
         dragHandle.innerHTML = Icons.DragHandle;
+        dragHandle.title = this.options.t.dragToMove;
         dragHandle.onmousedown = this.onMouseDown.bind(this);
         div.appendChild(dragHandle);
         const deleteBtn = document.createElement("button");

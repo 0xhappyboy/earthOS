@@ -84,6 +84,7 @@ export class FloatingToolbar {
             background: ${isDark ? "#3d3d3d" : "#e8e8e8"};
         `;
         dragHandle.innerHTML = Icons.DragHandle;
+        dragHandle.title = this.options.t.dragToMove;
         dragHandle.onmousedown = this.onMouseDown.bind(this);
         div.appendChild(dragHandle);
         const colorBtn = document.createElement("button");
@@ -273,16 +274,16 @@ export class FloatingToolbar {
         const PRESET_WIDTHS = [1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 20];
         const div = document.createElement("div");
         div.style.cssText = `
-        background: ${isDark ? "#2d2d2d" : "#ffffff"};
-        border: 1px solid ${isDark ? "#444" : "#ddd"};
-        border-radius: 8px;
-        padding: 6px 0;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        width: 130px;
-        max-height: 200px;
-        overflow-y: auto;
-        z-index: 300;
-    `;
+            background: ${isDark ? "#2d2d2d" : "#ffffff"};
+            border: 1px solid ${isDark ? "#444" : "#ddd"};
+            border-radius: 8px;
+            padding: 6px 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            width: 130px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 300;
+        `;
         div.className = "earthview-stroke-width-scroll";
         this.injectStrokeWidthScrollbarStyles(isDark);
         const container = document.createElement("div");
@@ -343,25 +344,25 @@ export class FloatingToolbar {
         const trackColor = isDark ? "#2d2d2d" : "#f0f0f0";
         const thumbHoverColor = isDark ? "#777" : "#aaa";
         const css = `
-        .earthview-stroke-width-scroll {
-            scrollbar-width: thin;
-            scrollbar-color: ${thumbColor} ${trackColor};
-        }
-        .earthview-stroke-width-scroll::-webkit-scrollbar {
-            width: 4px;
-        }
-        .earthview-stroke-width-scroll::-webkit-scrollbar-track {
-            background: ${trackColor};
-            border-radius: 4px;
-        }
-        .earthview-stroke-width-scroll::-webkit-scrollbar-thumb {
-            background: ${thumbColor};
-            border-radius: 4px;
-        }
-        .earthview-stroke-width-scroll::-webkit-scrollbar-thumb:hover {
-            background: ${thumbHoverColor};
-        }
-    `;
+            .earthview-stroke-width-scroll {
+                scrollbar-width: thin;
+                scrollbar-color: ${thumbColor} ${trackColor};
+            }
+            .earthview-stroke-width-scroll::-webkit-scrollbar {
+                width: 4px;
+            }
+            .earthview-stroke-width-scroll::-webkit-scrollbar-track {
+                background: ${trackColor};
+                border-radius: 4px;
+            }
+            .earthview-stroke-width-scroll::-webkit-scrollbar-thumb {
+                background: ${thumbColor};
+                border-radius: 4px;
+            }
+            .earthview-stroke-width-scroll::-webkit-scrollbar-thumb:hover {
+                background: ${thumbHoverColor};
+            }
+        `;
         let styleEl = document.getElementById(styleId) as HTMLStyleElement;
         if (!styleEl) {
             styleEl = document.createElement("style");

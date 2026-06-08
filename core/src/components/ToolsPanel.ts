@@ -40,7 +40,7 @@ export class ToolsPanel {
     private render(): void {
         this.element.innerHTML = "";
         const isDark = this.props.theme === "dark";
-        const measureTitle = this.createTitle("测量工具", isDark);
+        const measureTitle = this.createTitle(this.props.t.distanceMeasure, isDark);
         this.element.appendChild(measureTitle);
         const distanceRow = this.createMeasureRow(
             Icons.Ruler,
@@ -56,30 +56,29 @@ export class ToolsPanel {
             this.props.onAreaMeasure
         );
         this.element.appendChild(areaRow);
-        const pickTitle = this.createTitle("坐标拾取", isDark);
+        const pickTitle = this.createTitle(this.props.t.coordinatePick, isDark);
         this.element.appendChild(pickTitle);
         const pointPickRow = this.createPickRow(
             Icons.Point,
-            "点拾取",
+            this.props.t.pointPick,
             "point",
             this.props.onPointCoordinatePick
         );
         this.element.appendChild(pointPickRow);
         const linePickRow = this.createPickRow(
             Icons.Line,
-            "线拾取",
+            this.props.t.linePick,
             "line",
             this.props.onLineCoordinatePick
         );
         this.element.appendChild(linePickRow);
         const polygonPickRow = this.createPickRow(
             Icons.Polygon,
-            "面拾取",
+            this.props.t.polygonPick,
             "polygon",
             this.props.onPolygonCoordinatePick
         );
         this.element.appendChild(polygonPickRow);
-
     }
 
     private createTitle(title: string, isDark: boolean): HTMLDivElement {
@@ -95,16 +94,6 @@ export class ToolsPanel {
         `;
         titleDiv.textContent = title;
         return titleDiv;
-    }
-
-    private createSeparator(isDark: boolean): HTMLDivElement {
-        const separator = document.createElement("div");
-        separator.style.cssText = `
-            height: 1px;
-            background: ${isDark ? "#333" : "#eee"};
-            margin: 4px 0;
-        `;
-        return separator;
     }
 
     private createMeasureRow(
@@ -230,37 +219,6 @@ export class ToolsPanel {
             activeDot.textContent = "●";
             row.appendChild(activeDot);
         }
-
-        return row;
-    }
-
-    private createToolRow(icon: string, label: string, onClick: () => void): HTMLDivElement {
-        const isDark = this.props.theme === "dark";
-
-        const row = document.createElement("div");
-        row.style.cssText = `
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 8px 12px;
-            cursor: pointer;
-            border-bottom: 1px solid ${isDark ? "#333" : "#eee"};
-            transition: all 0.2s;
-        `;
-
-        row.onmouseenter = () => { row.style.background = isDark ? "#2a2a2a" : "#f5f5f5"; };
-        row.onmouseleave = () => { row.style.background = "transparent"; };
-        row.onclick = onClick;
-
-        const iconSpan = document.createElement("span");
-        iconSpan.innerHTML = icon;
-        iconSpan.style.cssText = `font-size: 14px;`;
-        row.appendChild(iconSpan);
-
-        const labelSpan = document.createElement("span");
-        labelSpan.style.cssText = `color: ${isDark ? "#fff" : "#333"}; font-size: 12px; flex: 1;`;
-        labelSpan.textContent = label;
-        row.appendChild(labelSpan);
 
         return row;
     }

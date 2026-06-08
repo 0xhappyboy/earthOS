@@ -12,7 +12,7 @@ export interface PopupPanelOptions {
 export class PopupPanel {
     private element: HTMLDivElement;
     private options: PopupPanelOptions;
-    private contentContainer!: HTMLDivElement; 
+    private contentContainer!: HTMLDivElement;
 
     constructor(options: PopupPanelOptions) {
         this.options = options;

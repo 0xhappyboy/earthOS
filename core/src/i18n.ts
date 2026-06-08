@@ -1,6 +1,9 @@
 export type Locale = "en" | "zh";
 
 export interface Translations {
+    pleaseEnterText: string;
+    longitude: string;
+    latitude: string;
     confirm: string;
     addImage: string;
     imageUrl: string;
@@ -97,9 +100,96 @@ export interface Translations {
     drawLine: string;
     drawBezier: string;
     drawSector: string;
+    pointData: string;
+    lineData: string;
+    polygonData: string;
+    coordinateData: string;
+    details: string;
+    copyCoordinates: string;
+    locateOnMap: string;
+    startPoint: string;
+    endPoint: string;
+    vertexCount: string;
+    createdTime: string;
+    noDataAvailable: string;
+    pleaseUseCoordinatePickTool: string;
+    coordinatesCopied: string;
+    locatedToPoint: string;
+    locatedToLine: string;
+    locatedToPolygon: string;
+    allCoordinatesCleared: string;
+    noCoordinateData: string;
+    copyAllPointCoordinates: string;
+    pointPickSuccess: string;
+    linePickSuccess: string;
+    polygonPickSuccess: string;
+    drawingStatusCancelHint: string;
+    editingText: string;
+    fontSize: string;
+    color: string;
+    bold: string;
+    italic: string;
+    imagePreview: string;
+    noImage: string;
+    imageLoadFailed: string;
+    image: string;
+    cancelDrawing: string;
+    drawingRectangle: string;
+    drawingTriangle: string;
+    drawingFreehand: string;
+    drawingFreehandPolygon: string;
+    drawingEllipse: string;
+    addingMarker: string;
+    addingText: string;
+    drawingArrow: string;
+    drawingLine: string;
+    drawingBezier: string;
+    drawingSector: string;
+    drawing: string;
+    pressEscToCancel: string;
+    clickMapToPickPoint: string;
+    clickMapToDrawLine: string;
+    clickMapToDrawPolygon: string;
+    doubleClickToFinishPick: string;
+    editText: string;
+    strokeWidth: string;
+    strokeStyle: string;
+    dragToMove: string;
+    noImagePreview: string;
+    uploadFromComputer: string;
+    enterImageUrl: string;
+    deleteImage: string;
+    cancelEdit: string;
+    save: string;
+    ok: string;
+    lineTool: string;
+    arrowTool: string;
+    bezierTool: string;
+    ellipseTool: string;
+    rectangleTool: string;
+    triangleTool: string;
+    sectorTool: string;
+    freehandTool: string;
+    freehandPolygonTool: string;
+    markerTool: string;
+    textTool: string;
+    imageTool: string;
+    pointPick: string;
+    linePick: string;
+    polygonPick: string;
+    points: string;
+    pointsCount: string;
+    featureNotFound: string;
+    cannotGetMapTarget: string;
+    cannotGetPixelFromCoordinate: string;
+    bezierFeatureNotFound: string;
+    noSourceAvailable: string;
 }
 
 const zh: Translations = {
+    pleaseEnterText: "请输入文字",
+    longitude: "经度",
+    latitude: "纬度",
     confirm: "确定",
     addImage: "添加图片",
     imageUrl: "图片URL",
@@ -169,10 +259,10 @@ const zh: Translations = {
     close: "关闭",
     zoomInTitle: "放大",
     zoomOutTitle: "缩小",
-    drawingCircle: "正在绘制圆形...",
-    editingCircle: "正在编辑圆形...",
-    editingRectangle: "正在绘制矩形...",
-    editingTriangle: "正在绘制三角形...",
+    drawingCircle: "正在绘制圆形",
+    editingCircle: "正在编辑圆形",
+    editingRectangle: "正在绘制矩形",
+    editingTriangle: "正在绘制三角形",
     locateMe: "定位到我",
     tools: "工具",
     toolsTitle: "测量工具",
@@ -196,16 +286,104 @@ const zh: Translations = {
     drawRectangle: "绘制矩形",
     drawTriangle: "绘制三角形",
     editShape: "编辑图形",
+    pointData: "点数据",
+    lineData: "线数据",
+    polygonData: "面数据",
+    coordinateData: "坐标数据",
+    details: "详情",
+    copyCoordinates: "复制坐标",
+    locateOnMap: "在地图上定位",
+    startPoint: "起点坐标",
+    endPoint: "终点坐标",
+    vertexCount: "顶点数量",
+    createdTime: "创建时间",
+    noDataAvailable: "暂无数据",
+    pleaseUseCoordinatePickTool: "暂无数据，请先使用坐标拾取工具",
+    coordinatesCopied: "已复制坐标到剪贴板",
+    locatedToPoint: "已定位到",
+    locatedToLine: "已定位到线，包含",
+    locatedToPolygon: "已定位到面，包含",
+    allCoordinatesCleared: "已清除所有坐标拾取数据",
+    noCoordinateData: "暂无拾取坐标数据",
+    copyAllPointCoordinates: "点击确定复制全部点坐标",
+    pointPickSuccess: "已拾取点坐标",
+    linePickSuccess: "已拾取线坐标，共",
+    polygonPickSuccess: "已拾取面坐标，共",
+    drawingStatusCancelHint: "按 ESC 取消绘制",
+    editingText: "编辑文字",
+    fontSize: "字号",
+    color: "颜色",
+    bold: "粗体",
+    italic: "斜体",
+    imagePreview: "预览",
+    noImage: "暂无图片",
+    imageLoadFailed: "图片加载失败",
+    image: "图片",
+    cancelDrawing: "取消绘制",
+    drawingRectangle: "正在绘制矩形",
+    drawingTriangle: "正在绘制三角形",
+    drawingFreehand: "正在手绘线",
+    drawingFreehandPolygon: "正在手绘多边形",
+    drawingEllipse: "正在绘制椭圆",
+    addingMarker: "添加标记点",
+    addingText: "添加文字标注",
+    drawingArrow: "正在绘制箭头",
+    drawingLine: "正在绘制线段",
+    drawingBezier: "正在绘制贝塞尔曲线",
+    drawingSector: "正在绘制扇形",
+    drawing: "正在绘制",
+    pressEscToCancel: " (按 ESC 取消绘制)",
+    clickMapToPickPoint: "点击地图拾取点坐标 (单击完成拾取)",
+    clickMapToDrawLine: "点击地图绘制线 (双击完成拾取)",
+    clickMapToDrawPolygon: "点击地图绘制面 (双击完成拾取)",
+    doubleClickToFinishPick: "双击完成拾取",
+    editText: "编辑文字",
+    strokeWidth: "线宽",
+    strokeStyle: "线型",
+    dragToMove: "拖动移动",
+    noImagePreview: "暂无图片",
+    uploadFromComputer: "从电脑上传",
+    enterImageUrl: "输入图片URL",
+    deleteImage: "删除图片",
+    cancelEdit: "取消编辑",
+    save: "保存",
+    ok: "确定",
+    lineTool: "线段",
+    arrowTool: "箭头",
+    bezierTool: "贝塞尔曲线",
+    ellipseTool: "椭圆",
+    rectangleTool: "矩形",
+    triangleTool: "三角形",
+    sectorTool: "扇形",
+    freehandTool: "手绘线",
+    freehandPolygonTool: "手绘多边形",
+    markerTool: "标记点",
+    textTool: "文字标注",
+    imageTool: "图片标注",
+    pointPick: "点拾取",
+    linePick: "线拾取",
+    polygonPick: "面拾取",
+    points: "个点",
+    pointsCount: "个",
+    featureNotFound: "未找到要素",
+    cannotGetMapTarget: "无法获取地图容器元素",
+    cannotGetPixelFromCoordinate: "无法从坐标获取像素位置",
+    bezierFeatureNotFound: "未找到贝塞尔曲线要素",
+    noSourceAvailable: "没有可用的数据源",
 };
 
 const en: Translations = {
-    confirm: "Confirm",
+    pleaseEnterText: "Please enter text",
+    longitude: "Longitude",
+    latitude: "Latitude",
+    confirm: "OK",
     addImage: "Add Image",
     imageUrl: "Image URL",
     uploadImage: "Upload Image",
     width: "Width",
     height: "Height",
     opacity: "Opacity",
+    delete: "Delete",
     drawImage: "Image",
     drawCoordinatePick: "Coordinate Pick",
     coordinatePick: "Coordinate Pick",
@@ -267,10 +445,10 @@ const en: Translations = {
     close: "Close",
     zoomInTitle: "Zoom In",
     zoomOutTitle: "Zoom Out",
-    drawingCircle: "Drawing Circle...",
-    editingCircle: "Editing circle...",
-    editingRectangle: "Drawing Rectangle...",
-    editingTriangle: "Drawing Triangle...",
+    drawingCircle: "Drawing Circle",
+    editingCircle: "Editing circle",
+    editingRectangle: "Drawing Rectangle",
+    editingTriangle: "Drawing Triangle",
     locateMe: "Locate Me",
     tools: "Tools",
     toolsTitle: "Measure Tools",
@@ -290,11 +468,94 @@ const en: Translations = {
     doubleClickToFinish: "Double click to finish",
     measurementLayer: "Measurement Layer",
     noMeasurements: "No measurements",
-    delete: "Delete",
     cancel: "Cancel",
     drawRectangle: "Draw Rectangle",
     drawTriangle: "Draw Triangle",
     editShape: "Edit Shape",
+    pointData: "Points",
+    lineData: "Lines",
+    polygonData: "Polygons",
+    coordinateData: "Coordinate Data",
+    details: "Details",
+    copyCoordinates: "Copy Coordinates",
+    locateOnMap: "Locate on Map",
+    startPoint: "Start Point",
+    endPoint: "End Point",
+    vertexCount: "Vertex Count",
+    createdTime: "Created Time",
+    noDataAvailable: "No data available",
+    pleaseUseCoordinatePickTool: "No data available, please use coordinate pick tool first",
+    coordinatesCopied: "Coordinates copied to clipboard",
+    locatedToPoint: "Located to",
+    locatedToLine: "Located to line with",
+    locatedToPolygon: "Located to polygon with",
+    allCoordinatesCleared: "All coordinate picks cleared",
+    noCoordinateData: "No coordinate data",
+    copyAllPointCoordinates: "Click OK to copy all point coordinates",
+    pointPickSuccess: "Point picked",
+    linePickSuccess: "Line picked with",
+    polygonPickSuccess: "Polygon picked with",
+    drawingStatusCancelHint: "Press ESC to cancel drawing",
+    editingText: "Edit Text",
+    fontSize: "Font Size",
+    color: "Color",
+    bold: "Bold",
+    italic: "Italic",
+    imagePreview: "Preview",
+    noImage: "No image",
+    imageLoadFailed: "Image load failed",
+    image: "Image",
+    cancelDrawing: "Cancel Drawing",
+    drawingRectangle: "Drawing Rectangle",
+    drawingTriangle: "Drawing Triangle",
+    drawingFreehand: "Drawing Freehand Line",
+    drawingFreehandPolygon: "Drawing Freehand Polygon",
+    drawingEllipse: "Drawing Ellipse",
+    addingMarker: "Adding Marker",
+    addingText: "Adding Text Label",
+    drawingArrow: "Drawing Arrow",
+    drawingLine: "Drawing Line",
+    drawingBezier: "Drawing Bezier Curve",
+    drawingSector: "Drawing Sector",
+    drawing: "Drawing",
+    pressEscToCancel: " (Press ESC to cancel)",
+    clickMapToPickPoint: "Click map to pick point (Click to finish)",
+    clickMapToDrawLine: "Click map to draw line (Double click to finish)",
+    clickMapToDrawPolygon: "Click map to draw polygon (Double click to finish)",
+    doubleClickToFinishPick: "Double click to finish",
+    editText: "Edit Text",
+    strokeWidth: "Stroke Width",
+    strokeStyle: "Stroke Style",
+    dragToMove: "Drag to move",
+    noImagePreview: "No image preview",
+    uploadFromComputer: "Upload from computer",
+    enterImageUrl: "Enter image URL",
+    deleteImage: "Delete image",
+    cancelEdit: "Cancel",
+    save: "Save",
+    ok: "OK",
+    lineTool: "Line",
+    arrowTool: "Arrow",
+    bezierTool: "Bezier Curve",
+    ellipseTool: "Ellipse",
+    rectangleTool: "Rectangle",
+    triangleTool: "Triangle",
+    sectorTool: "Sector",
+    freehandTool: "Freehand Line",
+    freehandPolygonTool: "Freehand Polygon",
+    markerTool: "Marker",
+    textTool: "Text",
+    imageTool: "Image",
+    pointPick: "Point Pick",
+    linePick: "Line Pick",
+    polygonPick: "Polygon Pick",
+    points: "points",
+    pointsCount: "",
+    featureNotFound: "Feature not found",
+    cannotGetMapTarget: "Cannot get map target element",
+    cannotGetPixelFromCoordinate: "Cannot get pixel from coordinate",
+    bezierFeatureNotFound: "Bezier feature not found",
+    noSourceAvailable: "No source available",
 };
 
 export const getTranslation = (locale: Locale): Translations => {

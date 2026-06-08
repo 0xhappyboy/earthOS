@@ -13,6 +13,7 @@ import { fromLonLat, toLonLat } from "ol/proj";
 import { BaseLayer } from "../BaseLayer";
 import { LayerTypeEnum } from "../../types";
 import { generateId, arrayToRgba } from "../../utils";
+import { Translations, getTranslation } from "../../i18n";
 
 export interface FreehandDrawData {
     id: string;
@@ -36,6 +37,7 @@ export class FreehandDrawLayer extends BaseLayer {
     private onEditCompleteCallback: ((data: FreehandDrawData) => void) | null = null;
     private editingFeature: Feature | null = null;
     private mapView: any = null;
+    private t: Translations;
 
     constructor(id: string, name: string, options?: {
         defaultFillColor?: number[];
@@ -45,7 +47,7 @@ export class FreehandDrawLayer extends BaseLayer {
         visible?: boolean;
         opacity?: number;
         zIndex?: number;
-    }) {
+    }, t?: Translations) {
         super(id, name, LayerTypeEnum.FREEHAND_DRAW, {
             ...options,
             zIndex: options?.zIndex ?? 100,
@@ -54,6 +56,7 @@ export class FreehandDrawLayer extends BaseLayer {
         this.defaultOutlineColor = options?.defaultOutlineColor || [76, 175, 80, 1];
         this.defaultOutlineWidth = options?.defaultOutlineWidth || 3;
         this.defaultOutlineStyle = options?.defaultOutlineStyle || "solid";
+        this.t = t || getTranslation("zh");
         this.source = new VectorSource();
         this.layer = new VectorLayer({
             source: this.source,
@@ -63,6 +66,10 @@ export class FreehandDrawLayer extends BaseLayer {
             opacity: this.opacity,
             zIndex: this.zIndex,
         });
+    }
+
+    public setTranslations(t: Translations): void {
+        this.t = t;
     }
 
     private getStyleForFeature(feature?: any): Style {
@@ -190,7 +197,7 @@ export class FreehandDrawLayer extends BaseLayer {
         this.stopEdit();
         const targetFeature = this.features.get(id);
         if (!targetFeature) {
-            console.warn(`Feature with id ${id} not found`);
+            console.warn(this.t.featureNotFound, id);
             return;
         }
         this.editingFeature = targetFeature;
@@ -260,7 +267,7 @@ export class FreehandDrawLayer extends BaseLayer {
 
     public addFreehand(data: FreehandDrawData): void {
         if (!this.source) {
-            console.error('No source available in addFreehand');
+            console.error(this.t.noSourceAvailable);
             return;
         }
 
@@ -305,7 +312,7 @@ export class FreehandDrawLayer extends BaseLayer {
     public removeFreehand(id: string): void {
         const layerSource = this.layer?.getSource();
         if (!layerSource) {
-            console.error('No layer source available');
+            console.error(this.t.noSourceAvailable);
             return;
         }
 

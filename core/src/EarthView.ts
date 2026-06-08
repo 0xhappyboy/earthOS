@@ -143,8 +143,6 @@ export class EarthView {
     private imageDrawLayer: ImageDrawLayer | null = null;
     private imageDrawTool: ImageDrawTool | null = null;
     private selectedImageId: string | null = null;
-
-
     private selectedPointPickId: string | null = null;
     private selectedLinePickId: string | null = null;
     private selectedPolygonPickId: string | null = null;
@@ -213,13 +211,11 @@ export class EarthView {
         setTimeout(() => this.hideLoading(), 500);
     }
 
-
     private initEventManager(): void {
         this.eventManager.setDrawingManager(this.drawingManager);
         this.eventManager.setMapView(this.mapManager.getMap());
         this.eventManager.bindEvents();
     }
-
 
     private resolveContainer(options: {
         container?: HTMLElement;
@@ -260,7 +256,6 @@ export class EarthView {
             parentEl.appendChild(autoContainer);
             return { container: autoContainer, isOwn: true };
         }
-
         throw new Error('[EarthView] Must provide one of: container, containerSelector, id, parent, or parentSelector');
     }
 
@@ -349,41 +344,36 @@ export class EarthView {
         setTimeout(() => toast.remove(), 2000);
     }
 
-
     public startPointCoordinatePick(): void {
-
         this.lineCoordinatePickLayer?.stopPick();
         this.polygonCoordinatePickLayer?.stopPick();
-
-        this.setMeasureStatus("点击地图拾取点坐标 (单击完成拾取)");
+        this.setMeasureStatus(this.t.clickMapToPickPoint);
         this.pointCoordinatePickLayer?.startPick((data: PointCoordinatePickData) => {
             this.setMeasureStatus(null);
             this.currentPointCoordinates.unshift(data);
-            this.showToast(`已拾取点坐标: ${data.longitude.toFixed(6)}, ${data.latitude.toFixed(6)}`);
+            this.showToast(`${this.t.pointPickSuccess}: ${data.longitude.toFixed(6)}, ${data.latitude.toFixed(6)}`);
         });
     }
 
     public startLineCoordinatePick(): void {
         this.pointCoordinatePickLayer?.stopPick();
         this.polygonCoordinatePickLayer?.stopPick();
-        this.setMeasureStatus("点击地图绘制线 (双击完成拾取)");
+        this.setMeasureStatus(this.t.clickMapToDrawLine);
         this.lineCoordinatePickLayer?.startPick((data: LineCoordinatePickData) => {
             this.setMeasureStatus(null);
             this.currentLineCoordinates.unshift(data);
-            const pointCount = data.points.length;
-            this.showToast(`已拾取线坐标: ${pointCount}个点`);
+            this.showToast(`${this.t.linePickSuccess} ${data.points.length} ${this.t.points}`);
         });
     }
 
     public startPolygonCoordinatePick(): void {
         this.pointCoordinatePickLayer?.stopPick();
         this.lineCoordinatePickLayer?.stopPick();
-        this.setMeasureStatus("点击地图绘制面 (双击完成拾取)");
+        this.setMeasureStatus(this.t.clickMapToDrawPolygon);
         this.polygonCoordinatePickLayer?.startPick((data: PolygonCoordinatePickData) => {
             this.setMeasureStatus(null);
             this.currentPolygonCoordinates.unshift(data);
-            const pointCount = data.points.length;
-            this.showToast(`已拾取面坐标: ${pointCount}个点`);
+            this.showToast(`${this.t.polygonPickSuccess} ${data.points.length} ${this.t.points}`);
         });
     }
 
@@ -392,43 +382,42 @@ export class EarthView {
         const totalLines = this.currentLineCoordinates.length;
         const totalPolygons = this.currentPolygonCoordinates.length;
         if (totalPoints === 0 && totalLines === 0 && totalPolygons === 0) {
-            this.showToast("暂无拾取坐标数据");
+            this.showToast(this.t.noCoordinateData);
             return;
         }
-        let message = "=== 坐标拾取数据列表 ===\n\n";
+        let message = `${this.t.coordinateData}\n\n`;
         if (totalPoints > 0) {
-            message += `📍 点数据 (${totalPoints}个):\n`;
+            message += `${this.t.pointData} (${totalPoints}):\n`;
             this.currentPointCoordinates.slice(0, 5).forEach((coord, index) => {
                 message += `  ${index + 1}. ${coord.longitude.toFixed(6)}, ${coord.latitude.toFixed(6)}\n`;
             });
-            if (totalPoints > 5) message += `  ... 共${totalPoints}个\n`;
+            if (totalPoints > 5) message += `  ... ${this.t.pointsCount}${totalPoints}\n`;
             message += "\n";
         }
         if (totalLines > 0) {
-            message += `📏 线数据 (${totalLines}条):\n`;
+            message += `${this.t.lineData} (${totalLines}):\n`;
             this.currentLineCoordinates.slice(0, 5).forEach((line, index) => {
-                message += `  ${index + 1}. ${line.points.length}个点, 创建于 ${new Date(line.timestamp).toLocaleTimeString()}\n`;
+                message += `  ${index + 1}. ${line.points.length} ${this.t.points}, ${this.t.createdTime} ${new Date(line.timestamp).toLocaleTimeString()}\n`;
             });
-            if (totalLines > 5) message += `  ... 共${totalLines}条\n`;
+            if (totalLines > 5) message += `  ... ${this.t.pointsCount}${totalLines}\n`;
             message += "\n";
         }
         if (totalPolygons > 0) {
-            message += `🔲 面数据 (${totalPolygons}个):\n`;
+            message += `${this.t.polygonData} (${totalPolygons}):\n`;
             this.currentPolygonCoordinates.slice(0, 5).forEach((polygon, index) => {
-                message += `  ${index + 1}. ${polygon.points.length}个点, 创建于 ${new Date(polygon.timestamp).toLocaleTimeString()}\n`;
+                message += `  ${index + 1}. ${polygon.points.length} ${this.t.points}, ${this.t.createdTime} ${new Date(polygon.timestamp).toLocaleTimeString()}\n`;
             });
-            if (totalPolygons > 5) message += `  ... 共${totalPolygons}个\n`;
+            if (totalPolygons > 5) message += `  ... ${this.t.pointsCount}${totalPolygons}\n`;
             message += "\n";
         }
-        message += "\n点击确定复制全部点坐标";
+        message += `\n${this.t.copyAllPointCoordinates}`;
         // eslint-disable-next-line no-restricted-globals
         if (confirm(message)) {
             const text = this.currentPointCoordinates.map(c => `${c.longitude.toFixed(6)}, ${c.latitude.toFixed(6)}`).join("\n");
             navigator.clipboard.writeText(text);
-            this.showToast("已复制全部点坐标到剪贴板");
+            this.showToast(this.t.coordinatesCopied);
         }
     }
-
 
     private handleTogglePopup(popup: any): void {
     }
@@ -475,8 +464,6 @@ export class EarthView {
         style.textContent = `@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(1.2)}}`;
         document.head.appendChild(style);
     }
-
-
 
     private initLayers(): void {
         if (!this.enableDrawing) return;
@@ -586,42 +573,47 @@ export class EarthView {
                 msg = this.t.drawingCircle;
                 break;
             case DrawToolType.RECTANGLE:
-                msg = "正在绘制矩形...";
+                msg = this.t.drawingRectangle;
                 break;
             case DrawToolType.TRIANGLE:
-                msg = "正在绘制三角形...";
+                msg = this.t.drawingTriangle;
                 break;
             case DrawToolType.FREEHAND:
-                msg = "正在手绘线...";
+                msg = this.t.drawingFreehand;
                 break;
             case DrawToolType.FREEHAND_POLYGON:
-                msg = "正在手绘多边形...";
+                msg = this.t.drawingFreehandPolygon;
                 break;
             case DrawToolType.ELLIPSE:
-                msg = "正在绘制椭圆...";
+                msg = this.t.drawingEllipse;
                 break;
             case DrawToolType.MARKER:
-                msg = "添加标记点...";
+                msg = this.t.addingMarker;
                 break;
             case DrawToolType.TEXT:
-                msg = "添加文字标注...";
+                msg = this.t.addingText;
                 break;
             case DrawToolType.ARROW:
-                msg = "正在绘制箭头...";
+                msg = this.t.drawingArrow;
+                break;
+            case DrawToolType.LINE:
+                msg = this.t.drawingLine;
+                break;
+            case DrawToolType.BEZIER:
+                msg = this.t.drawingBezier;
+                break;
+            case DrawToolType.SECTOR:
+                msg = this.t.drawingSector;
                 break;
             default:
-                msg = "正在绘制...";
+                msg = this.t.drawing;
         }
-        this.setDrawingStatus(`${msg} (按 ESC 取消绘制)`);
+        this.setDrawingStatus(`${msg}${this.t.pressEscToCancel}`);
     }
 
     private onDrawingEnd(): void {
         this.setDrawingStatus(null);
     }
-
-
-
-
 
     private setupSelections(): void {
         const map = this.mapManager.getMap();
@@ -661,7 +653,6 @@ export class EarthView {
                 null;
         };
 
-
         const isAnyLayerDrawing = (): boolean => {
             return !!(this.circleDrawLayer?.isDrawActive() ||
                 this.rectangleDrawLayer?.isDrawActive() ||
@@ -678,10 +669,7 @@ export class EarthView {
 
         const startEditById = (id: string, type: string) => {
             if (!id) return;
-
-
             this.stopAllEditing();
-
             switch (type) {
                 case 'circle':
                     this.circleDrawTool?.startEdit(id);
@@ -939,7 +927,6 @@ export class EarthView {
         this.drawingManager.startDrawingTriangle();
     }
 
-
     public startEditShape(): void {
         const circles = this.circleDrawLayer?.getAllCircles() || [];
         if (circles.length > 0) { this.circleDrawTool?.startEdit(circles[circles.length - 1].id); return; }
@@ -1047,31 +1034,23 @@ export class EarthView {
         }
     }
 
-
-
     private showFloatingToolbarForFreehand(pos: { x: number; y: number }, data: FreehandDrawData): void {
-
         if (this.floatingToolbar) {
             this.floatingToolbar.destroy();
             this.floatingToolbar = null;
         }
-
         this.floatingToolbarPosition = pos;
         this.showFloatingToolbar = true;
         this.currentColor = data.fillColor || [76, 175, 80, 0.3];
         this.currentStrokeWidth = data.outlineWidth || 3;
         this.currentStrokeStyle = data.outlineStyle || "solid";
-
         const targetId = data.id;
         this.selectedFreehandId = targetId;
-
         const targetLayer = this.freehandDrawLayer;
         if (!targetLayer) {
             console.error('FreehandDrawLayer is null');
             return;
         }
-
-
         this.floatingToolbar = new FloatingToolbar({
             onColorChange: (color) => {
                 this.currentColor = color;
@@ -1404,7 +1383,6 @@ export class EarthView {
                     }
                 },
                 onStrokeStyleChange: (style) => {
-
                 },
                 onDelete: () => {
                     if (this.selectedMarkerId && this.markerDrawLayer) {
@@ -1588,7 +1566,6 @@ export class EarthView {
         this.selectedImageId = null;
         if (this.floatingToolbar) {
             this.floatingToolbar.setVisible(false);
-
         }
     }
 
@@ -1794,14 +1771,11 @@ export class EarthView {
         );
     }
 
-
-
-
     private getPointDataForPanel(): PointData[] {
         const points = this.pointCoordinatePickLayer?.getAllCoordinates() || [];
         return points.map((point, index) => ({
             id: point.id,
-            name: `点 ${index + 1}`,
+            name: `${this.t.pointData} ${index + 1}`,
             longitude: point.longitude,
             latitude: point.latitude,
             timestamp: point.timestamp
@@ -1812,7 +1786,7 @@ export class EarthView {
         const lines = this.lineCoordinatePickLayer?.getAllLines() || [];
         return lines.map((line, index) => ({
             id: line.id,
-            name: `线 ${index + 1}`,
+            name: `${this.t.lineData} ${index + 1}`,
             points: line.points,
             timestamp: line.timestamp
         }));
@@ -1822,7 +1796,7 @@ export class EarthView {
         const polygons = this.polygonCoordinatePickLayer?.getAllPolygons() || [];
         return polygons.map((polygon, index) => ({
             id: polygon.id,
-            name: `面 ${index + 1}`,
+            name: `${this.t.polygonData} ${index + 1}`,
             points: polygon.points,
             timestamp: polygon.timestamp
         }));
@@ -1831,7 +1805,7 @@ export class EarthView {
     private locateToPoint(longitude: number, latitude: number): void {
         this.setCenter([longitude, latitude]);
         this.setZoom(18);
-        this.showToast(`已定位到: ${longitude.toFixed(6)}, ${latitude.toFixed(6)}`);
+        this.showToast(`${this.t.locatedToPoint}: ${longitude.toFixed(6)}, ${latitude.toFixed(6)}`);
     }
 
     private locateToLine(points: { longitude: number; latitude: number }[]): void {
@@ -1854,19 +1828,9 @@ export class EarthView {
         else if (maxDiff > 0.05) zoom = 14;
         else if (maxDiff > 0.01) zoom = 16;
         this.setZoom(zoom);
-        this.showToast(`已定位到线，包含 ${points.length} 个点`);
+        this.showToast(`${this.t.locatedToLine} ${points.length} ${this.t.points}`);
     }
 
-    /**
-     * Set custom basemap by URL template
-     * @param url Tile URL template, supports {z}, {x}, {y} placeholders
-     * @example
-     * // Use Google Satellite
-     * setBasemapByUrl("http://www.google.cn/maps/vt?lyrs=s&x={x}&y={y}&z={z}");
-     * 
-     * // Use AMap
-     * setBasemapByUrl("https://webrd01.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}");
-     */
     public setBasemapByUrl(
         url: string,
     ): void {
@@ -1876,7 +1840,7 @@ export class EarthView {
 
     private locateToPolygon(points: { longitude: number; latitude: number }[]): void {
         this.locateToLine(points);
-        this.showToast(`已定位到面，包含 ${points.length} 个顶点`);
+        this.showToast(`${this.t.locatedToPolygon} ${points.length} ${this.t.points}`);
     }
 
     public clearAllCoordinatePicks(): void {
@@ -1886,8 +1850,9 @@ export class EarthView {
         this.currentPointCoordinates = [];
         this.currentLineCoordinates = [];
         this.currentPolygonCoordinates = [];
-        this.showToast("已清除所有坐标拾取数据");
+        this.showToast(this.t.allCoordinatesCleared);
     }
+
     public destroy(): void {
         if (this.isDestroyed) return;
         this.isDestroyed = true;

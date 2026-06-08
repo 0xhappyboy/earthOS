@@ -73,6 +73,7 @@ export class Toolbar {
         toolsBtn.title = this.options.t.toolsTitle;
         div.appendChild(toolsBtn);
         this.buttons.set("tools", toolsBtn);
+
         const dataBtn = document.createElement("button");
         dataBtn.style.cssText = buttonStyle(false);
         dataBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -82,7 +83,7 @@ export class Toolbar {
             <line x1="9" y1="3" x2="9" y2="21"/>
             <line x1="15" y1="3" x2="15" y2="21"/>
         </svg>`;
-        dataBtn.title = "数据";
+        dataBtn.title = this.options.t.coordinateData;
         dataBtn.onclick = () => {
             this.options.onShowCoordinatePickingDataPanel?.();
         };

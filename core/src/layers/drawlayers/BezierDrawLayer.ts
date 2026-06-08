@@ -11,9 +11,7 @@ import { fromLonLat, toLonLat } from "ol/proj";
 import { BaseLayer } from "../BaseLayer";
 import { LayerTypeEnum } from "../../types";
 import { generateId, arrayToRgba } from "../../utils";
-import CircleStyle from "ol/style/Circle";
-import { Fill } from "ol/style";
-import { Point } from "ol/geom";
+import { Translations, getTranslation } from "../../i18n";
 
 export interface BezierDrawData {
     id: string;
@@ -38,6 +36,7 @@ export class BezierDrawLayer extends BaseLayer {
     private editingFeature: Feature | null = null;
     private mapView: any = null;
     private tempPoints: [number, number][] = [];
+    private t: Translations;
 
     constructor(id: string, name: string, options?: {
         defaultColor?: number[];
@@ -46,7 +45,7 @@ export class BezierDrawLayer extends BaseLayer {
         visible?: boolean;
         opacity?: number;
         zIndex?: number;
-    }) {
+    }, t?: Translations) {
         super(id, name, LayerTypeEnum.BEZIER_DRAW, {
             ...options,
             zIndex: options?.zIndex ?? 100,
@@ -54,6 +53,7 @@ export class BezierDrawLayer extends BaseLayer {
         this.defaultColor = options?.defaultColor || [156, 39, 176, 1];
         this.defaultWidth = options?.defaultWidth || 3;
         this.defaultStyle = options?.defaultStyle || "solid";
+        this.t = t || getTranslation("zh");
         this.source = new VectorSource();
         this.layer = new VectorLayer({
             source: this.source,
@@ -63,6 +63,10 @@ export class BezierDrawLayer extends BaseLayer {
             opacity: this.opacity,
             zIndex: this.zIndex,
         });
+    }
+
+    public setTranslations(t: Translations): void {
+        this.t = t;
     }
 
     private getStyleForFeature(feature?: any): Style {
@@ -288,7 +292,7 @@ export class BezierDrawLayer extends BaseLayer {
         this.stopDraw();
         const targetFeature = this.features.get(id);
         if (!targetFeature) {
-            console.warn(`Bezier feature with id ${id} not found`);
+            console.warn(this.t.bezierFeatureNotFound, id);
             return;
         }
         this.editingFeature = targetFeature;

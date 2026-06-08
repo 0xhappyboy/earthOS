@@ -32,10 +32,13 @@ export class TextInputModalBox {
     private italicBtn: HTMLButtonElement;
     private confirmBtn: HTMLButtonElement;
     private cancelBtn: HTMLButtonElement;
-    private deleteBtn: HTMLButtonElement;  
+    private deleteBtn: HTMLButtonElement;
     private isBold: boolean = false;
     private isItalic: boolean = false;
     private currentColor: number[];
+    private header: HTMLDivElement;
+    private toolbar: HTMLDivElement;
+    private footer: HTMLDivElement;
 
     private readonly PRESET_FONT_SIZES = [12, 14, 16, 18, 20, 24, 28, 32, 36, 42];
 
@@ -65,6 +68,9 @@ export class TextInputModalBox {
         this.confirmBtn = this.element.querySelector(".text-input-modal-confirm") as HTMLButtonElement;
         this.cancelBtn = this.element.querySelector(".text-input-modal-cancel") as HTMLButtonElement;
         this.deleteBtn = this.element.querySelector(".text-input-modal-delete") as HTMLButtonElement;
+        this.header = this.element.querySelector(".text-input-modal-header") as HTMLDivElement;
+        this.toolbar = this.element.querySelector(".text-input-modal-toolbar") as HTMLDivElement;
+        this.footer = this.element.querySelector(".text-input-modal-footer") as HTMLDivElement;
 
         this.bindEvents();
         this.updateColorPreview();
@@ -109,23 +115,24 @@ export class TextInputModalBox {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         `;
 
-        const header = this.createHeader(isDark);
-        div.appendChild(header);
+        this.header = this.createHeader(isDark);
+        div.appendChild(this.header);
 
         const textarea = this.createTextarea(isDark);
         div.appendChild(textarea);
 
-        const toolbar = this.createToolbar(isDark);
-        div.appendChild(toolbar);
+        this.toolbar = this.createToolbar(isDark);
+        div.appendChild(this.toolbar);
 
-        const footer = this.createFooter(isDark);
-        div.appendChild(footer);
+        this.footer = this.createFooter(isDark);
+        div.appendChild(this.footer);
 
         return div;
     }
 
     private createHeader(isDark: boolean): HTMLDivElement {
         const header = document.createElement("div");
+        header.className = "text-input-modal-header";
         header.style.cssText = `
             display: flex;
             justify-content: space-between;
@@ -141,7 +148,7 @@ export class TextInputModalBox {
             font-size: 12px;
             font-weight: 500;
         `;
-        title.textContent = "编辑文字";
+        title.textContent = this.options.t.editText;
         header.appendChild(title);
 
         return header;
@@ -150,7 +157,7 @@ export class TextInputModalBox {
     private createTextarea(isDark: boolean): HTMLTextAreaElement {
         const textarea = document.createElement("textarea");
         textarea.className = "text-input-modal-textarea";
-        textarea.placeholder = "请输入文字...";
+        textarea.placeholder = this.options.t.pleaseEnterText;
         textarea.value = this.options.initialText || "";
         textarea.style.cssText = `
             width: 100%;
@@ -174,6 +181,7 @@ export class TextInputModalBox {
 
     private createToolbar(isDark: boolean): HTMLDivElement {
         const toolbar = document.createElement("div");
+        toolbar.className = "text-input-modal-toolbar";
         toolbar.style.cssText = `
             display: flex;
             flex-wrap: wrap;
@@ -191,22 +199,10 @@ export class TextInputModalBox {
         const divider1 = this.createDivider(isDark);
         toolbar.appendChild(divider1);
 
-        this.boldBtn = this.createStyleButton(
-            "B",
-            "粗体",
-            isDark,
-            this.isBold,
-            "text-input-modal-bold"
-        );
+        this.boldBtn = this.createStyleButton("B", this.options.t.bold, isDark, this.isBold, "text-input-modal-bold");
         toolbar.appendChild(this.boldBtn);
 
-        this.italicBtn = this.createStyleButton(
-            "I",
-            "斜体",
-            isDark,
-            this.isItalic,
-            "text-input-modal-italic"
-        );
+        this.italicBtn = this.createStyleButton("I", this.options.t.italic, isDark, this.isItalic, "text-input-modal-italic");
         toolbar.appendChild(this.italicBtn);
 
         const divider2 = this.createDivider(isDark);
@@ -231,7 +227,7 @@ export class TextInputModalBox {
             color: ${isDark ? "#aaa" : "#666"};
             font-size: 10px;
         `;
-        label.textContent = "字号";
+        label.textContent = this.options.t.fontSize;
         container.appendChild(label);
 
         this.fontSizeSelect = document.createElement("select");
@@ -262,13 +258,7 @@ export class TextInputModalBox {
         return container;
     }
 
-    private createStyleButton(
-        icon: string,
-        title: string,
-        isDark: boolean,
-        isActive: boolean,
-        className: string
-    ): HTMLButtonElement {
+    private createStyleButton(icon: string, title: string, isDark: boolean, isActive: boolean, className: string): HTMLButtonElement {
         const btn = document.createElement("button");
         btn.className = className;
         btn.textContent = icon;
@@ -315,7 +305,7 @@ export class TextInputModalBox {
             color: ${isDark ? "#aaa" : "#666"};
             font-size: 10px;
         `;
-        label.textContent = "颜色";
+        label.textContent = this.options.t.color;
         container.appendChild(label);
 
         this.colorPreview = document.createElement("div");
@@ -363,6 +353,7 @@ export class TextInputModalBox {
 
     private createFooter(isDark: boolean): HTMLDivElement {
         const footer = document.createElement("div");
+        footer.className = "text-input-modal-footer";
         footer.style.cssText = `
             display: flex;
             justify-content: flex-end;
@@ -372,15 +363,15 @@ export class TextInputModalBox {
         `;
 
         if (this.options.onDelete) {
-            this.deleteBtn = this.createFooterButton("删除", isDark, false, true);
+            this.deleteBtn = this.createFooterButton(this.options.t.delete, isDark, false, true);
             this.deleteBtn.className = "text-input-modal-delete";
             footer.appendChild(this.deleteBtn);
         }
 
-        this.cancelBtn = this.createFooterButton("取消", isDark, false, false);
+        this.cancelBtn = this.createFooterButton(this.options.t.cancel, isDark, false, false);
         this.cancelBtn.className = "text-input-modal-cancel";
 
-        this.confirmBtn = this.createFooterButton("确定", isDark, true, false);
+        this.confirmBtn = this.createFooterButton(this.options.t.confirm, isDark, true, false);
         this.confirmBtn.className = "text-input-modal-confirm";
 
         footer.appendChild(this.cancelBtn);
@@ -581,6 +572,39 @@ export class TextInputModalBox {
         const isDark = theme === "dark";
         this.element.style.background = isDark ? "#2d2d2d" : "#ffffff";
         this.element.style.borderColor = isDark ? "#444" : "#e0e0e0";
+        if (this.header) {
+            this.header.style.background = isDark ? "#252525" : "#f5f5f5";
+            this.header.style.borderBottomColor = isDark ? "#3d3d3d" : "#eee";
+            const title = this.header.querySelector("span");
+            if (title) {
+                title.style.color = isDark ? "#fff" : "#333";
+            }
+        }
+        if (this.textarea) {
+            this.textarea.style.background = isDark ? "#1e1e1e" : "#fafafa";
+            this.textarea.style.color = isDark ? "#fff" : "#333";
+        }
+        if (this.toolbar) {
+            this.toolbar.style.background = isDark ? "#252525" : "#fafafa";
+            this.toolbar.style.borderTopColor = isDark ? "#3d3d3d" : "#eee";
+            this.toolbar.style.borderBottomColor = isDark ? "#3d3d3d" : "#eee";
+        }
+        if (this.footer) {
+            this.footer.style.background = isDark ? "#252525" : "#fafafa";
+        }
+        this.updateStyleButtons();
+        if (this.colorPreview) {
+            this.colorPreview.style.borderColor = isDark ? "#555" : "#ddd";
+        }
+        if (this.fontSizeSelect) {
+            this.fontSizeSelect.style.background = isDark ? "#3d3d3d" : "#ffffff";
+            this.fontSizeSelect.style.borderColor = isDark ? "#555" : "#ddd";
+            this.fontSizeSelect.style.color = isDark ? "#fff" : "#333";
+        }
+        const dividers = this.element.querySelectorAll(".text-input-modal-divider");
+        dividers.forEach((divider) => {
+            (divider as HTMLElement).style.background = isDark ? "#444" : "#ddd";
+        });
     }
 
     public destroy(): void {
