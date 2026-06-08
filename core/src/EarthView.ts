@@ -6,15 +6,6 @@ import {
     DistanceMeasurementLayer,
     AreaMeasurementLayer,
     MarkerLayer,
-    PolygonLayer,
-    PolylineLayer,
-    CircleLayer,
-    HeatmapLayer,
-    ClusterLayer,
-    GeoJSONLayer,
-    CustomTileLayer,
-    BarChartLayer,
-    PopupMarkerLayer,
     ArrowDrawLayer,
     EllipseDrawLayer,
     FreehandDrawLayer,
@@ -33,6 +24,12 @@ import { MapManager } from "./MapManager";
 import { ArrowDrawTool, DrawToolType, EllipseDrawTool, FreehandDrawTool, MarkerDrawTool, TextDrawTool } from "./draw";
 import { UIManager } from "./UIManager";
 import { DrawingManager } from "./DrawingManager";
+import { EventManager } from "./EventManager";
+import { ArrowDrawData } from "./layers/drawlayers/ArrowDrawLayer";
+import { EllipseDrawData } from "./layers/drawlayers/EllipseDrawLayer";
+import { FreehandDrawData } from "./layers/drawlayers/FreehandDrawLayer";
+import { MarkerDrawData } from "./layers/drawlayers/MarkerDrawLayer";
+import { TextDrawData } from "./layers/drawlayers/TextDrawLayer";
 
 export interface EarthViewOptions {
     container?: HTMLElement;
@@ -93,6 +90,7 @@ export class EarthView {
     private currentColor: number[] = [255, 0, 0, 1];
     private currentStrokeWidth: number = 3;
     private currentStrokeStyle: "solid" | "dashed" = "solid";
+    private currentSize: number = 10;
     private currentScale: string = "";
     private isLoading: boolean = true;
     private isChangingBasemap: boolean = false;
@@ -100,18 +98,24 @@ export class EarthView {
     private measureStatusText: string | null = null;
 
     private freehandDrawLayer: FreehandDrawLayer | null = null;
-    private freehandPolygonDrawLayer: FreehandDrawLayer | null = null;
     private ellipseDrawLayer: EllipseDrawLayer | null = null;
     private markerDrawLayer: MarkerDrawLayer | null = null;
     private textDrawLayer: TextDrawLayer | null = null;
     private arrowDrawLayer: ArrowDrawLayer | null = null;
 
     private freehandDrawTool: FreehandDrawTool | null = null;
-    private freehandPolygonDrawTool: FreehandDrawTool | null = null;
     private ellipseDrawTool: EllipseDrawTool | null = null;
     private markerDrawTool: MarkerDrawTool | null = null;
-    private textDrawTool: TextDrawTool | null = null;  
+    private textDrawTool: TextDrawTool | null = null;
     private arrowDrawTool: ArrowDrawTool | null = null;
+
+    private eventManager: EventManager;
+
+    private selectedFreehandId: string | null = null;
+    private selectedEllipseId: string | null = null;
+    private selectedMarkerId: string | null = null;
+    private selectedTextId: string | null = null;
+    private selectedArrowId: string | null = null;
 
     constructor(options: EarthViewOptions) {
         const {
@@ -160,8 +164,11 @@ export class EarthView {
         this.layerManager = new LayerManager(this.mapManager.getMap());
         this.drawToolManager = new DrawToolManager();
         this.drawingManager = new DrawingManager();
+        this.eventManager = new EventManager();
+
         this.initUI();
         this.initLayers();
+        this.initEventManager();
         this.initDrawingManager();
         this.bindEvents();
         this.initRightClickMenu();
@@ -170,6 +177,14 @@ export class EarthView {
         }
         setTimeout(() => this.hideLoading(), 500);
     }
+
+
+    private initEventManager(): void {
+        this.eventManager.setDrawingManager(this.drawingManager);
+        this.eventManager.setMapView(this.mapManager.getMap());
+        this.eventManager.bindEvents();
+    }
+
 
     private resolveContainer(options: {
         container?: HTMLElement;
@@ -299,6 +314,8 @@ export class EarthView {
         document.head.appendChild(style);
     }
 
+
+
     private initLayers(): void {
         if (!this.enableDrawing) return;
         this.circleDrawLayer = new CircleDrawLayer("circle-draw", "Circle Draw");
@@ -310,13 +327,11 @@ export class EarthView {
         this.triangleDrawLayer = new TriangleDrawLayer("triangle-draw", "Triangle Draw");
         this.triangleDrawLayer.setView(this.mapManager.getMap());
         this.layerManager.addLayer(this.triangleDrawLayer);
+
+
         this.freehandDrawLayer = new FreehandDrawLayer("freehand-draw", "Freehand Draw");
         this.freehandDrawLayer.setView(this.mapManager.getMap());
         this.layerManager.addLayer(this.freehandDrawLayer);
-
-        this.freehandPolygonDrawLayer = new FreehandDrawLayer("freehand-polygon-draw", "Freehand Polygon Draw");
-        this.freehandPolygonDrawLayer.setView(this.mapManager.getMap());
-        this.layerManager.addLayer(this.freehandPolygonDrawLayer);
 
         this.ellipseDrawLayer = new EllipseDrawLayer("ellipse-draw", "Ellipse Draw");
         this.ellipseDrawLayer.setView(this.mapManager.getMap());
@@ -345,27 +360,36 @@ export class EarthView {
         this.circleDrawTool = new CircleDrawTool(this.circleDrawLayer, this.t);
         this.rectangleDrawTool = new RectangleDrawTool(this.rectangleDrawLayer, this.t);
         this.triangleDrawTool = new TriangleDrawTool(this.triangleDrawLayer, this.t);
+
+
         this.freehandDrawTool = new FreehandDrawTool(this.freehandDrawLayer, this.t, false);
-        this.freehandPolygonDrawTool = new FreehandDrawTool(this.freehandPolygonDrawLayer, this.t, true);
+
+
         this.ellipseDrawTool = new EllipseDrawTool(this.ellipseDrawLayer, this.t);
         this.markerDrawTool = new MarkerDrawTool(this.markerDrawLayer, this.t);
         this.textDrawTool = new TextDrawTool(this.textDrawLayer, this.t);
         this.arrowDrawTool = new ArrowDrawTool(this.arrowDrawLayer, this.t);
 
+
         this.circleDrawTool.setOnDrawComplete(() => this.onDrawingEnd());
         this.rectangleDrawTool.setOnDrawComplete(() => this.onDrawingEnd());
         this.triangleDrawTool.setOnDrawComplete(() => this.onDrawingEnd());
         this.freehandDrawTool.setOnDrawComplete(() => this.onDrawingEnd());
-        this.freehandPolygonDrawTool.setOnDrawComplete(() => this.onDrawingEnd());
+
         this.ellipseDrawTool.setOnDrawComplete(() => this.onDrawingEnd());
         this.markerDrawTool.setOnDrawComplete(() => this.onDrawingEnd());
         this.textDrawTool.setOnDrawComplete(() => this.onDrawingEnd());
         this.arrowDrawTool.setOnDrawComplete(() => this.onDrawingEnd());
 
         this.drawingManager.registerTools(
-            this.circleDrawTool,
-            this.rectangleDrawTool,
-            this.triangleDrawTool
+            this.circleDrawTool!,
+            this.rectangleDrawTool!,
+            this.triangleDrawTool!,
+            this.freehandDrawTool!,
+            this.ellipseDrawTool!,
+            this.markerDrawTool!,
+            this.textDrawTool!,
+            this.arrowDrawTool!
         );
 
         this.drawingManager.setCallbacks(
@@ -408,26 +432,128 @@ export class EarthView {
             default:
                 msg = "正在绘制...";
         }
-        this.setDrawingStatus(msg);
+        this.setDrawingStatus(`${msg} (按 ESC 取消绘制)`);
     }
 
     private onDrawingEnd(): void {
         this.setDrawingStatus(null);
     }
 
+
+
+
+
     private setupSelections(): void {
         const map = this.mapManager.getMap();
-        map.on("click", (event: any) => {
-            const features = map.getFeaturesAtPixel(event.pixel);
-            const circle = features?.find((f: any) => f.get("id")?.startsWith("circle_"));
-            if (circle && this.circleDrawTool) { this.circleDrawTool.startEdit(circle.get("id")); return; }
-            const rect = features?.find((f: any) => f.get("id")?.startsWith("rectangle_"));
-            if (rect && this.rectangleDrawTool) { this.rectangleDrawTool.startEdit(rect.get("id")); return; }
-            const tri = features?.find((f: any) => f.get("id")?.startsWith("triangle_"));
-            if (tri && this.triangleDrawTool) { this.triangleDrawTool.startEdit(tri.get("id")); return; }
-            this.stopAllEditing();
+
+
+        const getFeatureType = (feature: any): string | null => {
+            const id = feature.get("id");
+            if (!id) return null;
+            if (typeof id === 'string') {
+                if (id.startsWith("circle_")) return 'circle';
+                if (id.startsWith("rectangle_")) return 'rectangle';
+                if (id.startsWith("triangle_")) return 'triangle';
+                if (id.startsWith("freehand_")) return 'freehand';
+                if (id.startsWith("ellipse_")) return 'ellipse';
+                if (id.startsWith("marker_")) return 'marker';
+                if (id.startsWith("text_")) return 'text';
+                if (id.startsWith("arrow_") && !id.endsWith("_head")) return 'arrow';
+            }
+            return null;
+        };
+
+
+        const getCurrentEditingId = (): string | null => {
+            return this.circleDrawLayer?.getEditingId() ||
+                this.rectangleDrawLayer?.getEditingId() ||
+                this.triangleDrawLayer?.getEditingId() ||
+                this.freehandDrawLayer?.getEditingId() ||
+                this.ellipseDrawLayer?.getEditingId() ||
+                this.markerDrawLayer?.getEditingId() ||
+                this.textDrawLayer?.getEditingId() ||
+                this.arrowDrawLayer?.getEditingId() ||
+                null;
+        };
+
+
+        const startEditById = (id: string, type: string) => {
+            if (!id) return;
+
+            switch (type) {
+                case 'circle':
+                    this.circleDrawTool?.startEdit(id);
+                    break;
+                case 'rectangle':
+                    this.rectangleDrawTool?.startEdit(id);
+                    break;
+                case 'triangle':
+                    this.triangleDrawTool?.startEdit(id);
+                    break;
+                case 'freehand':
+                    this.freehandDrawTool?.startEdit(id);
+                    break;
+                case 'ellipse':
+                    this.ellipseDrawTool?.startEdit(id);
+                    break;
+                case 'marker':
+                    this.markerDrawTool?.startEdit(id);
+                    break;
+                case 'text':
+                    this.textDrawTool?.startEdit(id);
+                    break;
+                case 'arrow':
+                    this.arrowDrawTool?.startEdit(id);
+                    break;
+            }
+        };
+
+
+        map.on("singleclick", (event: any) => {
+
+            if (this.textDrawLayer?.isInputActive) {
+                return;
+            }
+
+
+            const features = map.getFeaturesAtPixel(event.pixel, {
+                hitTolerance: 5
+            });
+
+
+            let targetFeature = null;
+            let targetType = null;
+
+            for (const feature of features) {
+                const type = getFeatureType(feature);
+                if (type) {
+                    targetFeature = feature;
+                    targetType = type;
+                    break;
+                }
+            }
+
+            if (targetFeature && targetType) {
+                const clickedId = targetFeature.get("id");
+                const currentEditingId = getCurrentEditingId();
+
+
+                if (currentEditingId === clickedId) {
+                    return;
+                }
+
+
+                if (clickedId) {
+                    this.stopAllEditing();
+                    startEditById(clickedId, targetType);
+                }
+            } else {
+
+                this.stopAllEditing();
+            }
         });
     }
+
 
     private initDrawingManager(): void {
     }
@@ -451,6 +577,9 @@ export class EarthView {
         });
     }
 
+
+
+
     private initRightClickMenu(): void {
         this.container.addEventListener("contextmenu", (e) => {
             e.preventDefault();
@@ -460,21 +589,65 @@ export class EarthView {
             const pixel = [x, y];
             const features = this.mapManager.getMap().getFeaturesAtPixel(pixel);
 
+
             const circle = features?.find((f: any) => f.get("id")?.startsWith("circle_"));
             if (circle && this.circleDrawLayer) {
                 const data = this.circleDrawLayer.getCircle(circle.get("id"));
                 if (data) { this.selectedCircleId = data.id; this.showFloatingToolbarForCircle({ x, y }, data); return; }
             }
+
             const rectFeature = features?.find((f: any) => f.get("id")?.startsWith("rectangle_"));
             if (rectFeature && this.rectangleDrawLayer) {
                 const data = this.rectangleDrawLayer.getRectangle(rectFeature.get("id"));
                 if (data) { this.selectedRectangleId = data.id; this.showFloatingToolbarForRectangle({ x, y }, data); return; }
             }
+
             const tri = features?.find((f: any) => f.get("id")?.startsWith("triangle_"));
             if (tri && this.triangleDrawLayer) {
                 const data = this.triangleDrawLayer.getTriangle(tri.get("id"));
                 if (data) { this.selectedTriangleId = data.id; this.showFloatingToolbarForTriangle({ x, y }, data); return; }
             }
+
+
+            const freehand = features?.find((f: any) => {
+                const id = f.get("id");
+                return id && typeof id === 'string' && id.startsWith("freehand_");
+            });
+
+            if (freehand && this.freehandDrawLayer) {
+                const data = this.freehandDrawLayer.getFreehand(freehand.get("id"));
+                if (data) {
+                    this.selectedFreehandId = data.id;
+                    this.showFloatingToolbarForFreehand({ x, y }, data);
+                    return;
+                }
+            }
+
+
+            const ellipse = features?.find((f: any) => f.get("id")?.startsWith("ellipse_"));
+            if (ellipse && this.ellipseDrawLayer) {
+                const data = this.ellipseDrawLayer.getEllipse(ellipse.get("id"));
+                if (data) { this.selectedEllipseId = data.id; this.showFloatingToolbarForEllipse({ x, y }, data); return; }
+            }
+
+            const marker = features?.find((f: any) => f.get("id")?.startsWith("marker_"));
+            if (marker && this.markerDrawLayer) {
+                const data = this.markerDrawLayer.getMarker(marker.get("id"));
+                if (data) { this.selectedMarkerId = data.id; this.showFloatingToolbarForMarker({ x, y }, data); return; }
+            }
+
+            const text = features?.find((f: any) => f.get("id")?.startsWith("text_"));
+            if (text && this.textDrawLayer) {
+                const data = this.textDrawLayer.getText(text.get("id"));
+                if (data) { this.selectedTextId = data.id; this.showFloatingToolbarForText({ x, y }, data); return; }
+            }
+
+            const arrow = features?.find((f: any) => f.get("id")?.startsWith("arrow_") && !f.get("id")?.toString().endsWith("_head"));
+            if (arrow && this.arrowDrawLayer) {
+                const data = this.arrowDrawLayer.getArrow(arrow.get("id"));
+                if (data) { this.selectedArrowId = data.id; this.showFloatingToolbarForArrow({ x, y }, data); return; }
+            }
+
             const measure = features?.find((f: any) => f.get("measurementId"));
             if (measure) {
                 this.selectedMeasurementId = measure.get("measurementId");
@@ -512,10 +685,21 @@ export class EarthView {
         alert(this.t.noCirclesToEdit);
     }
 
+
+
     private stopAllEditing(): void {
+
+        if (this.textDrawLayer?.isInputActive) {
+            return;
+        }
         this.circleDrawLayer?.stopEdit();
         this.rectangleDrawLayer?.stopEdit();
         this.triangleDrawLayer?.stopEdit();
+        this.freehandDrawLayer?.stopEdit();
+        this.ellipseDrawLayer?.stopEdit();
+        this.markerDrawLayer?.stopEdit();
+        this.textDrawLayer?.stopEdit();
+        this.arrowDrawLayer?.stopEdit();
     }
 
     private showFloatingToolbarForCircle(pos: { x: number; y: number }, data: CircleDrawData): void {
@@ -594,6 +778,257 @@ export class EarthView {
         }
     }
 
+
+
+    private showFloatingToolbarForFreehand(pos: { x: number; y: number }, data: FreehandDrawData): void {
+
+        if (this.floatingToolbar) {
+            this.floatingToolbar.destroy();
+            this.floatingToolbar = null;
+        }
+
+        this.floatingToolbarPosition = pos;
+        this.showFloatingToolbar = true;
+        this.currentColor = data.fillColor || [76, 175, 80, 0.3];
+        this.currentStrokeWidth = data.outlineWidth || 3;
+        this.currentStrokeStyle = data.outlineStyle || "solid";
+
+        const targetId = data.id;
+        this.selectedFreehandId = targetId;
+
+        const targetLayer = this.freehandDrawLayer;
+        if (!targetLayer) {
+            console.error('FreehandDrawLayer is null');
+            return;
+        }
+
+
+        this.floatingToolbar = new FloatingToolbar({
+            onColorChange: (color) => {
+                this.currentColor = color;
+                targetLayer.updateFreehandStyle(
+                    targetId,
+                    [color[0], color[1], color[2], 0.3],
+                    [color[0], color[1], color[2], 1],
+                    this.currentStrokeWidth,
+                    this.currentStrokeStyle
+                );
+            },
+            onStrokeWidthChange: (width) => {
+                this.currentStrokeWidth = width;
+                targetLayer.updateFreehandStyle(
+                    targetId,
+                    [this.currentColor[0], this.currentColor[1], this.currentColor[2], 0.3],
+                    [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1],
+                    width,
+                    this.currentStrokeStyle
+                );
+            },
+            onStrokeStyleChange: (style) => {
+                this.currentStrokeStyle = style;
+                targetLayer.updateFreehandStyle(
+                    targetId,
+                    [this.currentColor[0], this.currentColor[1], this.currentColor[2], 0.3],
+                    [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1],
+                    this.currentStrokeWidth,
+                    style
+                );
+            },
+            onDelete: () => {
+                console.log('Deleting freehand:', targetId);
+                if (targetLayer && targetId) {
+
+                    this.hideFloatingToolbar();
+
+                    targetLayer.removeFreehand(targetId);
+
+                    this.selectedFreehandId = null;
+
+                    setTimeout(() => {
+                        if (this.mapManager) {
+                            this.mapManager.getMap().render();
+                        }
+                    }, 50);
+                }
+            },
+            onClose: () => {
+                this.hideFloatingToolbar();
+            },
+            onPositionChange: (p) => {
+                this.floatingToolbarPosition = p;
+            },
+            theme: this.theme,
+            t: this.t,
+            containerRef: this.container,
+            currentColor: this.currentColor,
+            currentStrokeWidth: this.currentStrokeWidth,
+            currentStrokeStyle: this.currentStrokeStyle,
+            position: pos,
+        });
+    }
+
+    private showFloatingToolbarForEllipse(pos: { x: number; y: number }, data: EllipseDrawData): void {
+        this.floatingToolbarPosition = pos;
+        this.showFloatingToolbar = true;
+        this.currentColor = data.fillColor || [156, 39, 176, 0.3];
+        this.currentStrokeWidth = data.outlineWidth || 2;
+        this.currentStrokeStyle = data.outlineStyle || "solid";
+
+        this.showGenericFloatingToolbar(pos, {
+            id: this.selectedEllipseId,
+            updateStyle: (color, width, style) => {
+                if (this.selectedEllipseId && this.ellipseDrawLayer) {
+                    this.ellipseDrawLayer.updateEllipseStyle(
+                        this.selectedEllipseId,
+                        [color[0], color[1], color[2], 0.3],
+                        [color[0], color[1], color[2], 1],
+                        width,
+                        style
+                    );
+                }
+            },
+            delete: () => {
+                if (this.selectedEllipseId && this.ellipseDrawLayer) {
+                    this.ellipseDrawLayer.removeEllipse(this.selectedEllipseId);
+                    this.selectedEllipseId = null;
+                }
+                this.hideFloatingToolbar();
+            }
+        });
+    }
+
+    private showFloatingToolbarForMarker(pos: { x: number; y: number }, data: MarkerDrawData): void {
+        this.floatingToolbarPosition = pos;
+        this.showFloatingToolbar = true;
+        this.currentColor = data.color || [255, 87, 34, 1];
+        this.currentSize = data.size || 10;
+
+
+        if (this.floatingToolbar) {
+            this.floatingToolbar.updatePosition(pos);
+            this.floatingToolbar.setVisible(true);
+        } else {
+            this.floatingToolbar = new FloatingToolbar({
+                onColorChange: (color) => {
+                    this.currentColor = color;
+                    if (this.selectedMarkerId && this.markerDrawLayer) {
+                        this.markerDrawLayer.updateMarkerStyle(
+                            this.selectedMarkerId,
+                            [color[0], color[1], color[2], 1],
+                            this.currentSize
+                        );
+                    }
+                },
+                onStrokeWidthChange: (width) => {
+                    this.currentSize = width;
+                    if (this.selectedMarkerId && this.markerDrawLayer) {
+                        this.markerDrawLayer.updateMarkerStyle(
+                            this.selectedMarkerId,
+                            this.currentColor,
+                            width
+                        );
+                    }
+                },
+                onStrokeStyleChange: (style) => {
+
+                },
+                onDelete: () => {
+                    if (this.selectedMarkerId && this.markerDrawLayer) {
+                        this.markerDrawLayer.removeMarker(this.selectedMarkerId);
+                        this.selectedMarkerId = null;
+                    }
+                    this.hideFloatingToolbar();
+                },
+                onClose: () => this.hideFloatingToolbar(),
+                onPositionChange: (p) => { this.floatingToolbarPosition = p; },
+                theme: this.theme, t: this.t, containerRef: this.container,
+                currentColor: this.currentColor,
+                currentStrokeWidth: this.currentSize,
+                currentStrokeStyle: "solid",
+                position: pos,
+            });
+        }
+    }
+
+    private showFloatingToolbarForText(pos: { x: number; y: number }, data: TextDrawData): void {
+        // eslint-disable-next-line no-restricted-globals
+        if (confirm("是否编辑文字内容？")) {
+            this.textDrawTool?.startEdit(data.id);
+        }
+        this.hideFloatingToolbar();
+    }
+
+    private showFloatingToolbarForArrow(pos: { x: number; y: number }, data: ArrowDrawData): void {
+        this.floatingToolbarPosition = pos;
+        this.showFloatingToolbar = true;
+        this.currentColor = data.color || [255, 87, 34, 1];
+        this.currentStrokeWidth = data.width || 3;
+        this.currentStrokeStyle = data.style || "solid";
+
+        this.showGenericFloatingToolbar(pos, {
+            id: this.selectedArrowId,
+            updateStyle: (color, width, style) => {
+                if (this.selectedArrowId && this.arrowDrawLayer) {
+                    this.arrowDrawLayer.updateArrowStyle(
+                        this.selectedArrowId,
+                        [color[0], color[1], color[2], 1],
+                        width,
+                        style,
+                        data.headSize || 50
+                    );
+                }
+            },
+            delete: () => {
+                if (this.selectedArrowId && this.arrowDrawLayer) {
+                    this.arrowDrawLayer.removeArrow(this.selectedArrowId);
+                    this.selectedArrowId = null;
+                }
+                this.hideFloatingToolbar();
+            }
+        });
+    }
+
+
+    private showGenericFloatingToolbar(
+        pos: { x: number; y: number },
+        handlers: {
+            id: string | null,
+            updateStyle: (color: number[], width: number, style: "solid" | "dashed") => void,
+            delete: () => void
+        }
+    ): void {
+        if (this.floatingToolbar) {
+            this.floatingToolbar.updatePosition(pos);
+            this.floatingToolbar.setVisible(true);
+        } else {
+            this.floatingToolbar = new FloatingToolbar({
+                onColorChange: (color) => {
+                    this.currentColor = color;
+                    handlers.updateStyle(color, this.currentStrokeWidth, this.currentStrokeStyle);
+                },
+                onStrokeWidthChange: (width) => {
+                    this.currentStrokeWidth = width;
+                    handlers.updateStyle(this.currentColor, width, this.currentStrokeStyle);
+                },
+                onStrokeStyleChange: (style) => {
+                    this.currentStrokeStyle = style;
+                    handlers.updateStyle(this.currentColor, this.currentStrokeWidth, style);
+                },
+                onDelete: () => {
+                    handlers.delete();
+                    this.hideFloatingToolbar();
+                },
+                onClose: () => this.hideFloatingToolbar(),
+                onPositionChange: (p) => { this.floatingToolbarPosition = p; },
+                theme: this.theme, t: this.t, containerRef: this.container,
+                currentColor: this.currentColor,
+                currentStrokeWidth: this.currentStrokeWidth,
+                currentStrokeStyle: this.currentStrokeStyle,
+                position: pos,
+            });
+        }
+    }
+
     private showFloatingToolbarForTriangle(pos: { x: number; y: number }, data: TriangleDrawData): void {
         this.floatingToolbarPosition = pos;
         this.showFloatingToolbar = true;
@@ -656,7 +1091,15 @@ export class EarthView {
         this.selectedCircleId = null;
         this.selectedRectangleId = null;
         this.selectedTriangleId = null;
-        this.floatingToolbar?.setVisible(false);
+        this.selectedFreehandId = null;
+        this.selectedEllipseId = null;
+        this.selectedMarkerId = null;
+        this.selectedTextId = null;
+        this.selectedArrowId = null;
+        if (this.floatingToolbar) {
+            this.floatingToolbar.setVisible(false);
+
+        }
     }
 
     private hideMeasurementToolbar(): void {
@@ -744,32 +1187,32 @@ export class EarthView {
 
     public startDrawFreehand(): void {
         if (this.drawingManager.isDrawing()) this.drawingManager.cancelDrawing();
-        this.freehandDrawTool?.startDraw();
+        this.drawingManager.startDrawingFreehand();
     }
 
     public startDrawFreehandPolygon(): void {
         if (this.drawingManager.isDrawing()) this.drawingManager.cancelDrawing();
-        this.freehandPolygonDrawTool?.startDraw();
+        this.drawingManager.startDrawingFreehandPolygon();
     }
 
     public startDrawEllipse(): void {
         if (this.drawingManager.isDrawing()) this.drawingManager.cancelDrawing();
-        this.ellipseDrawTool?.startDraw();
+        this.drawingManager.startDrawingEllipse();
     }
 
     public startDrawMarker(): void {
         if (this.drawingManager.isDrawing()) this.drawingManager.cancelDrawing();
-        this.markerDrawTool?.startDraw();
+        this.drawingManager.startDrawingMarker();
     }
 
     public startDrawText(): void {
         if (this.drawingManager.isDrawing()) this.drawingManager.cancelDrawing();
-        this.textDrawTool?.startDraw();
+        this.drawingManager.startDrawingText();
     }
 
     public startDrawArrow(): void {
         if (this.drawingManager.isDrawing()) this.drawingManager.cancelDrawing();
-        this.arrowDrawTool?.startDraw();
+        this.drawingManager.startDrawingArrow();
     }
 
     public startMeasureDistance(): void {
@@ -818,6 +1261,7 @@ export class EarthView {
     public destroy(): void {
         if (this.isDestroyed) return;
         this.isDestroyed = true;
+        this.eventManager.destroy();
         this.uiManager.destroy();
         this.drawingManager.destroy();
         this.floatingToolbar?.destroy();
@@ -825,7 +1269,6 @@ export class EarthView {
         this.drawingStatusDiv?.remove();
         this.measureStatusDiv?.remove();
         this.freehandDrawTool?.destroy();
-        this.freehandPolygonDrawTool?.destroy();
         this.ellipseDrawTool?.destroy();
         this.markerDrawTool?.destroy();
         this.textDrawTool?.destroy();

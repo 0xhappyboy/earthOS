@@ -1,3 +1,5 @@
+// FreehandDrawLayer.ts - 完全简化版本
+
 import Feature from "ol/Feature";
 import LineString from "ol/geom/LineString";
 import Polygon from "ol/geom/Polygon";
@@ -7,8 +9,6 @@ import Style from "ol/style/Style";
 import Stroke from "ol/style/Stroke";
 import Fill from "ol/style/Fill";
 import Draw from "ol/interaction/Draw";
-// @ts-ignore
-import Transform from "ol-ext/interaction/Transform";
 import { fromLonLat, toLonLat } from "ol/proj";
 import { BaseLayer } from "../BaseLayer";
 import { LayerTypeEnum } from "../../types";
@@ -26,15 +26,12 @@ export interface FreehandDrawData {
 
 export class FreehandDrawLayer extends BaseLayer {
     private drawInteraction: Draw | null = null;
-    private transformInteraction: Transform | null = null;
     private features: Map<string, Feature> = new Map();
     private defaultFillColor: number[];
     private defaultOutlineColor: number[];
     private defaultOutlineWidth: number;
     private defaultOutlineStyle: "solid" | "dashed";
     private onDrawCompleteCallback: ((data: FreehandDrawData) => void) | null = null;
-    private onEditCompleteCallback: ((data: FreehandDrawData) => void) | null = null;
-    private editingFeature: Feature | null = null;
     private mapView: any = null;
 
     constructor(id: string, name: string, options?: {
@@ -102,6 +99,8 @@ export class FreehandDrawLayer extends BaseLayer {
         return this.layer;
     }
 
+
+
     public startDraw(isPolygon: boolean, onComplete?: (data: FreehandDrawData) => void): void {
         if (this.drawInteraction) {
             this.mapView?.removeInteraction(this.drawInteraction);
@@ -109,18 +108,27 @@ export class FreehandDrawLayer extends BaseLayer {
         }
         this.onDrawCompleteCallback = onComplete || null;
         const tempSource = new VectorSource();
-        this.drawInteraction = new Draw({
-            source: tempSource,  
-            type: isPolygon ? "Polygon" : "LineString",
-            freehand: true,
-            freehandCondition: () => true,
+        const drawStyle = new Style({
+            stroke: new Stroke({
+                color: arrayToRgba(this.defaultOutlineColor),
+                width: this.defaultOutlineWidth,
+                lineDash: this.defaultOutlineStyle === "dashed" ? [10, 10] : undefined,
+            }),
+            fill: new Fill({
+                color: arrayToRgba(this.defaultFillColor),
+            }),
         });
-
+        this.drawInteraction = new Draw({
+            source: tempSource,
+            type: isPolygon ? "Polygon" : "LineString",
+            style: drawStyle,
+        });
         this.drawInteraction.on("drawend", (event: any) => {
-            const feature = event.feature.clone();  
+            const feature = event.feature.clone();
             const geometry = feature.getGeometry();
             const id = generateId("freehand_");
             const isPolygonGeom = geometry instanceof Polygon;
+
             let points: [number, number][] = [];
 
             if (geometry instanceof LineString) {
@@ -137,6 +145,11 @@ export class FreehandDrawLayer extends BaseLayer {
                 }
             }
 
+
+            tempSource.clear();
+
+
+            feature.setId(id);
             feature.set("id", id);
             feature.set("isPolygon", isPolygonGeom);
             feature.set("points", points);
@@ -144,9 +157,12 @@ export class FreehandDrawLayer extends BaseLayer {
             feature.set("outlineColor", this.defaultOutlineColor);
             feature.set("outlineWidth", this.defaultOutlineWidth);
             feature.set("outlineStyle", this.defaultOutlineStyle);
+
+
             this.source?.addFeature(feature);
             this.features.set(id, feature);
             this.layer?.setZIndex(999);
+
             if (this.onDrawCompleteCallback) {
                 this.onDrawCompleteCallback({
                     id,
@@ -158,7 +174,7 @@ export class FreehandDrawLayer extends BaseLayer {
                     outlineStyle: this.defaultOutlineStyle,
                 });
             }
-            tempSource.clear();  
+
             this.mapView?.removeInteraction(this.drawInteraction);
             this.drawInteraction = null;
             this.onDrawCompleteCallback = null;
@@ -169,104 +185,93 @@ export class FreehandDrawLayer extends BaseLayer {
     }
 
     public startEdit(id: string, onComplete?: (data: FreehandDrawData) => void): void {
-        this.stopEdit();
 
-        const targetFeature = this.features.get(id);
-        if (!targetFeature) {
-            console.error(`Freehand with id ${id} not found`);
-            return;
-        }
-
-        this.editingFeature = targetFeature;
-        this.onEditCompleteCallback = onComplete || null;
-
-        const tempSource = new VectorSource();
-        tempSource.addFeature(targetFeature);
-        const tempFeatures = tempSource.getFeaturesCollection();
-
-        this.transformInteraction = new Transform({
-            features: tempFeatures as any,
-            translate: true,
-            scale: true,
-            rotate: true,
-            keepAspectRatio: () => false,
-        });
-        this.transformInteraction.setActive(true);
-
-        const saveChanges = () => {
-            const geometry = targetFeature.getGeometry();
-            let points: [number, number][] = [];
-            if (geometry instanceof LineString) {
-                const coords = geometry.getCoordinates();
-                for (let i = 0; i < coords.length; i++) {
-                    const [lng, lat] = toLonLat(coords[i]);
-                    points.push([lng, lat]);
-                }
-            } else if (geometry instanceof Polygon) {
-                const coords = geometry.getCoordinates()[0];
-                for (let i = 0; i < coords.length - 1; i++) {
-                    const [lng, lat] = toLonLat(coords[i]);
-                    points.push([lng, lat]);
-                }
-            }
-            const idVal = targetFeature.get("id");
-            const isPolygon = targetFeature.get("isPolygon");
-            if (this.onEditCompleteCallback && idVal) {
-                this.onEditCompleteCallback({
-                    id: idVal,
-                    points,
-                    isPolygon,
+        if (onComplete) {
+            const feature = this.features.get(id);
+            if (feature) {
+                onComplete({
+                    id,
+                    points: feature.get("points"),
+                    isPolygon: feature.get("isPolygon"),
                 });
             }
-        };
-
-        this.transformInteraction.on("scaleend", saveChanges);
-        this.transformInteraction.on("translateend", saveChanges);
-        this.transformInteraction.on("rotateend", saveChanges);
-        this.mapView?.addInteraction(this.transformInteraction);
+        }
     }
 
     public stopEdit(): void {
-        if (this.transformInteraction) {
-            this.mapView?.removeInteraction(this.transformInteraction);
-            this.transformInteraction = null;
-        }
-        this.editingFeature = null;
-        this.onEditCompleteCallback = null;
+
     }
 
+
+
     public addFreehand(data: FreehandDrawData): void {
+
+
+        if (!this.source) {
+            console.error('No source available in addFreehand');
+            return;
+        }
+
         const points: [number, number][] = [];
         for (let i = 0; i < data.points.length; i++) {
             const p = data.points[i];
             const [x, y] = fromLonLat(p);
             points.push([x, y]);
         }
+
         let feature: Feature;
+        const featureId = data.id || generateId("freehand_");
+
         if (data.isPolygon && points.length >= 3) {
             const ring = [...points, points[0]];
             const polygon = new Polygon([ring]);
-            feature = new Feature({ geometry: polygon, id: data.id, isPolygon: true, points: data.points });
+            feature = new Feature({
+                geometry: polygon,
+                id: featureId,
+                isPolygon: true,
+                points: data.points
+            });
         } else {
             const line = new LineString(points);
-            feature = new Feature({ geometry: line, id: data.id, isPolygon: false, points: data.points });
+            feature = new Feature({
+                geometry: line,
+                id: featureId,
+                isPolygon: false,
+                points: data.points
+            });
         }
         feature.set("fillColor", data.fillColor || this.defaultFillColor);
         feature.set("outlineColor", data.outlineColor || this.defaultOutlineColor);
         feature.set("outlineWidth", data.outlineWidth || this.defaultOutlineWidth);
         feature.set("outlineStyle", data.outlineStyle || this.defaultOutlineStyle);
-        this.source?.addFeature(feature);
-        this.features.set(data.id, feature);
+        this.source.addFeature(feature);
+        this.features.set(featureId, feature);
+
     }
 
+
+
     public removeFreehand(id: string): void {
-        const feature = this.features.get(id);
+        const layerSource = this.layer?.getSource();
+        if (!layerSource) {
+            console.error('No layer source available');
+            return;
+        }
+        let feature = this.features.get(id);
+        if (!feature) {
+            const allFeatures = layerSource.getFeatures();
+            feature = allFeatures.find((f: any) => f.get('id') === id) || null;
+        }
         if (feature) {
-            this.source?.removeFeature(feature);
+            layerSource.removeFeature(feature);
             this.features.delete(id);
-            if (this.editingFeature === feature) {
-                this.stopEdit();
-            }
+        } else {
+            console.warn('Feature not found with id:', id);
+            return;
+        }
+        this.layer?.changed();
+        if (this.mapView) {
+            this.mapView.render();
         }
     }
 
@@ -288,17 +293,40 @@ export class FreehandDrawLayer extends BaseLayer {
 
     public getFreehand(id: string): FreehandDrawData | undefined {
         const feature = this.features.get(id);
-        if (!feature) return undefined;
+        if (!feature) {
+            console.warn(`Freehand feature with id ${id} not found`);
+            return undefined;
+        }
+        let points = feature.get("points");
+        if (!points || !Array.isArray(points)) {
+            const geometry = feature.getGeometry();
+            if (geometry instanceof LineString) {
+                const coords = geometry.getCoordinates();
+                points = coords.map(coord => {
+                    const [lng, lat] = toLonLat(coord);
+                    return [lng, lat];
+                });
+            } else if (geometry instanceof Polygon) {
+                const coords = geometry.getCoordinates()[0];
+                points = coords.slice(0, -1).map(coord => {
+                    const [lng, lat] = toLonLat(coord);
+                    return [lng, lat];
+                });
+            }
+        }
         return {
             id,
-            points: feature.get("points"),
-            isPolygon: feature.get("isPolygon"),
-            fillColor: feature.get("fillColor"),
-            outlineColor: feature.get("outlineColor"),
-            outlineWidth: feature.get("outlineWidth"),
-            outlineStyle: feature.get("outlineStyle"),
+            points: points || [],
+            isPolygon: feature.get("isPolygon") || false,
+            fillColor: feature.get("fillColor") || this.defaultFillColor,
+            outlineColor: feature.get("outlineColor") || this.defaultOutlineColor,
+            outlineWidth: feature.get("outlineWidth") || this.defaultOutlineWidth,
+            outlineStyle: feature.get("outlineStyle") || this.defaultOutlineStyle,
         };
     }
+
+
+
 
     public updateFreehandStyle(
         id: string,
@@ -309,13 +337,19 @@ export class FreehandDrawLayer extends BaseLayer {
     ): void {
         const feature = this.features.get(id);
         if (!feature) return;
+
         feature.set("fillColor", fillColor);
         feature.set("outlineColor", outlineColor);
         feature.set("outlineWidth", outlineWidth);
         feature.set("outlineStyle", outlineStyle);
-        feature.setStyle(this.getStyleForFeature(feature));
+
+
+        feature.setStyle(undefined);
         feature.changed();
-        this.mapView?.render();
+
+        if (this.mapView) {
+            this.mapView.render();
+        }
     }
 
     public stopDraw(): void {
@@ -329,7 +363,6 @@ export class FreehandDrawLayer extends BaseLayer {
     public clearAll(): void {
         this.clear();
         this.features.clear();
-        this.stopEdit();
     }
 
     public isDrawActive(): boolean {
@@ -337,20 +370,17 @@ export class FreehandDrawLayer extends BaseLayer {
     }
 
     public isEditActive(): boolean {
-        return this.transformInteraction !== null;
+        return false;
     }
 
     public setEditable(editable: boolean): void {
-        if (editable) {
-            this.layer.set('pointer-events', true);
-        } else {
-            this.stopEdit();
+        if (!editable) {
             this.stopDraw();
         }
     }
 
     public getEditingId(): string | null {
-        return this.editingFeature?.get("id") || null;
+        return null;
     }
 
     public cancelDraw(): void {
@@ -358,7 +388,7 @@ export class FreehandDrawLayer extends BaseLayer {
     }
 
     public cancelEdit(): void {
-        this.stopEdit();
+
     }
 
     public updateData(data: { freehands?: FreehandDrawData[] }): void {
@@ -370,7 +400,6 @@ export class FreehandDrawLayer extends BaseLayer {
 
     public destroy(): void {
         this.stopDraw();
-        this.stopEdit();
         super.destroy();
     }
 }

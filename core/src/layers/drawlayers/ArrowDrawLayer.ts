@@ -248,20 +248,15 @@ export class ArrowDrawLayer extends BaseLayer {
 
     public startEdit(id: string, onComplete?: (data: ArrowDrawData) => void): void {
         this.stopEdit();
-
         const targetFeature = this.features.get(id);
         if (!targetFeature) {
-            console.error(`Arrow with id ${id} not found`);
             return;
         }
-
         this.editingFeature = targetFeature;
         this.onEditCompleteCallback = onComplete || null;
-
         const tempSource = new VectorSource();
         tempSource.addFeature(targetFeature);
         const tempFeatures = tempSource.getFeaturesCollection();
-
         this.transformInteraction = new Transform({
             features: tempFeatures as any,
             translate: true,

@@ -116,20 +116,15 @@ export class CircleDrawLayer extends BaseLayer {
 
     public startEdit(id: string, onComplete?: (data: CircleDrawData) => void): void {
         this.stopEdit();
-
         const targetFeature = this.features.get(id);
         if (!targetFeature) {
-            console.error(`Circle with id ${id} not found`);
             return;
         }
-
         this.editingFeature = targetFeature;
         this.onEditCompleteCallback = onComplete || null;
-
         const tempSource = new VectorSource();
         tempSource.addFeature(targetFeature);
         const tempFeatures = tempSource.getFeaturesCollection();
-
         this.transformInteraction = new Transform({
             features: tempFeatures as any,
             translate: true,

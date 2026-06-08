@@ -1,3 +1,5 @@
+
+
 import Feature from "ol/Feature";
 import Point from "ol/geom/Point";
 import VectorLayer from "ol/layer/Vector";
@@ -7,7 +9,7 @@ import Text from "ol/style/Text";
 import Fill from "ol/style/Fill";
 import Stroke from "ol/style/Stroke";
 import Draw from "ol/interaction/Draw";
-// @ts-ignore
+
 import Transform from "ol-ext/interaction/Transform";
 import { fromLonLat, toLonLat } from "ol/proj";
 import { BaseLayer } from "../BaseLayer";
@@ -41,6 +43,7 @@ export class TextDrawLayer extends BaseLayer {
     private editingFeature: Feature | null = null;
     private mapView: any = null;
     private pendingTextInput: HTMLInputElement | null = null;
+    public isInputActive: boolean = false;
 
     constructor(id: string, name: string, options?: {
         defaultFontSize?: number;
@@ -100,56 +103,123 @@ export class TextDrawLayer extends BaseLayer {
         });
     }
 
+
+
     private showTextInput(position: [number, number], onComplete: (text: string) => void): void {
+
+        if (this.pendingTextInput) {
+            this.pendingTextInput.remove();
+            this.pendingTextInput = null;
+        }
+
+        this.isInputActive = true;
+
         this.pendingTextInput = document.createElement("input");
         this.pendingTextInput.type = "text";
         this.pendingTextInput.placeholder = "请输入文字...";
         this.pendingTextInput.style.cssText = `
-            position: absolute;
-            z-index: 10000;
-            padding: 4px 8px;
-            font-size: 14px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            background: white;
-            outline: none;
-        `;
+        position: absolute;
+        z-index: 10001;
+        padding: 8px 12px;
+        font-size: 14px;
+        min-width: 180px;
+        border: 2px solid #00aaff;
+        border-radius: 6px;
+        background: #ffffff;
+        color: #333333;
+        outline: none;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        font-family: sans-serif;
+    `;
 
-        const container = this.mapView.getTargetElement();
-        const containerRect = container.getBoundingClientRect();
-        const screen = this.mapView.getPixelFromCoordinate(position);
-        this.pendingTextInput.style.left = `${screen[0] - containerRect.left}px`;
-        this.pendingTextInput.style.top = `${screen[1] - containerRect.top - 20}px`;
-        container.appendChild(this.pendingTextInput);
+        const map = this.mapView;
+        if (!map || typeof map.getTargetElement !== 'function') {
+            console.error("TextDrawLayer: mapView is not a valid map object");
+            this.isInputActive = false;
+            onComplete("");
+            return;
+        }
+
+        const targetElement = map.getTargetElement();
+        if (!targetElement) {
+            console.error("TextDrawLayer: cannot get map target element");
+            this.isInputActive = false;
+            onComplete("");
+            return;
+        }
+
+        const containerRect = targetElement.getBoundingClientRect();
+        const pixel = map.getPixelFromCoordinate(position);
+        if (!pixel || pixel.length < 2) {
+            console.error("TextDrawLayer: cannot get pixel from coordinate", position);
+            this.isInputActive = false;
+            onComplete("");
+            return;
+        }
+
+        const left = pixel[0] - containerRect.left - 90;
+        const top = pixel[1] - containerRect.top - 35;
+
+        this.pendingTextInput.style.left = `${Math.max(5, left)}px`;
+        this.pendingTextInput.style.top = `${Math.max(5, top)}px`;
+
+        targetElement.appendChild(this.pendingTextInput);
         this.pendingTextInput.focus();
+        this.pendingTextInput.select();
 
-        const handleComplete = () => {
-            const text = this.pendingTextInput?.value || "";
+        let isCompleted = false;
+
+        const cleanup = () => {
+            if (isCompleted) return;
+            isCompleted = true;
+
             if (this.pendingTextInput) {
                 this.pendingTextInput.remove();
                 this.pendingTextInput = null;
             }
             document.removeEventListener("keydown", handleKeydown);
+            document.removeEventListener("click", handleClickOutside);
+            this.isInputActive = false;
+        };
+
+        const handleComplete = (text: string) => {
+            if (isCompleted) return;
+            cleanup();
             onComplete(text);
         };
 
         const handleKeydown = (e: KeyboardEvent) => {
             if (e.key === "Enter") {
-                handleComplete();
+                e.preventDefault();
+                e.stopPropagation();
+                const text = this.pendingTextInput?.value || "";
+                handleComplete(text);
             } else if (e.key === "Escape") {
-                if (this.pendingTextInput) {
-                    this.pendingTextInput.remove();
-                    this.pendingTextInput = null;
-                }
-                document.removeEventListener("keydown", handleKeydown);
-                onComplete("");
+                e.preventDefault();
+                e.stopPropagation();
+                handleComplete("");
+            }
+        };
+
+        const handleClickOutside = (e: MouseEvent) => {
+
+            if (isCompleted) return;
+
+            if (this.pendingTextInput && !this.pendingTextInput.contains(e.target as Node)) {
+                const text = this.pendingTextInput.value || "";
+                handleComplete(text);
             }
         };
 
         document.addEventListener("keydown", handleKeydown);
+
+        setTimeout(() => {
+            document.addEventListener("click", handleClickOutside);
+        }, 100);
     }
 
     public setView(view: any): void {
+
         this.mapView = view;
     }
 
@@ -166,7 +236,7 @@ export class TextDrawLayer extends BaseLayer {
         this.onDrawCompleteCallback = onComplete || null;
         const tempSource = new VectorSource();
         this.drawInteraction = new Draw({
-            source: tempSource, 
+            source: tempSource,
             type: "Point",
         });
 
@@ -177,6 +247,15 @@ export class TextDrawLayer extends BaseLayer {
                 const [lng, lat] = toLonLat([x, y]);
 
                 this.showTextInput([x, y], (text: string) => {
+
+                    if (tempSource) {
+                        tempSource.clear();
+                    }
+                    if (this.drawInteraction) {
+                        this.mapView?.removeInteraction(this.drawInteraction);
+                        this.drawInteraction = null;
+                    }
+
                     if (text && text.trim()) {
                         const id = generateId("text_");
                         const feature = new Feature({
@@ -209,15 +288,22 @@ export class TextDrawLayer extends BaseLayer {
                                 outlineWidth: this.defaultOutlineWidth,
                             });
                         }
-                    }
-                });
-            }
+                    } else {
 
-            tempSource.clear();
-            this.mapView?.removeInteraction(this.drawInteraction);
-            this.drawInteraction = null;
-            this.onDrawCompleteCallback = null;
-            this.mapView?.render();
+                        if (this.onDrawCompleteCallback) {
+                            this.onDrawCompleteCallback(null as any);
+                        }
+                    }
+                    this.onDrawCompleteCallback = null;
+                    this.mapView?.render();
+                });
+            } else {
+                tempSource.clear();
+                this.mapView?.removeInteraction(this.drawInteraction);
+                this.drawInteraction = null;
+                this.onDrawCompleteCallback = null;
+                this.mapView?.render();
+            }
         });
 
         this.mapView?.addInteraction(this.drawInteraction);
@@ -226,13 +312,10 @@ export class TextDrawLayer extends BaseLayer {
     public startEdit(id: string, onComplete?: (data: TextDrawData) => void): void {
         const targetFeature = this.features.get(id);
         if (!targetFeature) {
-            console.error(`Text with id ${id} not found`);
             return;
         }
-
         this.editingFeature = targetFeature;
         this.onEditCompleteCallback = onComplete || null;
-
         const geometry = targetFeature.getGeometry();
         if (geometry instanceof Point) {
             const [x, y] = geometry.getCoordinates();
@@ -264,9 +347,12 @@ export class TextDrawLayer extends BaseLayer {
             this.pendingTextInput.remove();
             this.pendingTextInput = null;
         }
+        this.isInputActive = false;
         this.editingFeature = null;
         this.onEditCompleteCallback = null;
     }
+
+
 
     public addText(data: TextDrawData): void {
         const point = fromLonLat(data.position);

@@ -30,8 +30,9 @@ export class FreehandDrawTool implements DrawTool {
         return this.freehandDrawLayer.isDrawActive() || this.freehandDrawLayer.isEditActive();
     }
 
-    startDraw(): void {
-        this.freehandDrawLayer.startDraw(this.isPolygonMode, (data) => {
+    startDraw(isPolygon: boolean = false): void {
+        this.name = isPolygon ? "手绘多边形" : "手绘线";
+        this.freehandDrawLayer.startDraw(isPolygon, (data) => {
             if (this.onDrawComplete) {
                 this.onDrawComplete(data);
             }
