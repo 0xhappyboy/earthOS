@@ -52,6 +52,7 @@ export enum LayerTypeEnum {
     ELLIPSE_DRAW = "ellipse-draw",
     MARKER_DRAW = "marker-draw",
     TEXT_DRAW = "text-draw",
+    IMAGE_DRAW = "image-draw",
     ARROW_DRAW = "arrow-draw",
     LINE_DRAW = "line-draw",
     BEZIER_DRAW = "bezier-draw",

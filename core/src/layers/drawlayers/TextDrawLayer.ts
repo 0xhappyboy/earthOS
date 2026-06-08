@@ -1,5 +1,6 @@
 import Feature from "ol/Feature";
 import Point from "ol/geom/Point";
+import Polygon from "ol/geom/Polygon";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import Style from "ol/style/Style";
@@ -7,7 +8,7 @@ import Text from "ol/style/Text";
 import Fill from "ol/style/Fill";
 import Stroke from "ol/style/Stroke";
 import Draw from "ol/interaction/Draw";
-
+// @ts-ignore
 import Transform from "ol-ext/interaction/Transform";
 import { fromLonLat, toLonLat } from "ol/proj";
 import { BaseLayer } from "../BaseLayer";
@@ -35,6 +36,7 @@ export class TextDrawLayer extends BaseLayer {
     private drawInteraction: Draw | null = null;
     private transformInteraction: Transform | null = null;
     private features: Map<string, Feature> = new Map();
+    private editingHelperFeature: Feature | null = null; // 辅助框 feature
     private defaultFontSize: number;
     private defaultFontFamily: string;
     private defaultColor: number[];
@@ -83,6 +85,11 @@ export class TextDrawLayer extends BaseLayer {
     }
 
     private getStyleForFeature(feature?: any): Style {
+        // 如果是辅助框，显示边框但不显示文字内容
+        if (feature?.get("isHelper")) {
+            return this.getHelperStyle();
+        }
+
         const content = feature?.get("content") || "";
         const fontSize = feature?.get("fontSize") || this.defaultFontSize;
         const fontFamily = feature?.get("fontFamily") || this.defaultFontFamily;
@@ -113,6 +120,40 @@ export class TextDrawLayer extends BaseLayer {
                 textBaseline: "middle",
             }),
         });
+    }
+
+    // 获取辅助框的样式（显示控制框）
+    private getHelperStyle(): Style {
+        const isDark = this.currentTheme === "dark";
+        // 计算文字的大致尺寸用于辅助框
+        return new Style({
+            fill: new Fill({ color: "rgba(0, 170, 255, 0.05)" }),
+            stroke: new Stroke({
+                color: "#ffaa00",
+                width: 2,
+                lineDash: [8, 6],
+            }),
+        });
+    }
+
+    // 创建辅助框几何体（矩形）
+    private createHelperGeometry(center: [number, number], text: string, fontSize: number): Polygon {
+        // 估算文字宽度（每个字符大约 fontSize * 0.6 像素，这里简化为字符数 * fontSize * 0.6）
+        // 由于是地理坐标，需要根据缩放级别估算，这里简化处理
+        const charWidth = fontSize * 0.6;
+        const textWidth = text.length * charWidth;
+        const textHeight = fontSize * 1.2;
+        const halfWidth = textWidth / 2;
+        const halfHeight = textHeight / 2;
+        const [x, y] = center;
+
+        return new Polygon([[
+            [x - halfWidth, y - halfHeight],
+            [x + halfWidth, y - halfHeight],
+            [x + halfWidth, y + halfHeight],
+            [x - halfWidth, y + halfHeight],
+            [x - halfWidth, y - halfHeight]
+        ]]);
     }
 
     public setTheme(theme: Theme, t: Translations): void {
@@ -198,7 +239,6 @@ export class TextDrawLayer extends BaseLayer {
         left = Math.max(10, Math.min(left, window.innerWidth - 290));
         top = Math.max(10, Math.min(top, window.innerHeight - 270));
 
-        // 创建一个简单的 translations 对象用于 TextInputModalBox
         const simpleT = {
             addText: "添加文字",
             enterText: "请输入文字...",
@@ -207,7 +247,8 @@ export class TextDrawLayer extends BaseLayer {
             fontSize: "字号",
             color: "颜色",
             confirm: "确定",
-            cancel: "取消"
+            cancel: "取消",
+            delete: "删除"
         } as any;
 
         this.textInputModal = new TextInputModalBox(
@@ -242,7 +283,6 @@ export class TextDrawLayer extends BaseLayer {
             { x: left, y: top }
         );
     }
-
 
     private hideTextInputModal(): void {
         if (this.textInputModal) {
@@ -306,10 +346,16 @@ export class TextDrawLayer extends BaseLayer {
                         feature.set("backgroundColor", this.defaultBackgroundColor);
                         feature.set("outlineColor", this.defaultOutlineColor);
                         feature.set("outlineWidth", this.defaultOutlineWidth);
+                        feature.set("scale", 1);
 
                         this.source?.addFeature(feature);
                         this.features.set(id, feature);
                         this.layer?.setZIndex(999);
+
+                        feature.changed();
+                        if (this.mapView) {
+                            this.mapView.renderSync();
+                        }
 
                         if (this.onDrawCompleteCallback) {
                             this.onDrawCompleteCallback({
@@ -346,13 +392,146 @@ export class TextDrawLayer extends BaseLayer {
         this.mapView?.addInteraction(this.drawInteraction);
     }
 
-    public startEdit(id: string, onComplete?: (data: TextDrawData) => void, onDelete?: () => void): void {
+    // 开始编辑（移动/缩放模式）- 左键单击触发
+    public startEdit(id: string, onComplete?: (data: TextDrawData) => void): void {
+        this.stopEdit();
         const targetFeature = this.features.get(id);
         if (!targetFeature) {
             return;
         }
         this.editingFeature = targetFeature;
         this.onEditCompleteCallback = onComplete || null;
+
+        const geometry = targetFeature.getGeometry();
+        if (!(geometry instanceof Point)) return;
+
+        const [x, y] = geometry.getCoordinates();
+        const content = targetFeature.get("content") || "";
+        const fontSize = targetFeature.get("fontSize") || this.defaultFontSize;
+
+        // 创建辅助框 feature（基于文字内容和字体大小估算）
+        const helperGeometry = this.createHelperGeometry([x, y], content, fontSize);
+        this.editingHelperFeature = new Feature({
+            geometry: helperGeometry,
+            isHelper: true,
+        });
+        this.editingHelperFeature.setStyle(this.getHelperStyle());
+        this.source?.addFeature(this.editingHelperFeature);
+
+        const tempSource = new VectorSource();
+        tempSource.addFeature(this.editingHelperFeature);
+        const tempFeatures = tempSource.getFeaturesCollection();
+
+        this.transformInteraction = new Transform({
+            features: tempFeatures as any,
+            translate: true,
+            scale: true,
+            rotate: false,
+            keepAspectRatio: (event: any) => event.shiftKey,
+        });
+        this.transformInteraction.setActive(true);
+
+        // 缩放结束
+        this.transformInteraction.on("scaleend", () => {
+            if (!this.editingHelperFeature || !targetFeature) return;
+            const helperGeom = this.editingHelperFeature.getGeometry();
+            if (helperGeom instanceof Polygon) {
+                const extent = helperGeom.getExtent();
+                const centerX = (extent[0] + extent[2]) / 2;
+                const centerY = (extent[1] + extent[3]) / 2;
+                // 根据辅助框宽度计算新的字体大小
+                const newWidth = extent[2] - extent[0];
+                const originalWidth = this.createHelperGeometry([x, y], content, fontSize).getExtent()[2] - extent[0];
+                const scale = newWidth / originalWidth;
+                const newFontSize = Math.max(8, fontSize * scale);
+
+                const pointGeom = targetFeature.getGeometry() as Point;
+                if (pointGeom) {
+                    pointGeom.setCoordinates([centerX, centerY]);
+                }
+                targetFeature.set("fontSize", newFontSize);
+
+                const [lng, lat] = toLonLat([centerX, centerY]);
+                targetFeature.set("position", [lng, lat]);
+                targetFeature.changed();
+
+                // 更新辅助框
+                const newHelperGeometry = this.createHelperGeometry([centerX, centerY], content, newFontSize);
+                this.editingHelperFeature?.setGeometry(newHelperGeometry);
+
+                const featureId = targetFeature.get("id");
+                if (this.onEditCompleteCallback && featureId) {
+                    this.onEditCompleteCallback({
+                        id: featureId,
+                        position: [lng, lat],
+                        content: targetFeature.get("content"),
+                        fontSize: newFontSize,
+                        fontFamily: targetFeature.get("fontFamily"),
+                        color: targetFeature.get("color"),
+                        fontWeight: targetFeature.get("fontWeight"),
+                        fontStyle: targetFeature.get("fontStyle"),
+                        backgroundColor: targetFeature.get("backgroundColor"),
+                        outlineColor: targetFeature.get("outlineColor"),
+                        outlineWidth: targetFeature.get("outlineWidth"),
+                    });
+                }
+                this.mapView?.render();
+            }
+        });
+
+        // 移动结束
+        this.transformInteraction.on("translateend", () => {
+            if (!this.editingHelperFeature || !targetFeature) return;
+            const helperGeom = this.editingHelperFeature.getGeometry();
+            if (helperGeom instanceof Polygon) {
+                const extent = helperGeom.getExtent();
+                const centerX = (extent[0] + extent[2]) / 2;
+                const centerY = (extent[1] + extent[3]) / 2;
+
+                const pointGeom = targetFeature.getGeometry() as Point;
+                if (pointGeom) {
+                    pointGeom.setCoordinates([centerX, centerY]);
+                }
+                const [lng, lat] = toLonLat([centerX, centerY]);
+                targetFeature.set("position", [lng, lat]);
+                targetFeature.changed();
+
+                // 更新辅助框位置
+                const currentContent = targetFeature.get("content") || "";
+                const currentFontSize = targetFeature.get("fontSize") || this.defaultFontSize;
+                const newHelperGeometry = this.createHelperGeometry([centerX, centerY], currentContent, currentFontSize);
+                this.editingHelperFeature?.setGeometry(newHelperGeometry);
+
+                const featureId = targetFeature.get("id");
+                if (this.onEditCompleteCallback && featureId) {
+                    this.onEditCompleteCallback({
+                        id: featureId,
+                        position: [lng, lat],
+                        content: targetFeature.get("content"),
+                        fontSize: currentFontSize,
+                        fontFamily: targetFeature.get("fontFamily"),
+                        color: targetFeature.get("color"),
+                        fontWeight: targetFeature.get("fontWeight"),
+                        fontStyle: targetFeature.get("fontStyle"),
+                        backgroundColor: targetFeature.get("backgroundColor"),
+                        outlineColor: targetFeature.get("outlineColor"),
+                        outlineWidth: targetFeature.get("outlineWidth"),
+                    });
+                }
+                this.mapView?.render();
+            }
+        });
+
+        this.mapView?.addInteraction(this.transformInteraction);
+        this.mapView?.render();
+    }
+
+    // 编辑文字属性（内容、颜色等）- 右键单击触发
+    public editProperties(id: string, onComplete?: (data: TextDrawData) => void, onDelete?: () => void): void {
+        const targetFeature = this.features.get(id);
+        if (!targetFeature) {
+            return;
+        }
 
         const geometry = targetFeature.getGeometry();
         if (geometry instanceof Point) {
@@ -362,15 +541,17 @@ export class TextDrawLayer extends BaseLayer {
             const currentColor = targetFeature.get("color") || this.defaultColor;
             const currentFontWeight = targetFeature.get("fontWeight") || "normal";
             const currentFontStyle = targetFeature.get("fontStyle") || "normal";
+
             const handleDelete = () => {
                 this.removeText(id);
                 if (onDelete) {
                     onDelete();
                 }
-                if (this.onEditCompleteCallback) {
-                    this.onEditCompleteCallback(null as any);
+                if (onComplete) {
+                    onComplete(null as any);
                 }
             };
+
             this.showTextInputModal(
                 [x, y],
                 {
@@ -381,7 +562,7 @@ export class TextDrawLayer extends BaseLayer {
                     fontStyle: currentFontStyle,
                 },
                 (result) => {
-                    if (result.text && result.text.trim() && result.text !== currentText) {
+                    if (result.text && result.text.trim()) {
                         targetFeature.set("content", result.text);
                         targetFeature.set("fontSize", result.fontSize);
                         targetFeature.set("color", result.color);
@@ -391,8 +572,8 @@ export class TextDrawLayer extends BaseLayer {
                         this.mapView?.render();
 
                         const position = targetFeature.get("position");
-                        if (this.onEditCompleteCallback) {
-                            this.onEditCompleteCallback({
+                        if (onComplete) {
+                            onComplete({
                                 id,
                                 position,
                                 content: result.text,
@@ -407,98 +588,21 @@ export class TextDrawLayer extends BaseLayer {
                             });
                         }
                     }
-                    this.editingFeature = null;
-                    this.onEditCompleteCallback = null;
                 },
                 handleDelete
             );
         }
     }
 
-    // 添加新方法用于编辑
-    private showTextInputModalForEdit(
-        position: [number, number],
-        initialData: {
-            text: string;
-            fontSize: number;
-            color: number[];
-            fontWeight: "normal" | "bold";
-            fontStyle: "normal" | "italic";
-        },
-        onComplete: (data: {
-            text: string;
-            fontSize: number;
-            color: number[];
-            fontWeight: "normal" | "bold";
-            fontStyle: "normal" | "italic";
-        }) => void
-    ): void {
-        if (this.textInputModal) {
-            this.textInputModal.destroy();
-            this.textInputModal = null;
-        }
-
-        this.isInputActive = true;
-
-        const map = this.mapView;
-        if (!map || typeof map.getTargetElement !== 'function') {
-            this.isInputActive = false;
-            onComplete(initialData);
-            return;
-        }
-
-        const targetElement = map.getTargetElement();
-        if (!targetElement) {
-            this.isInputActive = false;
-            onComplete(initialData);
-            return;
-        }
-
-        const pixel = map.getPixelFromCoordinate(position);
-        if (!pixel || pixel.length < 2) {
-            this.isInputActive = false;
-            onComplete(initialData);
-            return;
-        }
-
-        let left = pixel[0] - 140;
-        let top = pixel[1] - 130;
-        left = Math.max(10, Math.min(left, window.innerWidth - 290));
-        top = Math.max(10, Math.min(top, window.innerHeight - 270));
-
-        // 使用 this.currentTheme 和 this.currentTranslations
-        const t = this.currentTranslations || {
-            addText: "添加文字",
-            enterText: "请输入文字...",
-            bold: "粗体",
-            italic: "斜体",
-            fontSize: "字号",
-            color: "颜色",
-            confirm: "确定",
-            cancel: "取消"
-        } as unknown as Translations;
-
-        this.textInputModal = new TextInputModalBox(
-            {
-                initialText: initialData.text,
-                initialFontSize: initialData.fontSize,
-                initialColor: initialData.color,
-                initialFontWeight: initialData.fontWeight,
-                initialFontStyle: initialData.fontStyle,
-                onConfirm: onComplete,
-                onCancel: () => {
-                    onComplete(initialData);
-                    this.hideTextInputModal();
-                },
-                theme: this.currentTheme,
-                t: t,
-            },
-            { x: left, y: top }
-        );
-    }
-
-
     public stopEdit(): void {
+        if (this.transformInteraction) {
+            this.mapView?.removeInteraction(this.transformInteraction);
+            this.transformInteraction = null;
+        }
+        if (this.editingHelperFeature) {
+            this.source?.removeFeature(this.editingHelperFeature);
+            this.editingHelperFeature = null;
+        }
         if (this.textInputModal) {
             this.textInputModal.destroy();
             this.textInputModal = null;
@@ -524,6 +628,7 @@ export class TextDrawLayer extends BaseLayer {
         feature.set("backgroundColor", data.backgroundColor || this.defaultBackgroundColor);
         feature.set("outlineColor", data.outlineColor || this.defaultOutlineColor);
         feature.set("outlineWidth", data.outlineWidth || this.defaultOutlineWidth);
+        feature.set("scale", 1);
         this.source?.addFeature(feature);
         this.features.set(data.id, feature);
     }
@@ -621,11 +726,13 @@ export class TextDrawLayer extends BaseLayer {
     }
 
     public isEditActive(): boolean {
-        return this.textInputModal !== null;
+        return this.transformInteraction !== null;
     }
 
     public setEditable(editable: boolean): void {
-        if (!editable) {
+        if (editable) {
+            this.layer.set('pointer-events', true);
+        } else {
             this.stopEdit();
             this.stopDraw();
         }

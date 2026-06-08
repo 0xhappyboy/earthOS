@@ -5,7 +5,6 @@ import {
     TriangleDrawLayer,
     DistanceMeasurementLayer,
     AreaMeasurementLayer,
-    MarkerLayer,
     ArrowDrawLayer,
     EllipseDrawLayer,
     FreehandDrawLayer,
@@ -42,6 +41,8 @@ import { LineCoordinatePickLayer, LineCoordinatePickData } from "./layers/toolla
 import { PolygonCoordinatePickLayer, PolygonCoordinatePickData } from "./layers/toollayers/PolygonCoordinatePickLayer";
 import { LineData, PointData, PolygonData } from "./components/CoordinatePickingDataPanel";
 import { fromLonLat } from "ol/proj";
+import { ImageDrawTool } from "./draw/ImageDrawTool";
+import { ImageDrawLayer, ImageDrawData } from "./layers/drawlayers/ImageDrawLayer";
 
 export interface EarthViewOptions {
     container?: HTMLElement;
@@ -149,6 +150,10 @@ export class EarthView {
     private currentPointCoordinates: PointCoordinatePickData[] = [];
     private currentLineCoordinates: LineCoordinatePickData[] = [];
     private currentPolygonCoordinates: PolygonCoordinatePickData[] = [];
+
+    private imageDrawLayer: ImageDrawLayer | null = null;
+    private imageDrawTool: ImageDrawTool | null = null;
+    private selectedImageId: string | null = null;
 
     constructor(options: EarthViewOptions) {
         const {
@@ -307,6 +312,7 @@ export class EarthView {
                 onLocateCoordinate: (lng, lat) => this.locateToPoint(lng, lat),
                 onLocateLine: (points) => this.locateToLine(points),
                 onLocatePolygon: (points) => this.locateToPolygon(points),
+                onDrawImage: () => this.startDrawImage(),
             },
             () => this.getLayerList(),
             () => this.getBasemap()
@@ -360,12 +366,9 @@ export class EarthView {
         });
     }
 
-
     public startLineCoordinatePick(): void {
-
         this.pointCoordinatePickLayer?.stopPick();
         this.polygonCoordinatePickLayer?.stopPick();
-
         this.setMeasureStatus("点击地图绘制线 (双击完成拾取)");
         this.lineCoordinatePickLayer?.startPick((data: LineCoordinatePickData) => {
             this.setMeasureStatus(null);
@@ -375,12 +378,9 @@ export class EarthView {
         });
     }
 
-
     public startPolygonCoordinatePick(): void {
-
         this.pointCoordinatePickLayer?.stopPick();
         this.lineCoordinatePickLayer?.stopPick();
-
         this.setMeasureStatus("点击地图绘制面 (双击完成拾取)");
         this.polygonCoordinatePickLayer?.startPick((data: PolygonCoordinatePickData) => {
             this.setMeasureStatus(null);
@@ -390,20 +390,15 @@ export class EarthView {
         });
     }
 
-
     private showCoordinateList(): void {
         const totalPoints = this.currentPointCoordinates.length;
         const totalLines = this.currentLineCoordinates.length;
         const totalPolygons = this.currentPolygonCoordinates.length;
-
         if (totalPoints === 0 && totalLines === 0 && totalPolygons === 0) {
             this.showToast("暂无拾取坐标数据");
             return;
         }
-
         let message = "=== 坐标拾取数据列表 ===\n\n";
-
-
         if (totalPoints > 0) {
             message += `📍 点数据 (${totalPoints}个):\n`;
             this.currentPointCoordinates.slice(0, 5).forEach((coord, index) => {
@@ -412,8 +407,6 @@ export class EarthView {
             if (totalPoints > 5) message += `  ... 共${totalPoints}个\n`;
             message += "\n";
         }
-
-
         if (totalLines > 0) {
             message += `📏 线数据 (${totalLines}条):\n`;
             this.currentLineCoordinates.slice(0, 5).forEach((line, index) => {
@@ -499,104 +492,75 @@ export class EarthView {
         this.triangleDrawLayer = new TriangleDrawLayer("triangle-draw", "Triangle Draw");
         this.triangleDrawLayer.setView(this.mapManager.getMap());
         this.layerManager.addLayer(this.triangleDrawLayer);
-
-
-
-
+        this.imageDrawLayer = new ImageDrawLayer("image-draw", "Image Draw");
+        this.imageDrawLayer.setView(this.mapManager.getMap());
+        this.imageDrawLayer.setTheme(this.theme, this.t);
+        this.imageDrawLayer.setZIndex(200);
+        this.layerManager.addLayer(this.imageDrawLayer);
         this.pointCoordinatePickLayer = new PointCoordinatePickLayer("point-coordinate-pick", "Point Coordinate Pick");
         this.pointCoordinatePickLayer.setView(this.mapManager.getMap());
         this.layerManager.addLayer(this.pointCoordinatePickLayer);
-
-
         this.lineCoordinatePickLayer = new LineCoordinatePickLayer("line-coordinate-pick", "Line Coordinate Pick");
         this.lineCoordinatePickLayer.setView(this.mapManager.getMap());
         this.layerManager.addLayer(this.lineCoordinatePickLayer);
-
-
         this.polygonCoordinatePickLayer = new PolygonCoordinatePickLayer("polygon-coordinate-pick", "Polygon Coordinate Pick");
         this.polygonCoordinatePickLayer.setView(this.mapManager.getMap());
         this.layerManager.addLayer(this.polygonCoordinatePickLayer);
-
-
         this.freehandDrawLayer = new FreehandDrawLayer("freehand-draw", "Freehand Draw");
         this.freehandDrawLayer.setView(this.mapManager.getMap());
         this.layerManager.addLayer(this.freehandDrawLayer);
-
         this.ellipseDrawLayer = new EllipseDrawLayer("ellipse-draw", "Ellipse Draw");
         this.ellipseDrawLayer.setView(this.mapManager.getMap());
         this.layerManager.addLayer(this.ellipseDrawLayer);
-
         this.markerDrawLayer = new MarkerDrawLayer("marker-draw", "Marker Draw");
         this.markerDrawLayer.setView(this.mapManager.getMap());
         this.layerManager.addLayer(this.markerDrawLayer);
-
         this.textDrawLayer = new TextDrawLayer("text-draw", "Text Draw");
         this.textDrawLayer.setView(this.mapManager.getMap());
         this.textDrawLayer.setTheme(this.theme, this.t);
         this.layerManager.addLayer(this.textDrawLayer);
-
         this.arrowDrawLayer = new ArrowDrawLayer("arrow-draw", "Arrow Draw");
         this.arrowDrawLayer.setView(this.mapManager.getMap());
         this.layerManager.addLayer(this.arrowDrawLayer);
-
         this.distanceMeasureLayer = new DistanceMeasurementLayer("distance-measurement", "Distance Measurement");
         this.distanceMeasureLayer.setView(this.mapManager.getMap());
         this.layerManager.addLayer(this.distanceMeasureLayer);
-
         this.areaMeasureLayer = new AreaMeasurementLayer("area-measurement", "Area Measurement");
         this.areaMeasureLayer.setView(this.mapManager.getMap());
         this.layerManager.addLayer(this.areaMeasureLayer);
-
-
         this.lineDrawLayer = new LineDrawLayer("line-draw", "Line Draw");
         this.lineDrawLayer.setView(this.mapManager.getMap());
         this.layerManager.addLayer(this.lineDrawLayer);
-
-
         this.bezierDrawLayer = new BezierDrawLayer("bezier-draw", "Bezier Draw");
         this.bezierDrawLayer.setView(this.mapManager.getMap());
         this.layerManager.addLayer(this.bezierDrawLayer);
-
-
         this.sectorDrawLayer = new SectorDrawLayer("sector-draw", "Sector Draw");
         this.sectorDrawLayer.setView(this.mapManager.getMap());
         this.layerManager.addLayer(this.sectorDrawLayer);
-
-
+        this.imageDrawTool = new ImageDrawTool(this.imageDrawLayer, this.t);
+        this.imageDrawTool.setOnDrawComplete(() => this.onDrawingEnd());
         this.lineDrawTool = new LineDrawTool(this.lineDrawLayer, this.t);
         this.bezierDrawTool = new BezierDrawTool(this.bezierDrawLayer, this.t);
         this.sectorDrawTool = new SectorDrawTool(this.sectorDrawLayer, this.t);
-
-
         this.lineDrawTool.setOnDrawComplete(() => this.onDrawingEnd());
         this.bezierDrawTool.setOnDrawComplete(() => this.onDrawingEnd());
         this.sectorDrawTool.setOnDrawComplete(() => this.onDrawingEnd());
-
-
         this.circleDrawTool = new CircleDrawTool(this.circleDrawLayer, this.t);
         this.rectangleDrawTool = new RectangleDrawTool(this.rectangleDrawLayer, this.t);
         this.triangleDrawTool = new TriangleDrawTool(this.triangleDrawLayer, this.t);
-
-
         this.freehandDrawTool = new FreehandDrawTool(this.freehandDrawLayer, this.t, false);
-
-
         this.ellipseDrawTool = new EllipseDrawTool(this.ellipseDrawLayer, this.t);
         this.markerDrawTool = new MarkerDrawTool(this.markerDrawLayer, this.t);
         this.textDrawTool = new TextDrawTool(this.textDrawLayer, this.t);
         this.arrowDrawTool = new ArrowDrawTool(this.arrowDrawLayer, this.t);
-
-
         this.circleDrawTool.setOnDrawComplete(() => this.onDrawingEnd());
         this.rectangleDrawTool.setOnDrawComplete(() => this.onDrawingEnd());
         this.triangleDrawTool.setOnDrawComplete(() => this.onDrawingEnd());
         this.freehandDrawTool.setOnDrawComplete(() => this.onDrawingEnd());
-
         this.ellipseDrawTool.setOnDrawComplete(() => this.onDrawingEnd());
         this.markerDrawTool.setOnDrawComplete(() => this.onDrawingEnd());
         this.textDrawTool.setOnDrawComplete(() => this.onDrawingEnd());
         this.arrowDrawTool.setOnDrawComplete(() => this.onDrawingEnd());
-
         this.drawingManager.registerTools(
             this.circleDrawTool!,
             this.rectangleDrawTool!,
@@ -609,8 +573,8 @@ export class EarthView {
             this.lineDrawTool!,
             this.bezierDrawTool!,
             this.sectorDrawTool!,
+            this.imageDrawTool!,
         );
-
         this.drawingManager.setCallbacks(
             (type) => this.onDrawingStart(type),
             () => this.onDrawingEnd()
@@ -680,6 +644,7 @@ export class EarthView {
                 if (id.startsWith("line_")) return 'line';
                 if (id.startsWith("bezier_")) return 'bezier';
                 if (id.startsWith("sector_")) return 'sector';
+                if (id.startsWith("image_")) return 'image';
             }
             return null;
         };
@@ -754,27 +719,26 @@ export class EarthView {
                 case 'sector':
                     this.sectorDrawTool?.startEdit(id);
                     break;
+                case 'image':
+                    this.imageDrawTool?.startEdit(id);
+                    break;
             }
         };
-
         map.on("singleclick", (event: any) => {
-
             if (isAnyLayerDrawing()) {
                 return;
             }
-
-
             if (this.textDrawLayer?.isInputActive) {
                 return;
             }
-
+            if (this.imageDrawLayer?.isInputActive) {
+                return;
+            }
             const features = map.getFeaturesAtPixel(event.pixel, {
                 hitTolerance: 5
             });
-
             let targetFeature = null;
             let targetType = null;
-
             for (const feature of features) {
                 const type = getFeatureType(feature);
                 if (type) {
@@ -783,22 +747,16 @@ export class EarthView {
                     break;
                 }
             }
-
             if (targetFeature && targetType) {
                 const clickedId = targetFeature.get("id");
                 const currentEditingId = getCurrentEditingId();
-
-
                 if (currentEditingId === clickedId) {
                     return;
                 }
-
-
                 if (clickedId) {
                     startEditById(clickedId, targetType);
                 }
             } else {
-
                 this.stopAllEditing();
             }
         });
@@ -821,48 +779,45 @@ export class EarthView {
             });
         }
         this.mapManager.getMap().on("click", () => {
+            if (this.imageDrawLayer?.isInputActive) {
+                return;
+            }
             this.hideFloatingToolbar();
             this.hideMeasurementToolbar();
         });
     }
 
-
-
-
     private initRightClickMenu(): void {
         this.container.addEventListener("contextmenu", (e) => {
+            if (this.imageDrawLayer?.isInputActive) {
+                e.preventDefault();
+                return;
+            }
             e.preventDefault();
             const rect = this.container.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
             const pixel = [x, y];
             const features = this.mapManager.getMap().getFeaturesAtPixel(pixel);
-
-
             const circle = features?.find((f: any) => f.get("id")?.startsWith("circle_"));
             if (circle && this.circleDrawLayer) {
                 const data = this.circleDrawLayer.getCircle(circle.get("id"));
                 if (data) { this.selectedCircleId = data.id; this.showFloatingToolbarForCircle({ x, y }, data); return; }
             }
-
             const rectFeature = features?.find((f: any) => f.get("id")?.startsWith("rectangle_"));
             if (rectFeature && this.rectangleDrawLayer) {
                 const data = this.rectangleDrawLayer.getRectangle(rectFeature.get("id"));
                 if (data) { this.selectedRectangleId = data.id; this.showFloatingToolbarForRectangle({ x, y }, data); return; }
             }
-
             const tri = features?.find((f: any) => f.get("id")?.startsWith("triangle_"));
             if (tri && this.triangleDrawLayer) {
                 const data = this.triangleDrawLayer.getTriangle(tri.get("id"));
                 if (data) { this.selectedTriangleId = data.id; this.showFloatingToolbarForTriangle({ x, y }, data); return; }
             }
-
-
             const freehand = features?.find((f: any) => {
                 const id = f.get("id");
                 return id && typeof id === 'string' && id.startsWith("freehand_");
             });
-
             if (freehand && this.freehandDrawLayer) {
                 const data = this.freehandDrawLayer.getFreehand(freehand.get("id"));
                 if (data) {
@@ -871,8 +826,6 @@ export class EarthView {
                     return;
                 }
             }
-
-
             const line = features?.find((f: any) => f.get("id")?.startsWith("line_"));
             if (line && this.lineDrawLayer) {
                 const data = this.lineDrawLayer.getLine(line.get("id"));
@@ -882,8 +835,6 @@ export class EarthView {
                     return;
                 }
             }
-
-
             const bezier = features?.find((f: any) => f.get("id")?.startsWith("bezier_"));
             if (bezier && this.bezierDrawLayer) {
                 const data = this.bezierDrawLayer.getBezier(bezier.get("id"));
@@ -893,8 +844,6 @@ export class EarthView {
                     return;
                 }
             }
-
-
             const sector = features?.find((f: any) => f.get("id")?.startsWith("sector_"));
             if (sector && this.sectorDrawLayer) {
                 const data = this.sectorDrawLayer.getSector(sector.get("id"));
@@ -904,31 +853,39 @@ export class EarthView {
                     return;
                 }
             }
-
             const ellipse = features?.find((f: any) => f.get("id")?.startsWith("ellipse_"));
             if (ellipse && this.ellipseDrawLayer) {
                 const data = this.ellipseDrawLayer.getEllipse(ellipse.get("id"));
                 if (data) { this.selectedEllipseId = data.id; this.showFloatingToolbarForEllipse({ x, y }, data); return; }
             }
-
             const marker = features?.find((f: any) => f.get("id")?.startsWith("marker_"));
             if (marker && this.markerDrawLayer) {
                 const data = this.markerDrawLayer.getMarker(marker.get("id"));
                 if (data) { this.selectedMarkerId = data.id; this.showFloatingToolbarForMarker({ x, y }, data); return; }
             }
-
             const text = features?.find((f: any) => f.get("id")?.startsWith("text_"));
             if (text && this.textDrawLayer) {
                 const data = this.textDrawLayer.getText(text.get("id"));
-                if (data) { this.selectedTextId = data.id; this.showFloatingToolbarForText({ x, y }, data); return; }
+                if (data) {
+                    this.selectedTextId = data.id;
+                    this.textDrawTool?.editProperties(data.id);
+                    return;
+                }
             }
-
+            const image = features?.find((f: any) => f.get("id")?.startsWith("image_"));
+            if (image && this.imageDrawLayer) {
+                const data = this.imageDrawLayer.getImage(image.get("id"));
+                if (data) {
+                    this.selectedImageId = data.id;
+                    this.imageDrawTool?.editProperties(data.id);
+                    return;
+                }
+            }
             const arrow = features?.find((f: any) => f.get("id")?.startsWith("arrow_") && !f.get("id")?.toString().endsWith("_head"));
             if (arrow && this.arrowDrawLayer) {
                 const data = this.arrowDrawLayer.getArrow(arrow.get("id"));
                 if (data) { this.selectedArrowId = data.id; this.showFloatingToolbarForArrow({ x, y }, data); return; }
             }
-
             const measure = features?.find((f: any) => f.get("measurementId"));
             if (measure) {
                 this.selectedMeasurementId = measure.get("measurementId");
@@ -970,6 +927,9 @@ export class EarthView {
         if (this.textDrawLayer?.isInputActive) {
             return;
         }
+        if (this.imageDrawLayer?.isInputActive) {
+            return;
+        }
         this.circleDrawLayer?.stopEdit();
         this.rectangleDrawLayer?.stopEdit();
         this.triangleDrawLayer?.stopEdit();
@@ -981,6 +941,7 @@ export class EarthView {
         this.lineDrawLayer?.stopEdit();
         this.bezierDrawLayer?.stopEdit();
         this.sectorDrawLayer?.stopEdit();
+        this.imageDrawLayer?.stopEdit();
     }
 
     private showFloatingToolbarForCircle(pos: { x: number; y: number }, data: CircleDrawData): void {
@@ -1465,16 +1426,9 @@ export class EarthView {
         }
     }
 
-    private showFloatingToolbarForText(pos: { x: number; y: number }, data: TextDrawData): void {
-        // if (data.position) {
-        //     const webMercatorPos = fromLonLat([data.position[0], data.position[1]]);
-        //     this.mapManager.getView().setCenter(webMercatorPos);
-        //     this.setZoom(18);
-        // }
-        // setTimeout(() => {
-        //     this.textDrawTool?.startEdit(data.id);
-        // }, 100);
-        // this.hideFloatingToolbar();
+    public startDrawImage(): void {
+        if (this.drawingManager.isDrawing()) this.drawingManager.cancelDrawing();
+        this.drawingManager.startDrawingImage();
     }
 
     private showFloatingToolbarForArrow(pos: { x: number; y: number }, data: ArrowDrawData): void {
@@ -1618,6 +1572,7 @@ export class EarthView {
         this.selectedLineId = null;
         this.selectedBezierId = null;
         this.selectedSectorId = null;
+        this.selectedImageId = null;
         if (this.floatingToolbar) {
             this.floatingToolbar.setVisible(false);
 
@@ -1685,7 +1640,6 @@ export class EarthView {
         setTimeout(() => this.hideLoading(), 500);
     }
     public getBasemap(): BasemapTypeEnum { return this.mapManager.getCurrentBasemap(); }
-
     public setTheme(theme: "light" | "dark"): void {
         this.theme = theme;
         this.container.setAttribute("data-theme", theme);
@@ -1698,12 +1652,6 @@ export class EarthView {
     public getContainer(): HTMLElement { return this.container; }
     public getLayerManager(): LayerManager { return this.layerManager; }
     public getMap(): any { return this.mapManager.getMap(); }
-
-    public addMarkerLayer(id: string, name: string, options?: any): MarkerLayer {
-        const layer = new MarkerLayer(id, name, { ...options, visible: true, opacity: 1 });
-        this.layerManager.addLayer(layer);
-        return layer;
-    }
 
     public removeLayer(id: string): void {
         this.layerManager.removeLayer(id);

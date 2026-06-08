@@ -1,3 +1,4 @@
+
 import { CircleDrawTool } from "./draw/CircleDrawTool";
 import { RectangleDrawTool } from "./draw/RectangleDrawTool";
 import { TriangleDrawTool } from "./draw/TriangleDrawTool";
@@ -10,6 +11,7 @@ import { DrawToolType } from "./draw/DrawTool";
 import { BezierDrawTool } from "./draw/BezierDrawTool";
 import { LineDrawTool } from "./draw/LineDrawTool";
 import { SectorDrawTool } from "./draw/SectorDrawTool";
+import { ImageDrawTool } from "./draw/ImageDrawTool";  
 
 export class DrawingManager {
     private activeToolType: DrawToolType | null = null;
@@ -21,11 +23,10 @@ export class DrawingManager {
     private markerTool: MarkerDrawTool | null = null;
     private textTool: TextDrawTool | null = null;
     private arrowTool: ArrowDrawTool | null = null;
-
+    private imageTool: ImageDrawTool | null = null;  
     private lineTool: LineDrawTool | null = null;
     private bezierTool: BezierDrawTool | null = null;
     private sectorTool: SectorDrawTool | null = null;
-
     private onDrawingStartCallback?: (toolType: DrawToolType) => void;
     private onDrawingEndCallback?: () => void;
 
@@ -43,6 +44,7 @@ export class DrawingManager {
         line: LineDrawTool,
         bezier: BezierDrawTool,
         sector: SectorDrawTool,
+        image: ImageDrawTool,  
     ): void {
         this.circleTool = circle;
         this.rectangleTool = rectangle;
@@ -55,6 +57,7 @@ export class DrawingManager {
         this.lineTool = line;
         this.bezierTool = bezier;
         this.sectorTool = sector;
+        this.imageTool = image;  
         this.circleTool?.setOnDrawComplete(() => this.endDrawing());
         this.rectangleTool?.setOnDrawComplete(() => this.endDrawing());
         this.triangleTool?.setOnDrawComplete(() => this.endDrawing());
@@ -63,6 +66,7 @@ export class DrawingManager {
         this.markerTool?.setOnDrawComplete(() => this.endDrawing());
         this.textTool?.setOnDrawComplete(() => this.endDrawing());
         this.arrowTool?.setOnDrawComplete(() => this.endDrawing());
+        this.imageTool?.setOnDrawComplete(() => this.endDrawing());  
         this.circleTool?.setOnEditComplete(() => this.endDrawing());
         this.rectangleTool?.setOnEditComplete(() => this.endDrawing());
         this.triangleTool?.setOnEditComplete(() => this.endDrawing());
@@ -71,6 +75,7 @@ export class DrawingManager {
         this.markerTool?.setOnEditComplete(() => this.endDrawing());
         this.textTool?.setOnEditComplete(() => this.endDrawing());
         this.arrowTool?.setOnEditComplete(() => this.endDrawing());
+        this.imageTool?.setOnEditComplete(() => this.endDrawing());  
         this.lineTool?.setOnDrawComplete(() => this.endDrawing());
         this.bezierTool?.setOnDrawComplete(() => this.endDrawing());
         this.sectorTool?.setOnDrawComplete(() => this.endDrawing());
@@ -160,18 +165,21 @@ export class DrawingManager {
         this.textTool?.startDraw();
         this.onDrawingStartCallback?.(DrawToolType.TEXT);
     }
-
     public startDrawingArrow(): void {
         this.deactivateAll();
         this.activeToolType = DrawToolType.ARROW;
         this.arrowTool?.startDraw();
         this.onDrawingStartCallback?.(DrawToolType.ARROW);
     }
-
+    public startDrawingImage(): void {
+        this.deactivateAll();
+        this.activeToolType = DrawToolType.IMAGE;
+        this.imageTool?.startDraw();
+        this.onDrawingStartCallback?.(DrawToolType.IMAGE);
+    }
     public cancelDrawing(): void {
         this.deactivateAll();
     }
-
     private deactivateAll(): void {
         const hadActive = this.activeToolType !== null;
         this.circleTool?.deactivate();
@@ -182,6 +190,7 @@ export class DrawingManager {
         this.markerTool?.deactivate();
         this.textTool?.deactivate();
         this.arrowTool?.deactivate();
+        this.imageTool?.deactivate();  
         this.lineTool?.deactivate();
         this.bezierTool?.deactivate();
         this.sectorTool?.deactivate();
@@ -205,7 +214,7 @@ export class DrawingManager {
     public isDrawing(): boolean {
         return this.activeToolType !== null;
     }
-
+    
     public destroy(): void {
         this.deactivateAll();
         this.circleTool = null;
@@ -216,6 +225,7 @@ export class DrawingManager {
         this.markerTool = null;
         this.textTool = null;
         this.arrowTool = null;
+        this.imageTool = null;  
         this.lineTool = null;
         this.bezierTool = null;
         this.sectorTool = null;

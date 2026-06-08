@@ -9,7 +9,6 @@ export class ArrowDrawTool implements DrawTool {
     private arrowDrawLayer: ArrowDrawLayer;
     private onDrawComplete?: (data: ArrowDrawData) => void;
     private onEditComplete?: (data: ArrowDrawData) => void;
-
     constructor(arrowDrawLayer: ArrowDrawLayer, t: Translations) {
         this.arrowDrawLayer = arrowDrawLayer;
         this.name = t.drawArrow || "箭头绘制";

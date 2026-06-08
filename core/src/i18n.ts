@@ -1,6 +1,14 @@
 export type Locale = "en" | "zh";
 
 export interface Translations {
+    confirm: string;
+    addImage: string;
+    imageUrl: string;
+    uploadImage: string;
+    width: string;
+    height: string;
+    opacity: string;
+    drawImage: string;
     drawCoordinatePick: string;
     coordinatePick: string;
     coordinateList: string;
@@ -92,6 +100,15 @@ export interface Translations {
 }
 
 const zh: Translations = {
+    confirm: "确定",
+    addImage: "添加图片",
+    imageUrl: "图片URL",
+    uploadImage: "上传图片",
+    width: "宽度",
+    height: "高度",
+    opacity: "透明度",
+    delete: "删除",
+    drawImage: "图片标注",
     drawCoordinatePick: "坐标拾取",
     coordinatePick: "坐标拾取",
     coordinateList: "坐标列表",
@@ -175,7 +192,6 @@ const zh: Translations = {
     doubleClickToFinish: "双击完成测量",
     measurementLayer: "测量图层",
     noMeasurements: "暂无测量数据",
-    delete: "删除",
     cancel: "取消",
     drawRectangle: "绘制矩形",
     drawTriangle: "绘制三角形",
@@ -183,6 +199,14 @@ const zh: Translations = {
 };
 
 const en: Translations = {
+    confirm: "Confirm",
+    addImage: "Add Image",
+    imageUrl: "Image URL",
+    uploadImage: "Upload Image",
+    width: "Width",
+    height: "Height",
+    opacity: "Opacity",
+    drawImage: "Image",
     drawCoordinatePick: "Coordinate Pick",
     coordinatePick: "Coordinate Pick",
     coordinateList: "Coordinate List",

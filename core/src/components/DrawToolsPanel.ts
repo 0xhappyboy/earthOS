@@ -16,6 +16,7 @@ export interface DrawToolsPanelProps {
     onDrawBezier: () => void;
     onDrawSector: () => void;
     onEditShape: () => void;
+    onDrawImage: () => void;
     theme: Theme;
     t: Translations;
 }
@@ -57,6 +58,7 @@ export class DrawToolsPanel {
         this.addSectionTitle("标注工具");
         this.element.appendChild(this.createToolRow(this.createMarkerIcon(), "标注点", this.props.onDrawMarker));
         this.element.appendChild(this.createToolRow(this.createTextIcon(), "文字标注", this.props.onDrawText));
+        this.element.appendChild(this.createToolRow(this.createImageIcon(), "图片标注", this.props.onDrawImage));
     }
 
     private addSectionTitle(title: string): void {
@@ -178,6 +180,15 @@ export class DrawToolsPanel {
             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
             <circle cx="12" cy="10" r="3"/>
         </svg>`;
+    }
+
+    private createImageIcon(): string {
+        return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+        <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
+        <polyline points="21 15 16 10 5 21"/>
+        <line x1="10" y1="21" x2="21" y2="21"/>
+    </svg>`;
     }
 
     private createTextIcon(): string {

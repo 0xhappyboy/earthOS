@@ -16,6 +16,7 @@ export interface UIManagerCallbacks {
     onDrawEllipse: () => void;
     onDrawMarker: () => void;
     onDrawText: () => void;
+    onDrawImage: () => void;
     onDrawArrow: () => void;
     onDrawLine: () => void;
     onDrawBezier: () => void;
@@ -193,6 +194,7 @@ export class UIManager {
                     onDrawLine: () => this.callbacks.onDrawLine(),
                     onDrawBezier: () => this.callbacks.onDrawBezier(),
                     onDrawSector: () => this.callbacks.onDrawSector(),
+                    onDrawImage: this.callbacks.onDrawImage,
                     onEditShape: () => this.callbacks.onEditShape(),
                     theme: this.theme,
                     t: this.t,

@@ -44,6 +44,10 @@ export class TextDrawTool implements DrawTool {
         });
     }
 
+    editProperties(id: string, onComplete?: (data: TextDrawData) => void, onDelete?: () => void): void {
+        this.textDrawLayer.editProperties(id, onComplete, onDelete);
+    }
+
     setOnDrawComplete(callback: (data: TextDrawData) => void): void {
         this.onDrawComplete = callback;
     }

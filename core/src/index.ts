@@ -8,7 +8,6 @@ export {
 } from "./types";
 
 export type {
-    MarkerData,
     PolygonData,
     PolylineData,
     CircleData,
@@ -17,7 +16,7 @@ export type {
     ClusterData,
     BarChartData,
     TileLayerConfig,
-    PopupMarkerData,
+    MarkerLayerData,
     DistanceMeasurementData,
     AreaMeasurementData,
     MeasurementPoint,
@@ -37,7 +36,6 @@ export type { Locale, Translations } from "./i18n";
 export {
     BaseLayer,
     LayerManager,
-    MarkerLayer,
     PolygonLayer,
     PolylineLayer,
     CircleLayer,
@@ -46,7 +44,7 @@ export {
     GeoJSONLayer,
     CustomTileLayer,
     BarChartLayer,
-    PopupMarkerLayer,
+    MarkerLayer,
     CircleDrawLayer,
     DistanceMeasurementLayer,
     AreaMeasurementLayer,

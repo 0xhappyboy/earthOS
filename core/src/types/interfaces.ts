@@ -1,4 +1,4 @@
-import { CoordinateSystemTypeEnum, BasemapTypeEnum, LayerTypeEnum } from "./enums";
+import { LayerTypeEnum } from "./enums";
 
 export interface ILayer {
     id: string;
@@ -10,14 +10,18 @@ export interface ILayer {
     data?: any;
 }
 
-export interface MarkerData {
+export interface MarkerLayerData {
     id: string;
     longitude: number;
     latitude: number;
+    title?: string;
+    description?: string;
+    coverImage?: string;
     color?: number[];
     size?: number;
-    title?: string;
-    popupContent?: string;
+    onClick?: (data: MarkerLayerData, event: any) => void;
+    onContextMenu?: (data: MarkerLayerData, event: any) => void;
+    onHover?: (data: MarkerLayerData, event: any) => void;
 }
 
 export interface PolygonData {
@@ -85,17 +89,6 @@ export interface TileLayerConfig {
     attribution?: string;
     minZoom?: number;
     maxZoom?: number;
-}
-
-export interface PopupMarkerData {
-    id: string;
-    longitude: number;
-    latitude: number;
-    title?: string;
-    description?: string;
-    coverImage?: string;
-    color?: number[];
-    size?: number;
 }
 
 export interface MeasurementPoint {
