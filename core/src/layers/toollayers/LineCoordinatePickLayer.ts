@@ -117,6 +117,7 @@ export class LineCoordinatePickLayer extends BaseLayer {
                 geometry: new Point(midCoord),
                 id: id,
             });
+            labelFeature.set("type", "line_pick");
             labelFeature.setStyle(new Style({
                 text: new Text({
                     text: `线 ${this.lines.size}`,

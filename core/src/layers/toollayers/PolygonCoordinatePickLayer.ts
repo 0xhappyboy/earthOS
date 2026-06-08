@@ -126,6 +126,7 @@ export class PolygonCoordinatePickLayer extends BaseLayer {
                 geometry: new Point([centerX, centerY]),
                 id: id,
             });
+            labelFeature.set("type", "polygon_pick");
             labelFeature.setStyle(new Style({
                 text: new Text({
                     text: `面 ${this.polygons.size}`,

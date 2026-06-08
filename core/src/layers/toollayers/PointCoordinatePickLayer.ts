@@ -11,6 +11,7 @@ import { toLonLat } from "ol/proj";
 import { BaseLayer } from "../BaseLayer";
 import { LayerTypeEnum } from "../../types";
 import { generateId, arrayToRgba } from "../../utils";
+import CircleStyle from "ol/style/Circle";
 
 export interface PointCoordinatePickData {
     id: string;
@@ -72,23 +73,31 @@ export class PointCoordinatePickLayer extends BaseLayer {
             source: this.source!,
             type: "Point",
         });
-
         this.drawInteraction.on("drawend", (event: any) => {
-            const feature = event.feature;
-            const geometry = feature.getGeometry();
+            const drawnFeature = event.feature;
+            const geometry = drawnFeature.getGeometry();
             const coordinates = geometry.getCoordinates();
-
             const [lng, lat] = toLonLat(coordinates);
             const id = generateId("coord_");
             const timestamp = Date.now();
-
+            drawnFeature.setStyle(new Style({
+                image: new CircleStyle({
+                    radius: 6,
+                    fill: new Fill({ color: "#00aaff" }),
+                    stroke: new Stroke({ color: "#ffffff", width: 2 }),
+                }),
+            }));
+            drawnFeature.set("id", id);
+            drawnFeature.set("type", "point_pick");
+            this.features.set(id, drawnFeature);
             const labelFeature = new Feature({
                 geometry: new Point(coordinates),
-                id: id,
+                id: id + "_label",
                 longitude: lng,
                 latitude: lat,
                 timestamp: timestamp,
             });
+            labelFeature.set("type", "point_pick");
             labelFeature.setStyle(new Style({
                 text: new Text({
                     text: "坐标拾取",
@@ -100,13 +109,10 @@ export class PointCoordinatePickLayer extends BaseLayer {
                     offsetY: -10,
                 }),
             }));
-
+            this.source?.addFeature(labelFeature);
+            this.features.set(id + "_label", labelFeature);
             const pickData: PointCoordinatePickData = { id, longitude: lng, latitude: lat, timestamp };
             this.picks.set(id, pickData);
-            this.features.set(id, labelFeature);
-
-            this.source?.addFeature(labelFeature);
-
             if (this.onCompleteCallback) {
                 this.onCompleteCallback(pickData);
             }
@@ -115,7 +121,6 @@ export class PointCoordinatePickLayer extends BaseLayer {
 
         this.mapView?.addInteraction(this.drawInteraction);
     }
-
     public stopPick(): void {
         if (this.drawInteraction) {
             this.mapView?.removeInteraction(this.drawInteraction);
@@ -123,16 +128,19 @@ export class PointCoordinatePickLayer extends BaseLayer {
         }
         this.onCompleteCallback = null;
     }
-
     public removeCoordinate(id: string): boolean {
         const feature = this.features.get(id);
         if (feature) {
             this.source?.removeFeature(feature);
             this.features.delete(id);
-            this.picks.delete(id);
-            return true;
         }
-        return false;
+        const labelFeature = this.features.get(id + "_label");
+        if (labelFeature) {
+            this.source?.removeFeature(labelFeature);
+            this.features.delete(id + "_label");
+        }
+        this.picks.delete(id);
+        return true;
     }
 
     public clearAllCoordinates(): void {

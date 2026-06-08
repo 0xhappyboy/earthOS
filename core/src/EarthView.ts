@@ -144,6 +144,11 @@ export class EarthView {
     private imageDrawTool: ImageDrawTool | null = null;
     private selectedImageId: string | null = null;
 
+
+    private selectedPointPickId: string | null = null;
+    private selectedLinePickId: string | null = null;
+    private selectedPolygonPickId: string | null = null;
+
     constructor(options: EarthViewOptions) {
         const {
             container,
@@ -791,6 +796,36 @@ export class EarthView {
             const y = e.clientY - rect.top;
             const pixel = [x, y];
             const features = this.mapManager.getMap().getFeaturesAtPixel(pixel);
+            const pointPick = features?.find((f: any) => f.get("type") === "point_pick");
+            if (pointPick && this.pointCoordinatePickLayer) {
+                const id = pointPick.get("id");
+                const data = this.pointCoordinatePickLayer.getCoordinate(id);
+                if (data) {
+                    this.selectedPointPickId = id;
+                    this.showMeasurementToolbarForFeature({ x, y });
+                    return;
+                }
+            }
+            const linePick = features?.find((f: any) => f.get("type") === "line_pick");
+            if (linePick && this.lineCoordinatePickLayer) {
+                const id = linePick.get("id");
+                const data = this.lineCoordinatePickLayer.getLine(id);
+                if (data) {
+                    this.selectedLinePickId = id;
+                    this.showMeasurementToolbarForFeature({ x, y });
+                    return;
+                }
+            }
+            const polygonPick = features?.find((f: any) => f.get("type") === "polygon_pick");
+            if (polygonPick && this.polygonCoordinatePickLayer) {
+                const id = polygonPick.get("id");
+                const data = this.polygonCoordinatePickLayer.getPolygon(id);
+                if (data) {
+                    this.selectedPolygonPickId = id;
+                    this.showMeasurementToolbarForFeature({ x, y });
+                    return;
+                }
+            }
             const circle = features?.find((f: any) => f.get("id")?.startsWith("circle_"));
             if (circle && this.circleDrawLayer) {
                 const data = this.circleDrawLayer.getCircle(circle.get("id"));
@@ -1505,19 +1540,36 @@ export class EarthView {
         this.measurementToolbarPosition = pos;
         this.showMeasurementToolbar = true;
         if (this.measurementFloatingToolbar) {
-            this.measurementFloatingToolbar.showAtPosition(pos);
-            this.measurementFloatingToolbar.setVisible(true);
-        } else {
-            this.measurementFloatingToolbar = new MeasurementFloatingToolbar({
-                onDelete: () => { if (this.selectedMeasurementId) { this.deleteMeasurement(this.selectedMeasurementId); } this.hideMeasurementToolbar(); },
-                onClose: () => this.hideMeasurementToolbar(),
-                onPositionChange: (p) => { this.measurementToolbarPosition = p; },
-                theme: this.theme,
-                t: this.t,
-                containerRef: this.container,
-                position: pos,
-            });
+            this.measurementFloatingToolbar.destroy();
+            this.measurementFloatingToolbar = null;
         }
+        this.measurementFloatingToolbar = new MeasurementFloatingToolbar({
+            onDelete: () => {
+                if (this.selectedMeasurementId) {
+                    this.deleteMeasurement(this.selectedMeasurementId);
+                    this.selectedMeasurementId = null;
+                }
+                else if (this.selectedPointPickId) {
+                    this.deleteMeasurement(this.selectedPointPickId);
+                    this.selectedPointPickId = null;
+                }
+                else if (this.selectedLinePickId) {
+                    this.deleteMeasurement(this.selectedLinePickId);
+                    this.selectedLinePickId = null;
+                }
+                else if (this.selectedPolygonPickId) {
+                    this.deleteMeasurement(this.selectedPolygonPickId);
+                    this.selectedPolygonPickId = null;
+                }
+                this.hideMeasurementToolbar();
+            },
+            onClose: () => this.hideMeasurementToolbar(),
+            onPositionChange: (p) => { this.measurementToolbarPosition = p; },
+            theme: this.theme,
+            t: this.t,
+            containerRef: this.container,
+            position: pos,
+        });
     }
 
     private hideFloatingToolbar(): void {
@@ -1543,7 +1595,12 @@ export class EarthView {
     private hideMeasurementToolbar(): void {
         this.showMeasurementToolbar = false;
         this.selectedMeasurementId = null;
-        this.measurementFloatingToolbar?.setVisible(false);
+        this.selectedPointPickId = null;
+        this.selectedLinePickId = null;
+        this.selectedPolygonPickId = null;
+        if (this.measurementFloatingToolbar) {
+            this.measurementFloatingToolbar.setVisible(false);
+        }
     }
 
     private getLayerList(): LayerInfo[] {
@@ -1698,7 +1755,31 @@ export class EarthView {
     }
 
     public deleteMeasurement(id: string): boolean {
-        return this.distanceMeasureLayer?.deleteMeasurement(id) || this.areaMeasureLayer?.deleteMeasurement(id) || false;
+        if (id.startsWith("LineCoordinatePick_")) {
+            if (this.lineCoordinatePickLayer?.removeLine(id)) {
+                this.currentLineCoordinates = this.currentLineCoordinates.filter(c => c.id !== id);
+                return true;
+            }
+        }
+        if (id.startsWith("PolygonCoordinatePick_")) {
+            if (this.polygonCoordinatePickLayer?.removePolygon(id)) {
+                this.currentPolygonCoordinates = this.currentPolygonCoordinates.filter(c => c.id !== id);
+                return true;
+            }
+        }
+        if (id.startsWith("coord_")) {
+            if (this.pointCoordinatePickLayer?.removeCoordinate(id)) {
+                this.currentPointCoordinates = this.currentPointCoordinates.filter(c => c.id !== id);
+                return true;
+            }
+        }
+        if (this.distanceMeasureLayer?.deleteMeasurement(id)) {
+            return true;
+        }
+        if (this.areaMeasureLayer?.deleteMeasurement(id)) {
+            return true;
+        }
+        return false;
     }
 
     public zoomIn(): void { this.setZoom(this.getZoom() + 1); }
