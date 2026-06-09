@@ -10,18 +10,9 @@ import Draw from "ol/interaction/Draw";
 import Transform from "ol-ext/interaction/Transform";
 import { fromLonLat, toLonLat } from "ol/proj";
 import { BaseLayer } from "../BaseLayer";
-import { LayerTypeEnum } from "../../types";
+import { LayerTypeEnum, TriangleDrawData } from "../../types";
 import { generateId, arrayToRgba } from "../../utils";
 import { Circle } from "ol/geom";
-
-export interface TriangleDrawData {
-    id: string;
-    center: [number, number];
-    size: number;
-    fillColor?: number[];
-    outlineColor?: number[];
-    outlineWidth?: number;
-}
 
 export class TriangleDrawLayer extends BaseLayer {
     private drawInteraction: Draw | null = null;
@@ -34,11 +25,13 @@ export class TriangleDrawLayer extends BaseLayer {
     private onEditCompleteCallback: ((data: TriangleDrawData) => void) | null = null;
     private editingFeature: Feature | null = null;
     private mapView: any = null;
+    private defaultOutlineStyle: "solid" | "dashed";
 
     constructor(id: string, name: string, options?: {
         defaultFillColor?: number[];
         defaultOutlineColor?: number[];
         defaultOutlineWidth?: number;
+        defaultOutlineStyle?: "solid" | "dashed";
         visible?: boolean;
         opacity?: number;
         zIndex?: number;
@@ -50,6 +43,7 @@ export class TriangleDrawLayer extends BaseLayer {
         this.defaultFillColor = options?.defaultFillColor || [255, 255, 0, 0.3];
         this.defaultOutlineColor = options?.defaultOutlineColor || [255, 255, 0, 1];
         this.defaultOutlineWidth = options?.defaultOutlineWidth || 1;
+        this.defaultOutlineStyle = options?.defaultOutlineStyle || "solid";
         this.source = new VectorSource();
         this.layer = new VectorLayer({
             source: this.source,
@@ -175,6 +169,7 @@ export class TriangleDrawLayer extends BaseLayer {
                         fillColor: this.defaultFillColor,
                         outlineColor: this.defaultOutlineColor,
                         outlineWidth: this.defaultOutlineWidth,
+                        outlineStyle: this.defaultOutlineStyle,
                     });
                 }
             }
@@ -323,6 +318,10 @@ export class TriangleDrawLayer extends BaseLayer {
                 id,
                 center: [lng, lat],
                 size,
+                fillColor: feature.get("fillColor"),
+                outlineColor: feature.get("outlineColor"),
+                outlineWidth: feature.get("outlineWidth"),
+                outlineStyle: feature.get("outlineStyle") || "solid",
             };
         }
         return undefined;
@@ -337,6 +336,10 @@ export class TriangleDrawLayer extends BaseLayer {
     ): void {
         const feature = this.features.get(id);
         if (!feature) return;
+        feature.set("fillColor", fillColor);
+        feature.set("outlineColor", outlineColor);
+        feature.set("outlineWidth", outlineWidth);
+        feature.set("outlineStyle", outlineStyle);
         const lineDash = outlineStyle === "dashed" ? [10, 10] : undefined;
         feature.setStyle(new Style({
             fill: new Fill({ color: arrayToRgba(fillColor) }),

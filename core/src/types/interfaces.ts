@@ -130,6 +130,7 @@ export interface CircleDrawData {
     fillColor?: number[];
     outlineColor?: number[];
     outlineWidth?: number;
+    outlineStyle?: "solid" | "dashed";
 }
 
 export interface HeatmapData {
@@ -200,6 +201,7 @@ export interface TriangleDrawData {
     fillColor?: number[];
     outlineColor?: number[];
     outlineWidth?: number;
+    outlineStyle?: "solid" | "dashed";
 }
 
 export interface LayerInfo {

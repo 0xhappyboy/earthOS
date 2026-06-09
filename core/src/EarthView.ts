@@ -1272,79 +1272,131 @@ export class EarthView {
     }
 
     private showFloatingToolbarForCircle(pos: { x: number; y: number }, data: CircleDrawData): void {
-        this.floatingToolbarPosition = pos;
-        this.showFloatingToolbar = true;
-        this.currentColor = data.fillColor || [255, 0, 0, 1];
-        this.currentStrokeWidth = data.outlineWidth || 3;
         if (this.floatingToolbar) {
-            this.floatingToolbar.updatePosition(pos);
-            this.floatingToolbar.setVisible(true);
-        } else {
-            this.floatingToolbar = new FloatingToolbar({
-                onColorChange: (color) => {
-                    this.currentColor = color;
-                    if (this.selectedCircleId && this.circleDrawLayer) {
-                        this.circleDrawLayer.updateCircleStyle(this.selectedCircleId, [color[0], color[1], color[2], 0.3], [color[0], color[1], color[2], 1], this.currentStrokeWidth, this.currentStrokeStyle);
-                    }
-                },
-                onStrokeWidthChange: (width) => {
-                    this.currentStrokeWidth = width;
-                    if (this.selectedCircleId && this.circleDrawLayer) {
-                        this.circleDrawLayer.updateCircleStyle(this.selectedCircleId, [this.currentColor[0], this.currentColor[1], this.currentColor[2], 0.3], [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1], width, this.currentStrokeStyle);
-                    }
-                },
-                onStrokeStyleChange: (style) => {
-                    this.currentStrokeStyle = style;
-                    if (this.selectedCircleId && this.circleDrawLayer) {
-                        this.circleDrawLayer.updateCircleStyle(this.selectedCircleId, [this.currentColor[0], this.currentColor[1], this.currentColor[2], 0.3], [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1], this.currentStrokeWidth, style);
-                    }
-                },
-                onDelete: () => { if (this.selectedCircleId && this.circleDrawLayer) { this.circleDrawLayer.removeCircle(this.selectedCircleId); this.selectedCircleId = null; } this.hideFloatingToolbar(); },
-                onClose: () => this.hideFloatingToolbar(),
-                onPositionChange: (p) => { this.floatingToolbarPosition = p; },
-                theme: this.theme, t: this.t, containerRef: this.container,
-                currentColor: this.currentColor, currentStrokeWidth: this.currentStrokeWidth, currentStrokeStyle: this.currentStrokeStyle,
-                position: pos,
-            });
+            this.floatingToolbar.destroy();
+            this.floatingToolbar = null;
         }
+        const targetId = data.id;
+        let currentColor = data.fillColor || [255, 0, 0, 1];
+        let currentStrokeWidth = data.outlineWidth || 3;
+        let currentStrokeStyle = data.outlineStyle || "solid";
+        this.floatingToolbar = new FloatingToolbar({
+            onColorChange: (color) => {
+                currentColor = color;
+                this.circleDrawLayer?.updateCircleStyle(
+                    targetId,
+                    [color[0], color[1], color[2], 0.3],
+                    [color[0], color[1], color[2], 1],
+                    currentStrokeWidth,
+                    currentStrokeStyle
+                );
+                this.selectedCircleId = targetId;
+            },
+            onStrokeWidthChange: (width) => {
+                currentStrokeWidth = width;
+                this.circleDrawLayer?.updateCircleStyle(
+                    targetId,
+                    [currentColor[0], currentColor[1], currentColor[2], 0.3],
+                    [currentColor[0], currentColor[1], currentColor[2], 1],
+                    width,
+                    currentStrokeStyle
+                );
+                this.selectedCircleId = targetId;
+            },
+            onStrokeStyleChange: (style) => {
+                currentStrokeStyle = style;
+                this.circleDrawLayer?.updateCircleStyle(
+                    targetId,
+                    [currentColor[0], currentColor[1], currentColor[2], 0.3],
+                    [currentColor[0], currentColor[1], currentColor[2], 1],
+                    currentStrokeWidth,
+                    style
+                );
+                this.selectedCircleId = targetId;
+            },
+            onDelete: () => {
+                this.circleDrawLayer?.removeCircle(targetId);
+                if (this.selectedCircleId === targetId) this.selectedCircleId = null;
+                this.hideFloatingToolbar();
+            },
+            onClose: () => {
+                if (this.selectedCircleId === targetId) this.selectedCircleId = null;
+                this.hideFloatingToolbar();
+            },
+            onPositionChange: (p) => { this.floatingToolbarPosition = p; },
+            theme: this.theme,
+            t: this.t,
+            containerRef: this.container,
+            currentColor: currentColor,
+            currentStrokeWidth: currentStrokeWidth,
+            currentStrokeStyle: currentStrokeStyle,
+            position: pos,
+        });
     }
 
     private showFloatingToolbarForRectangle(pos: { x: number; y: number }, data: RectangleDrawData): void {
-        this.floatingToolbarPosition = pos;
-        this.showFloatingToolbar = true;
-        this.currentColor = data.fillColor || [0, 0, 255, 1];
-        this.currentStrokeWidth = data.outlineWidth || 3;
         if (this.floatingToolbar) {
-            this.floatingToolbar.updatePosition(pos);
-            this.floatingToolbar.setVisible(true);
-        } else {
-            this.floatingToolbar = new FloatingToolbar({
-                onColorChange: (color) => {
-                    this.currentColor = color;
-                    if (this.selectedRectangleId && this.rectangleDrawLayer) {
-                        this.rectangleDrawLayer.updateRectangleStyle(this.selectedRectangleId, [color[0], color[1], color[2], 0.3], [color[0], color[1], color[2], 1], this.currentStrokeWidth, this.currentStrokeStyle);
-                    }
-                },
-                onStrokeWidthChange: (width) => {
-                    this.currentStrokeWidth = width;
-                    if (this.selectedRectangleId && this.rectangleDrawLayer) {
-                        this.rectangleDrawLayer.updateRectangleStyle(this.selectedRectangleId, [this.currentColor[0], this.currentColor[1], this.currentColor[2], 0.3], [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1], width, this.currentStrokeStyle);
-                    }
-                },
-                onStrokeStyleChange: (style) => {
-                    this.currentStrokeStyle = style;
-                    if (this.selectedRectangleId && this.rectangleDrawLayer) {
-                        this.rectangleDrawLayer.updateRectangleStyle(this.selectedRectangleId, [this.currentColor[0], this.currentColor[1], this.currentColor[2], 0.3], [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1], this.currentStrokeWidth, style);
-                    }
-                },
-                onDelete: () => { if (this.selectedRectangleId && this.rectangleDrawLayer) { this.rectangleDrawLayer.removeRectangle(this.selectedRectangleId); this.selectedRectangleId = null; } this.hideFloatingToolbar(); },
-                onClose: () => this.hideFloatingToolbar(),
-                onPositionChange: (p) => { this.floatingToolbarPosition = p; },
-                theme: this.theme, t: this.t, containerRef: this.container,
-                currentColor: this.currentColor, currentStrokeWidth: this.currentStrokeWidth, currentStrokeStyle: this.currentStrokeStyle,
-                position: pos,
-            });
+            this.floatingToolbar.destroy();
+            this.floatingToolbar = null;
         }
+
+        const targetId = data.id;
+        let currentColor = data.fillColor || [0, 0, 255, 1];
+        let currentStrokeWidth = data.outlineWidth || 3;
+        let currentStrokeStyle: "solid" | "dashed" = "solid";
+
+        this.floatingToolbar = new FloatingToolbar({
+            onColorChange: (color) => {
+                currentColor = color;
+                this.rectangleDrawLayer?.updateRectangleStyle(
+                    targetId,
+                    [color[0], color[1], color[2], 0.3],
+                    [color[0], color[1], color[2], 1],
+                    currentStrokeWidth,
+                    currentStrokeStyle
+                );
+                this.selectedRectangleId = targetId;
+            },
+            onStrokeWidthChange: (width) => {
+                currentStrokeWidth = width;
+                this.rectangleDrawLayer?.updateRectangleStyle(
+                    targetId,
+                    [currentColor[0], currentColor[1], currentColor[2], 0.3],
+                    [currentColor[0], currentColor[1], currentColor[2], 1],
+                    width,
+                    currentStrokeStyle
+                );
+                this.selectedRectangleId = targetId;
+            },
+            onStrokeStyleChange: (style) => {
+                currentStrokeStyle = style;
+                this.rectangleDrawLayer?.updateRectangleStyle(
+                    targetId,
+                    [currentColor[0], currentColor[1], currentColor[2], 0.3],
+                    [currentColor[0], currentColor[1], currentColor[2], 1],
+                    currentStrokeWidth,
+                    style
+                );
+                this.selectedRectangleId = targetId;
+            },
+            onDelete: () => {
+                this.rectangleDrawLayer?.removeRectangle(targetId);
+                if (this.selectedRectangleId === targetId) this.selectedRectangleId = null;
+                this.hideFloatingToolbar();
+            },
+            onClose: () => {
+                if (this.selectedRectangleId === targetId) this.selectedRectangleId = null;
+                this.hideFloatingToolbar();
+            },
+            onPositionChange: (p) => { this.floatingToolbarPosition = p; },
+            theme: this.theme,
+            t: this.t,
+            containerRef: this.container,
+            currentColor: currentColor,
+            currentStrokeWidth: currentStrokeWidth,
+            currentStrokeStyle: currentStrokeStyle,
+            position: pos,
+        });
     }
 
     private showFloatingToolbarForFreehand(pos: { x: number; y: number }, data: FreehandDrawData): void {
@@ -1352,73 +1404,64 @@ export class EarthView {
             this.floatingToolbar.destroy();
             this.floatingToolbar = null;
         }
-        this.floatingToolbarPosition = pos;
-        this.showFloatingToolbar = true;
-        this.currentColor = data.fillColor || [76, 175, 80, 0.3];
-        this.currentStrokeWidth = data.outlineWidth || 3;
-        this.currentStrokeStyle = data.outlineStyle || "solid";
+
         const targetId = data.id;
-        this.selectedFreehandId = targetId;
-        const targetLayer = this.freehandDrawLayer;
-        if (!targetLayer) {
-            console.error('FreehandDrawLayer is null');
-            return;
-        }
+        let currentFillColor = data.fillColor || [76, 175, 80, 0.3];
+        let currentOutlineColor = data.outlineColor || [76, 175, 80, 1];
+        let currentStrokeWidth = data.outlineWidth || 3;
+        let currentStrokeStyle = data.outlineStyle || "solid";
+
         this.floatingToolbar = new FloatingToolbar({
             onColorChange: (color) => {
-                this.currentColor = color;
-                targetLayer.updateFreehandStyle(
+                currentFillColor = [color[0], color[1], color[2], 0.3];
+                currentOutlineColor = [color[0], color[1], color[2], 1];
+                this.freehandDrawLayer?.updateFreehandStyle(
                     targetId,
-                    [color[0], color[1], color[2], 0.3],
-                    [color[0], color[1], color[2], 1],
-                    this.currentStrokeWidth,
-                    this.currentStrokeStyle
+                    currentFillColor,
+                    currentOutlineColor,
+                    currentStrokeWidth,
+                    currentStrokeStyle
                 );
+                this.selectedFreehandId = targetId;
             },
             onStrokeWidthChange: (width) => {
-                this.currentStrokeWidth = width;
-                targetLayer.updateFreehandStyle(
+                currentStrokeWidth = width;
+                this.freehandDrawLayer?.updateFreehandStyle(
                     targetId,
-                    [this.currentColor[0], this.currentColor[1], this.currentColor[2], 0.3],
-                    [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1],
+                    currentFillColor,
+                    currentOutlineColor,
                     width,
-                    this.currentStrokeStyle
+                    currentStrokeStyle
                 );
+                this.selectedFreehandId = targetId;
             },
             onStrokeStyleChange: (style) => {
-                this.currentStrokeStyle = style;
-                targetLayer.updateFreehandStyle(
+                currentStrokeStyle = style;
+                this.freehandDrawLayer?.updateFreehandStyle(
                     targetId,
-                    [this.currentColor[0], this.currentColor[1], this.currentColor[2], 0.3],
-                    [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1],
-                    this.currentStrokeWidth,
+                    currentFillColor,
+                    currentOutlineColor,
+                    currentStrokeWidth,
                     style
                 );
+                this.selectedFreehandId = targetId;
             },
             onDelete: () => {
-                if (targetLayer && targetId) {
-                    this.hideFloatingToolbar();
-                    targetLayer.removeFreehand(targetId);
-                    this.selectedFreehandId = null;
-                    setTimeout(() => {
-                        if (this.mapManager) {
-                            this.mapManager.getMap().render();
-                        }
-                    }, 50);
-                }
-            },
-            onClose: () => {
+                this.freehandDrawLayer?.removeFreehand(targetId);
+                if (this.selectedFreehandId === targetId) this.selectedFreehandId = null;
                 this.hideFloatingToolbar();
             },
-            onPositionChange: (p) => {
-                this.floatingToolbarPosition = p;
+            onClose: () => {
+                if (this.selectedFreehandId === targetId) this.selectedFreehandId = null;
+                this.hideFloatingToolbar();
             },
+            onPositionChange: (p) => { this.floatingToolbarPosition = p; },
             theme: this.theme,
             t: this.t,
             containerRef: this.container,
-            currentColor: this.currentColor,
-            currentStrokeWidth: this.currentStrokeWidth,
-            currentStrokeStyle: this.currentStrokeStyle,
+            currentColor: currentOutlineColor,
+            currentStrokeWidth: currentStrokeWidth,
+            currentStrokeStyle: currentStrokeStyle,
             position: pos,
         });
     }
@@ -1428,67 +1471,44 @@ export class EarthView {
             this.floatingToolbar.destroy();
             this.floatingToolbar = null;
         }
-        this.floatingToolbarPosition = pos;
-        this.showFloatingToolbar = true;
-        this.currentColor = data.color || [255, 193, 7, 1];
-        this.currentStrokeWidth = data.width || 3;
-        this.currentStrokeStyle = data.style || "solid";
+
         const targetId = data.id;
-        this.selectedLineId = targetId;
-        const targetLayer = this.lineDrawLayer;
-        if (!targetLayer) return;
+        let currentColor = data.color || [255, 193, 7, 1];
+        let currentStrokeWidth = data.width || 3;
+        let currentStrokeStyle = data.style || "solid";
+
         this.floatingToolbar = new FloatingToolbar({
             onColorChange: (color) => {
-                this.currentColor = color;
-                targetLayer.updateLineStyle(
-                    targetId,
-                    [color[0], color[1], color[2], 1],
-                    this.currentStrokeWidth,
-                    this.currentStrokeStyle
-                );
+                currentColor = color;
+                this.lineDrawLayer?.updateLineStyle(targetId, color, currentStrokeWidth, currentStrokeStyle);
+                this.selectedLineId = targetId;
             },
             onStrokeWidthChange: (width) => {
-                this.currentStrokeWidth = width;
-                targetLayer.updateLineStyle(
-                    targetId,
-                    [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1],
-                    width,
-                    this.currentStrokeStyle
-                );
+                currentStrokeWidth = width;
+                this.lineDrawLayer?.updateLineStyle(targetId, currentColor, width, currentStrokeStyle);
+                this.selectedLineId = targetId;
             },
             onStrokeStyleChange: (style) => {
-                this.currentStrokeStyle = style;
-                targetLayer.updateLineStyle(
-                    targetId,
-                    [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1],
-                    this.currentStrokeWidth,
-                    style
-                );
+                currentStrokeStyle = style;
+                this.lineDrawLayer?.updateLineStyle(targetId, currentColor, currentStrokeWidth, style);
+                this.selectedLineId = targetId;
             },
             onDelete: () => {
-                if (targetLayer && targetId) {
-                    this.hideFloatingToolbar();
-                    targetLayer.removeLine(targetId);
-                    this.selectedLineId = null;
-                    setTimeout(() => {
-                        if (this.mapManager) {
-                            this.mapManager.getMap().render();
-                        }
-                    }, 50);
-                }
-            },
-            onClose: () => {
+                this.lineDrawLayer?.removeLine(targetId);
+                if (this.selectedLineId === targetId) this.selectedLineId = null;
                 this.hideFloatingToolbar();
             },
-            onPositionChange: (p) => {
-                this.floatingToolbarPosition = p;
+            onClose: () => {
+                if (this.selectedLineId === targetId) this.selectedLineId = null;
+                this.hideFloatingToolbar();
             },
+            onPositionChange: (p) => { this.floatingToolbarPosition = p; },
             theme: this.theme,
             t: this.t,
             containerRef: this.container,
-            currentColor: this.currentColor,
-            currentStrokeWidth: this.currentStrokeWidth,
-            currentStrokeStyle: this.currentStrokeStyle,
+            currentColor: currentColor,
+            currentStrokeWidth: currentStrokeWidth,
+            currentStrokeStyle: currentStrokeStyle,
             position: pos,
         });
     }
@@ -1498,67 +1518,44 @@ export class EarthView {
             this.floatingToolbar.destroy();
             this.floatingToolbar = null;
         }
-        this.floatingToolbarPosition = pos;
-        this.showFloatingToolbar = true;
-        this.currentColor = data.color || [156, 39, 176, 1];
-        this.currentStrokeWidth = data.width || 3;
-        this.currentStrokeStyle = data.style || "solid";
+
         const targetId = data.id;
-        this.selectedBezierId = targetId;
-        const targetLayer = this.bezierDrawLayer;
-        if (!targetLayer) return;
+        let currentColor = data.color || [156, 39, 176, 1];
+        let currentStrokeWidth = data.width || 3;
+        let currentStrokeStyle = data.style || "solid";
+
         this.floatingToolbar = new FloatingToolbar({
             onColorChange: (color) => {
-                this.currentColor = color;
-                targetLayer.updateBezierStyle(
-                    targetId,
-                    [color[0], color[1], color[2], 1],
-                    this.currentStrokeWidth,
-                    this.currentStrokeStyle
-                );
+                currentColor = color;
+                this.bezierDrawLayer?.updateBezierStyle(targetId, color, currentStrokeWidth, currentStrokeStyle);
+                this.selectedBezierId = targetId;
             },
             onStrokeWidthChange: (width) => {
-                this.currentStrokeWidth = width;
-                targetLayer.updateBezierStyle(
-                    targetId,
-                    [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1],
-                    width,
-                    this.currentStrokeStyle
-                );
+                currentStrokeWidth = width;
+                this.bezierDrawLayer?.updateBezierStyle(targetId, currentColor, width, currentStrokeStyle);
+                this.selectedBezierId = targetId;
             },
             onStrokeStyleChange: (style) => {
-                this.currentStrokeStyle = style;
-                targetLayer.updateBezierStyle(
-                    targetId,
-                    [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1],
-                    this.currentStrokeWidth,
-                    style
-                );
+                currentStrokeStyle = style;
+                this.bezierDrawLayer?.updateBezierStyle(targetId, currentColor, currentStrokeWidth, style);
+                this.selectedBezierId = targetId;
             },
             onDelete: () => {
-                if (targetLayer && targetId) {
-                    this.hideFloatingToolbar();
-                    targetLayer.removeBezier(targetId);
-                    this.selectedBezierId = null;
-                    setTimeout(() => {
-                        if (this.mapManager) {
-                            this.mapManager.getMap().render();
-                        }
-                    }, 50);
-                }
-            },
-            onClose: () => {
+                this.bezierDrawLayer?.removeBezier(targetId);
+                if (this.selectedBezierId === targetId) this.selectedBezierId = null;
                 this.hideFloatingToolbar();
             },
-            onPositionChange: (p) => {
-                this.floatingToolbarPosition = p;
+            onClose: () => {
+                if (this.selectedBezierId === targetId) this.selectedBezierId = null;
+                this.hideFloatingToolbar();
             },
+            onPositionChange: (p) => { this.floatingToolbarPosition = p; },
             theme: this.theme,
             t: this.t,
             containerRef: this.container,
-            currentColor: this.currentColor,
-            currentStrokeWidth: this.currentStrokeWidth,
-            currentStrokeStyle: this.currentStrokeStyle,
+            currentColor: currentColor,
+            currentStrokeWidth: currentStrokeWidth,
+            currentStrokeStyle: currentStrokeStyle,
             position: pos,
         });
     }
@@ -1568,151 +1565,171 @@ export class EarthView {
             this.floatingToolbar.destroy();
             this.floatingToolbar = null;
         }
-        this.floatingToolbarPosition = pos;
-        this.showFloatingToolbar = true;
-        this.currentColor = data.fillColor || [33, 150, 243, 0.3];
-        this.currentStrokeWidth = data.outlineWidth || 2;
-        this.currentStrokeStyle = data.outlineStyle || "solid";
+
         const targetId = data.id;
-        this.selectedSectorId = targetId;
-        const targetLayer = this.sectorDrawLayer;
-        if (!targetLayer) return;
+        let currentColor = data.fillColor || [33, 150, 243, 0.3];
+        let currentStrokeWidth = data.outlineWidth || 2;
+        let currentStrokeStyle = data.outlineStyle || "solid";
+
         this.floatingToolbar = new FloatingToolbar({
             onColorChange: (color) => {
-                this.currentColor = color;
-                targetLayer.updateSectorStyle(
+                currentColor = color;
+                this.sectorDrawLayer?.updateSectorStyle(
                     targetId,
                     [color[0], color[1], color[2], 0.3],
                     [color[0], color[1], color[2], 1],
-                    this.currentStrokeWidth,
-                    this.currentStrokeStyle
+                    currentStrokeWidth,
+                    currentStrokeStyle
                 );
+                this.selectedSectorId = targetId;
             },
             onStrokeWidthChange: (width) => {
-                this.currentStrokeWidth = width;
-                targetLayer.updateSectorStyle(
+                currentStrokeWidth = width;
+                this.sectorDrawLayer?.updateSectorStyle(
                     targetId,
-                    [this.currentColor[0], this.currentColor[1], this.currentColor[2], 0.3],
-                    [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1],
+                    [currentColor[0], currentColor[1], currentColor[2], 0.3],
+                    [currentColor[0], currentColor[1], currentColor[2], 1],
                     width,
-                    this.currentStrokeStyle
+                    currentStrokeStyle
                 );
+                this.selectedSectorId = targetId;
             },
             onStrokeStyleChange: (style) => {
-                this.currentStrokeStyle = style;
-                targetLayer.updateSectorStyle(
+                currentStrokeStyle = style;
+                this.sectorDrawLayer?.updateSectorStyle(
                     targetId,
-                    [this.currentColor[0], this.currentColor[1], this.currentColor[2], 0.3],
-                    [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1],
-                    this.currentStrokeWidth,
+                    [currentColor[0], currentColor[1], currentColor[2], 0.3],
+                    [currentColor[0], currentColor[1], currentColor[2], 1],
+                    currentStrokeWidth,
                     style
                 );
+                this.selectedSectorId = targetId;
             },
             onDelete: () => {
-                if (targetLayer && targetId) {
-                    this.hideFloatingToolbar();
-                    targetLayer.removeSector(targetId);
-                    this.selectedSectorId = null;
-                    setTimeout(() => {
-                        if (this.mapManager) {
-                            this.mapManager.getMap().render();
-                        }
-                    }, 50);
-                }
-            },
-            onClose: () => {
+                this.sectorDrawLayer?.removeSector(targetId);
+                if (this.selectedSectorId === targetId) this.selectedSectorId = null;
                 this.hideFloatingToolbar();
             },
-            onPositionChange: (p) => {
-                this.floatingToolbarPosition = p;
+            onClose: () => {
+                if (this.selectedSectorId === targetId) this.selectedSectorId = null;
+                this.hideFloatingToolbar();
             },
+            onPositionChange: (p) => { this.floatingToolbarPosition = p; },
             theme: this.theme,
             t: this.t,
             containerRef: this.container,
-            currentColor: this.currentColor,
-            currentStrokeWidth: this.currentStrokeWidth,
-            currentStrokeStyle: this.currentStrokeStyle,
+            currentColor: [currentColor[0], currentColor[1], currentColor[2], 1],
+            currentStrokeWidth: currentStrokeWidth,
+            currentStrokeStyle: currentStrokeStyle,
             position: pos,
         });
     }
 
     private showFloatingToolbarForEllipse(pos: { x: number; y: number }, data: EllipseDrawData): void {
-        this.floatingToolbarPosition = pos;
-        this.showFloatingToolbar = true;
-        this.currentColor = data.fillColor || [156, 39, 176, 0.3];
-        this.currentStrokeWidth = data.outlineWidth || 2;
-        this.currentStrokeStyle = data.outlineStyle || "solid";
-        this.showGenericFloatingToolbar(pos, {
-            id: this.selectedEllipseId,
-            updateStyle: (color, width, style) => {
-                if (this.selectedEllipseId && this.ellipseDrawLayer) {
-                    this.ellipseDrawLayer.updateEllipseStyle(
-                        this.selectedEllipseId,
-                        [color[0], color[1], color[2], 0.3],
-                        [color[0], color[1], color[2], 1],
-                        width,
-                        style
-                    );
-                }
+        if (this.floatingToolbar) {
+            this.floatingToolbar.destroy();
+            this.floatingToolbar = null;
+        }
+
+        const targetId = data.id;
+        let currentColor = data.fillColor || [156, 39, 176, 0.3];
+        let currentStrokeWidth = data.outlineWidth || 2;
+        let currentStrokeStyle = data.outlineStyle || "solid";
+
+        this.floatingToolbar = new FloatingToolbar({
+            onColorChange: (color) => {
+                currentColor = color;
+                this.ellipseDrawLayer?.updateEllipseStyle(
+                    targetId,
+                    [color[0], color[1], color[2], 0.3],
+                    [color[0], color[1], color[2], 1],
+                    currentStrokeWidth,
+                    currentStrokeStyle
+                );
+                this.selectedEllipseId = targetId;
             },
-            delete: () => {
-                if (this.selectedEllipseId && this.ellipseDrawLayer) {
-                    this.ellipseDrawLayer.removeEllipse(this.selectedEllipseId);
-                    this.selectedEllipseId = null;
-                }
+            onStrokeWidthChange: (width) => {
+                currentStrokeWidth = width;
+                this.ellipseDrawLayer?.updateEllipseStyle(
+                    targetId,
+                    [currentColor[0], currentColor[1], currentColor[2], 0.3],
+                    [currentColor[0], currentColor[1], currentColor[2], 1],
+                    width,
+                    currentStrokeStyle
+                );
+                this.selectedEllipseId = targetId;
+            },
+            onStrokeStyleChange: (style) => {
+                currentStrokeStyle = style;
+                this.ellipseDrawLayer?.updateEllipseStyle(
+                    targetId,
+                    [currentColor[0], currentColor[1], currentColor[2], 0.3],
+                    [currentColor[0], currentColor[1], currentColor[2], 1],
+                    currentStrokeWidth,
+                    style
+                );
+                this.selectedEllipseId = targetId;
+            },
+            onDelete: () => {
+                this.ellipseDrawLayer?.removeEllipse(targetId);
+                if (this.selectedEllipseId === targetId) this.selectedEllipseId = null;
                 this.hideFloatingToolbar();
-            }
+            },
+            onClose: () => {
+                if (this.selectedEllipseId === targetId) this.selectedEllipseId = null;
+                this.hideFloatingToolbar();
+            },
+            onPositionChange: (p) => { this.floatingToolbarPosition = p; },
+            theme: this.theme,
+            t: this.t,
+            containerRef: this.container,
+            currentColor: [currentColor[0], currentColor[1], currentColor[2], 1],
+            currentStrokeWidth: currentStrokeWidth,
+            currentStrokeStyle: currentStrokeStyle,
+            position: pos,
         });
     }
 
     private showFloatingToolbarForMarker(pos: { x: number; y: number }, data: MarkerDrawData): void {
-        this.floatingToolbarPosition = pos;
-        this.showFloatingToolbar = true;
-        this.currentColor = data.color || [255, 87, 34, 1];
-        this.currentSize = data.size || 10;
         if (this.floatingToolbar) {
-            this.floatingToolbar.updatePosition(pos);
-            this.floatingToolbar.setVisible(true);
-        } else {
-            this.floatingToolbar = new FloatingToolbar({
-                onColorChange: (color) => {
-                    this.currentColor = color;
-                    if (this.selectedMarkerId && this.markerDrawLayer) {
-                        this.markerDrawLayer.updateMarkerStyle(
-                            this.selectedMarkerId,
-                            [color[0], color[1], color[2], 1],
-                            this.currentSize
-                        );
-                    }
-                },
-                onStrokeWidthChange: (width) => {
-                    this.currentSize = width;
-                    if (this.selectedMarkerId && this.markerDrawLayer) {
-                        this.markerDrawLayer.updateMarkerStyle(
-                            this.selectedMarkerId,
-                            this.currentColor,
-                            width
-                        );
-                    }
-                },
-                onStrokeStyleChange: (style) => {
-                },
-                onDelete: () => {
-                    if (this.selectedMarkerId && this.markerDrawLayer) {
-                        this.markerDrawLayer.removeMarker(this.selectedMarkerId);
-                        this.selectedMarkerId = null;
-                    }
-                    this.hideFloatingToolbar();
-                },
-                onClose: () => this.hideFloatingToolbar(),
-                onPositionChange: (p) => { this.floatingToolbarPosition = p; },
-                theme: this.theme, t: this.t, containerRef: this.container,
-                currentColor: this.currentColor,
-                currentStrokeWidth: this.currentSize,
-                currentStrokeStyle: "solid",
-                position: pos,
-            });
+            this.floatingToolbar.destroy();
+            this.floatingToolbar = null;
         }
+
+        const targetId = data.id;
+        let currentColor = data.color || [255, 87, 34, 1];
+        let currentSize = data.size || 10;
+
+        this.floatingToolbar = new FloatingToolbar({
+            onColorChange: (color) => {
+                currentColor = color;
+                this.markerDrawLayer?.updateMarkerStyle(targetId, color, currentSize);
+                this.selectedMarkerId = targetId;
+            },
+            onStrokeWidthChange: (width) => {
+                currentSize = width;
+                this.markerDrawLayer?.updateMarkerStyle(targetId, currentColor, width);
+                this.selectedMarkerId = targetId;
+            },
+            onStrokeStyleChange: () => { },
+            onDelete: () => {
+                this.markerDrawLayer?.removeMarker(targetId);
+                if (this.selectedMarkerId === targetId) this.selectedMarkerId = null;
+                this.hideFloatingToolbar();
+            },
+            onClose: () => {
+                if (this.selectedMarkerId === targetId) this.selectedMarkerId = null;
+                this.hideFloatingToolbar();
+            },
+            onPositionChange: (p) => { this.floatingToolbarPosition = p; },
+            theme: this.theme,
+            t: this.t,
+            containerRef: this.container,
+            currentColor: currentColor,
+            currentStrokeWidth: currentSize,
+            currentStrokeStyle: "solid",
+            position: pos,
+        });
     }
 
     public startDrawImage(): void {
@@ -1721,31 +1738,50 @@ export class EarthView {
     }
 
     private showFloatingToolbarForArrow(pos: { x: number; y: number }, data: ArrowDrawData): void {
-        this.floatingToolbarPosition = pos;
-        this.showFloatingToolbar = true;
-        this.currentColor = data.color || [255, 87, 34, 1];
-        this.currentStrokeWidth = data.width || 3;
-        this.currentStrokeStyle = data.style || "solid";
-        this.showGenericFloatingToolbar(pos, {
-            id: this.selectedArrowId,
-            updateStyle: (color, width, style) => {
-                if (this.selectedArrowId && this.arrowDrawLayer) {
-                    this.arrowDrawLayer.updateArrowStyle(
-                        this.selectedArrowId,
-                        [color[0], color[1], color[2], 1],
-                        width,
-                        style,
-                        data.headSize || 50
-                    );
-                }
+        if (this.floatingToolbar) {
+            this.floatingToolbar.destroy();
+            this.floatingToolbar = null;
+        }
+
+        const targetId = data.id;
+        let currentColor = data.color || [255, 87, 34, 1];
+        let currentStrokeWidth = data.width || 3;
+        let currentStrokeStyle = data.style || "solid";
+        const currentHeadSize = data.headSize || 50;
+
+        this.floatingToolbar = new FloatingToolbar({
+            onColorChange: (color) => {
+                currentColor = color;
+                this.arrowDrawLayer?.updateArrowStyle(targetId, color, currentStrokeWidth, currentStrokeStyle, currentHeadSize);
+                this.selectedArrowId = targetId;
             },
-            delete: () => {
-                if (this.selectedArrowId && this.arrowDrawLayer) {
-                    this.arrowDrawLayer.removeArrow(this.selectedArrowId);
-                    this.selectedArrowId = null;
-                }
+            onStrokeWidthChange: (width) => {
+                currentStrokeWidth = width;
+                this.arrowDrawLayer?.updateArrowStyle(targetId, currentColor, width, currentStrokeStyle, currentHeadSize);
+                this.selectedArrowId = targetId;
+            },
+            onStrokeStyleChange: (style) => {
+                currentStrokeStyle = style;
+                this.arrowDrawLayer?.updateArrowStyle(targetId, currentColor, currentStrokeWidth, style, currentHeadSize);
+                this.selectedArrowId = targetId;
+            },
+            onDelete: () => {
+                this.arrowDrawLayer?.removeArrow(targetId);
+                if (this.selectedArrowId === targetId) this.selectedArrowId = null;
                 this.hideFloatingToolbar();
-            }
+            },
+            onClose: () => {
+                if (this.selectedArrowId === targetId) this.selectedArrowId = null;
+                this.hideFloatingToolbar();
+            },
+            onPositionChange: (p) => { this.floatingToolbarPosition = p; },
+            theme: this.theme,
+            t: this.t,
+            containerRef: this.container,
+            currentColor: currentColor,
+            currentStrokeWidth: currentStrokeWidth,
+            currentStrokeStyle: currentStrokeStyle,
+            position: pos,
         });
     }
 
@@ -1790,41 +1826,66 @@ export class EarthView {
     }
 
     private showFloatingToolbarForTriangle(pos: { x: number; y: number }, data: TriangleDrawData): void {
-        this.floatingToolbarPosition = pos;
-        this.showFloatingToolbar = true;
-        this.currentColor = data.fillColor || [255, 255, 0, 1];
-        this.currentStrokeWidth = data.outlineWidth || 3;
         if (this.floatingToolbar) {
-            this.floatingToolbar.updatePosition(pos);
-            this.floatingToolbar.setVisible(true);
-        } else {
-            this.floatingToolbar = new FloatingToolbar({
-                onColorChange: (color) => {
-                    this.currentColor = color;
-                    if (this.selectedTriangleId && this.triangleDrawLayer) {
-                        this.triangleDrawLayer.updateTriangleStyle(this.selectedTriangleId, [color[0], color[1], color[2], 0.3], [color[0], color[1], color[2], 1], this.currentStrokeWidth, this.currentStrokeStyle);
-                    }
-                },
-                onStrokeWidthChange: (width) => {
-                    this.currentStrokeWidth = width;
-                    if (this.selectedTriangleId && this.triangleDrawLayer) {
-                        this.triangleDrawLayer.updateTriangleStyle(this.selectedTriangleId, [this.currentColor[0], this.currentColor[1], this.currentColor[2], 0.3], [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1], width, this.currentStrokeStyle);
-                    }
-                },
-                onStrokeStyleChange: (style) => {
-                    this.currentStrokeStyle = style;
-                    if (this.selectedTriangleId && this.triangleDrawLayer) {
-                        this.triangleDrawLayer.updateTriangleStyle(this.selectedTriangleId, [this.currentColor[0], this.currentColor[1], this.currentColor[2], 0.3], [this.currentColor[0], this.currentColor[1], this.currentColor[2], 1], this.currentStrokeWidth, style);
-                    }
-                },
-                onDelete: () => { if (this.selectedTriangleId && this.triangleDrawLayer) { this.triangleDrawLayer.removeTriangle(this.selectedTriangleId); this.selectedTriangleId = null; } this.hideFloatingToolbar(); },
-                onClose: () => this.hideFloatingToolbar(),
-                onPositionChange: (p) => { this.floatingToolbarPosition = p; },
-                theme: this.theme, t: this.t, containerRef: this.container,
-                currentColor: this.currentColor, currentStrokeWidth: this.currentStrokeWidth, currentStrokeStyle: this.currentStrokeStyle,
-                position: pos,
-            });
+            this.floatingToolbar.destroy();
+            this.floatingToolbar = null;
         }
+        const targetId = data.id;
+        let currentColor = data.fillColor || [255, 255, 0, 1];
+        let currentStrokeWidth = data.outlineWidth || 3;
+        let currentStrokeStyle = data.outlineStyle || "solid";
+        this.floatingToolbar = new FloatingToolbar({
+            onColorChange: (color) => {
+                currentColor = color;
+                this.triangleDrawLayer?.updateTriangleStyle(
+                    targetId,
+                    [color[0], color[1], color[2], 0.3],
+                    [color[0], color[1], color[2], 1],
+                    currentStrokeWidth,
+                    currentStrokeStyle
+                );
+                this.selectedTriangleId = targetId;
+            },
+            onStrokeWidthChange: (width) => {
+                currentStrokeWidth = width;
+                this.triangleDrawLayer?.updateTriangleStyle(
+                    targetId,
+                    [currentColor[0], currentColor[1], currentColor[2], 0.3],
+                    [currentColor[0], currentColor[1], currentColor[2], 1],
+                    width,
+                    currentStrokeStyle
+                );
+                this.selectedTriangleId = targetId;
+            },
+            onStrokeStyleChange: (style) => {
+                currentStrokeStyle = style;
+                this.triangleDrawLayer?.updateTriangleStyle(
+                    targetId,
+                    [currentColor[0], currentColor[1], currentColor[2], 0.3],
+                    [currentColor[0], currentColor[1], currentColor[2], 1],
+                    currentStrokeWidth,
+                    style
+                );
+                this.selectedTriangleId = targetId;
+            },
+            onDelete: () => {
+                this.triangleDrawLayer?.removeTriangle(targetId);
+                if (this.selectedTriangleId === targetId) this.selectedTriangleId = null;
+                this.hideFloatingToolbar();
+            },
+            onClose: () => {
+                if (this.selectedTriangleId === targetId) this.selectedTriangleId = null;
+                this.hideFloatingToolbar();
+            },
+            onPositionChange: (p) => { this.floatingToolbarPosition = p; },
+            theme: this.theme,
+            t: this.t,
+            containerRef: this.container,
+            currentColor: currentColor,
+            currentStrokeWidth: currentStrokeWidth,
+            currentStrokeStyle: currentStrokeStyle,
+            position: pos,
+        });
     }
 
     private showMeasurementToolbarForFeature(pos: { x: number; y: number }): void {

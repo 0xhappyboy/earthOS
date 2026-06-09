@@ -21,6 +21,7 @@ export class CircleDrawLayer extends BaseLayer {
     private defaultFillColor: number[];
     private defaultOutlineColor: number[];
     private defaultOutlineWidth: number;
+    private defaultOutlineStyle: "solid" | "dashed";
     private onDrawCompleteCallback: ((data: CircleDrawData) => void) | null = null;
     private onEditCompleteCallback: ((data: CircleDrawData) => void) | null = null;
     private editingFeature: Feature | null = null;
@@ -31,6 +32,7 @@ export class CircleDrawLayer extends BaseLayer {
         defaultFillColor?: number[];
         defaultOutlineColor?: number[];
         defaultOutlineWidth?: number;
+        defaultOutlineStyle?: "solid" | "dashed";
         visible?: boolean;
         opacity?: number;
         zIndex?: number;
@@ -42,6 +44,7 @@ export class CircleDrawLayer extends BaseLayer {
         this.defaultFillColor = options?.defaultFillColor || [255, 0, 0, 0.3];
         this.defaultOutlineColor = options?.defaultOutlineColor || [255, 0, 0, 1];
         this.defaultOutlineWidth = options?.defaultOutlineWidth || 1;
+        this.defaultOutlineStyle = options?.defaultOutlineStyle || "solid";
         this.t = t || getTranslation("zh");
         this.source = new VectorSource();
         this.layer = new VectorLayer({
@@ -109,6 +112,7 @@ export class CircleDrawLayer extends BaseLayer {
                         fillColor: this.defaultFillColor,
                         outlineColor: this.defaultOutlineColor,
                         outlineWidth: this.defaultOutlineWidth,
+                        outlineStyle: this.defaultOutlineStyle,
                     });
                 }
             }
@@ -234,6 +238,10 @@ export class CircleDrawLayer extends BaseLayer {
                 id,
                 center: [center[0], center[1]],
                 radius: geometry.getRadius(),
+                fillColor: feature.get("fillColor"),
+                outlineColor: feature.get("outlineColor"),
+                outlineWidth: feature.get("outlineWidth"),
+                outlineStyle: feature.get("outlineStyle") || "solid",
             };
         }
         return undefined;
@@ -248,6 +256,10 @@ export class CircleDrawLayer extends BaseLayer {
     ): void {
         const feature = this.features.get(id);
         if (!feature) return;
+        feature.set("fillColor", fillColor);
+        feature.set("outlineColor", outlineColor);
+        feature.set("outlineWidth", outlineWidth);
+        feature.set("outlineStyle", outlineStyle);
         const lineDash = outlineStyle === "dashed" ? [10, 10] : undefined;
         feature.setStyle(new Style({
             fill: new Fill({ color: arrayToRgba(fillColor) }),
