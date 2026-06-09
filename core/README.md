@@ -24,11 +24,11 @@ A reliable geographic information graphics system developed based on OpenLayers.
 ## ⚙️ Install
 
 ```bash
-npm i @candleview/core
+npm i @earthview/core
 ```
 
 ```bash
-yarn add @candleview/core
+yarn add @earthview/core
 ```
 
 ## Quick Start
