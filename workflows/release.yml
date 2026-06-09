@@ -1,0 +1,59 @@
+name: Build CandleView
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          cd core
+          yarn install
+
+      - name: Build
+        run: |
+          cd core
+          yarn build
+
+      - name: Package release
+        run: |
+          cd core
+          cp package.json dist/
+          cp README.md dist/
+          cp LICENSE dist/
+          cd dist
+          zip -r ../earthview-${{ github.ref_name }}.zip .
+          tar -czf ../earthview-${{ github.ref_name }}.tar.gz .
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: earthview-${{ github.ref_name }}
+          body: |
+            Earthview Core has been updated to the latest version.
+
+            ### Release Notes
+            - the relevant features have been updated.
+
+            ### Installation
+            ```bash
+            npm install @earthview/core
+            # or
+            yarn add @earthview/core
