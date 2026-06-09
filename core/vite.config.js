@@ -15,5 +15,15 @@ export default defineConfig({
       formats: ['es', 'cjs'],
       fileName: (format) => format === 'es' ? 'index.mjs' : 'index.js'
     },
+    rollupOptions: {
+      input: 'src/index.ts',
+      output: {
+        preserveModules: false
+      }
+    }
+  },
+  root: process.cwd(),
+  optimizeDeps: {
+    entries: []
   }
 })
