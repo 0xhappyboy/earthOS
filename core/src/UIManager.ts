@@ -1,5 +1,6 @@
 import { BasemapOption, BasemapOptions, DrawToolsPanel, LayersPanel, LoadingOverlay, PopupPanel, PopupType, ScaleBar, Toolbar, ToolsPanel } from "./components";
 import { CoordinatePickingDataPanel, LineData, PointData, PolygonData } from "./components/CoordinatePickingDataPanel";
+import { LayerFeature } from "./components/LayersPanel";
 import { Translations } from "./i18n";
 import { BasemapTypeEnum, LayerInfo } from "./types";
 
@@ -38,6 +39,9 @@ export interface UIManagerCallbacks {
     onLocateCoordinate?: (longitude: number, latitude: number) => void;
     onLocateLine?: (points: { longitude: number; latitude: number }[]) => void;
     onLocatePolygon?: (points: { longitude: number; latitude: number }[]) => void;
+    onGetLayerFeatures?: (layerId: string) => LayerFeature[];
+    onLocateFeature?: (layerId: string, featureId: string) => void;
+    onCopyFeatureCoordinates?: (layerId: string, featureId: string) => void;
 }
 
 export class UIManager {
@@ -144,6 +148,22 @@ export class UIManager {
                     layerList: this.getLayerListFn(),
                     onToggleVisibility: (id) => this.callbacks.onToggleLayerVisibility(id),
                     onRemoveLayer: (id) => this.callbacks.onRemoveLayer(id),
+                    onGetLayerFeatures: (layerId) => {
+                        if (this.callbacks.onGetLayerFeatures) {
+                            return this.callbacks.onGetLayerFeatures(layerId);
+                        }
+                        return [];
+                    },
+                    onLocateFeature: (layerId, featureId) => {
+                        if (this.callbacks.onLocateFeature) {
+                            this.callbacks.onLocateFeature(layerId, featureId);
+                        }
+                    },
+                    onCopyFeatureCoordinates: (layerId, featureId) => {
+                        if (this.callbacks.onCopyFeatureCoordinates) {
+                            this.callbacks.onCopyFeatureCoordinates(layerId, featureId);
+                        }
+                    },
                     theme: this.theme,
                     t: this.t,
                 });

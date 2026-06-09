@@ -76,4 +76,20 @@ export class PolylineLayer extends BaseLayer {
             data.polylines.forEach((polyline) => this.addPolyline(polyline));
         }
     }
+
+    public getAllPolylines(): PolylineData[] {
+        const result: PolylineData[] = [];
+        this.features.forEach((feature, id) => {
+            result.push(feature.getProperties() as PolylineData);
+        });
+        return result;
+    }
+
+    public getPolyline(id: string): PolylineData | undefined {
+        const feature = this.features.get(id);
+        if (feature) {
+            return feature.getProperties() as PolylineData;
+        }
+        return undefined;
+    }
 }

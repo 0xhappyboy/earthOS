@@ -87,4 +87,20 @@ export class PolygonLayer extends BaseLayer {
             data.polygons.forEach((polygon) => this.addPolygon(polygon));
         }
     }
+
+    public getAllPolygons(): PolygonData[] {
+        const result: PolygonData[] = [];
+        this.features.forEach((feature, id) => {
+            result.push(feature.getProperties() as PolygonData);
+        });
+        return result;
+    }
+
+    public getPolygon(id: string): PolygonData | undefined {
+        const feature = this.features.get(id);
+        if (feature) {
+            return feature.getProperties() as PolygonData;
+        }
+        return undefined;
+    }
 }

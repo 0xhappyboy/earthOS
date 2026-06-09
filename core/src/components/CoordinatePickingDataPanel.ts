@@ -138,7 +138,7 @@ export class CoordinatePickingDataPanel {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 8px 12px;
+            padding: 2px 10px;
             border-bottom: 1px solid ${isDark ? "#333" : "#e0e0e0"};
             background: ${isDark ? "#2d2d2d" : "#f5f5f5"};
             flex-shrink: 0;
@@ -151,16 +151,17 @@ export class CoordinatePickingDataPanel {
 
         const closeBtn = document.createElement("button");
         closeBtn.style.cssText = `
-            background: none;
-            border: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2px;
-            color: ${isDark ? "#ccc" : "#666"};
-        `;
-        closeBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    color: ${isDark ? "#ccc" : "#666"};
+    font-size: 16px;
+`;
+        closeBtn.innerHTML = "✕";
         closeBtn.onclick = () => {
             this.hideDetailPanel();
             this.options.onClose();

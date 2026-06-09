@@ -3,6 +3,7 @@ import VectorLayer from "ol/layer/Vector";
 import GeoJSON from "ol/format/GeoJSON";
 import { BaseLayer } from "../BaseLayer";
 import { LayerTypeEnum } from "../../types";
+import { Feature } from "ol";
 
 export class GeoJSONLayer extends BaseLayer {
     private geoJsonFormat: GeoJSON;
@@ -53,6 +54,14 @@ export class GeoJSONLayer extends BaseLayer {
         } else if (data.geojson) {
             this.loadGeoJSON(data.geojson);
         }
+    }
+
+    public getAllFeatures(): Feature[] {
+        const features: Feature[] = [];
+        this.source?.forEachFeature((feature: Feature) => {
+            features.push(feature);
+        });
+        return features;
     }
 
     public getLayer(): VectorLayer<VectorSource> | null {

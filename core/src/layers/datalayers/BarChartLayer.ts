@@ -101,6 +101,21 @@ export class BarChartLayer extends BaseLayer {
         });
     }
 
+    public getData(): BarChartData[] {
+        const result: BarChartData[] = [];
+        this.features.forEach((feature, id) => {
+            const props = feature.getProperties();
+            result.push({
+                id: id,
+                longitude: props.geometry?.getCoordinates()[0],
+                latitude: props.geometry?.getCoordinates()[1],
+                value: props.value,
+                title: props.title
+            });
+        });
+        return result;
+    }
+
     public updateData(data: BarChartData[]): void {
         this.setData(data);
     }

@@ -13,6 +13,7 @@ export interface ILayer {
 // ==================== Market Layer Data Start ====================
 export interface MarkerLayerData {
     id: string;
+    name?: string;
     longitude: number;
     latitude: number;
     bubbleBoxTitle?: string;
@@ -29,6 +30,7 @@ export interface MarkerLayerData {
     onClick?: (data: MarkerLayerData, event: any) => void;
     onContextMenu?: (data: MarkerLayerData, event: any) => void;
     onHover?: (data: MarkerLayerData, event: any) => void;
+    timestamp?: number;
 }
 
 export enum MarkerLayerPointTypeEnum {
@@ -131,6 +133,7 @@ export interface CircleDrawData {
 }
 
 export interface HeatmapData {
+    id: string;
     longitude: number;
     latitude: number;
     value?: number;

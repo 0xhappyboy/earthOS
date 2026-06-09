@@ -199,9 +199,13 @@ export interface Translations {
     pointPickLayer: string;
     linePickLayer: string;
     polygonPickLayer: string;
+    featureType: string;
+    properties: string;
 }
 
 const zh: Translations = {
+    featureType: "要素类型",
+    properties: "属性",
     freehandDrawLayer: "手绘线图层",
     ellipseDrawLayer: "椭圆绘制图层",
     markerDrawLayer: "标记点图层",
@@ -403,6 +407,8 @@ const zh: Translations = {
 };
 
 const en: Translations = {
+    featureType: "Feature Type",
+    properties: "Properties",
     freehandDrawLayer: "Freehand Draw Layer",
     ellipseDrawLayer: "Ellipse Draw Layer",
     markerDrawLayer: "Marker Draw Layer",

@@ -14,6 +14,14 @@ import {
     LineDrawLayer,
     SectorDrawLayer,
     PointCoordinatePickLayer,
+    MarkerLayer,
+    BarChartLayer,
+    CircleLayer,
+    ClusterLayer,
+    GeoJSONLayer,
+    HeatmapLayer,
+    PolygonLayer,
+    PolylineLayer,
 } from "./layers";
 import { FloatingToolbar, MeasurementFloatingToolbar, PopupPanel } from "./components";
 import { BasemapTypeEnum, CoordinateSystemTypeEnum, CircleDrawData, RectangleDrawData, TriangleDrawData } from "./types";
@@ -41,6 +49,7 @@ import { PolygonCoordinatePickLayer, PolygonCoordinatePickData } from "./layers/
 import { LineData, PointData, PolygonData } from "./components/CoordinatePickingDataPanel";
 import { ImageDrawTool } from "./draw/ImageDrawTool";
 import { ImageDrawLayer } from "./layers/drawlayers/ImageDrawLayer";
+import { LayerFeature } from "./components/LayersPanel";
 
 export interface EarthViewOptions {
     container?: HTMLElement;
@@ -305,6 +314,342 @@ export class EarthView {
                 onLocateLine: (points) => this.locateToLine(points),
                 onLocatePolygon: (points) => this.locateToPolygon(points),
                 onDrawImage: () => this.startDrawImage(),
+                // 新增：获取图层要素
+                // 获取图层要素的回调
+                onGetLayerFeatures: (layerId) => {
+                    const layer = this.layerManager.getLayer(layerId);
+
+                    // MarkerLayer - 标记图层
+                    if (layer && layer instanceof MarkerLayer) {
+                        const markers = layer.getAllMarkers();
+                        return markers.map(marker => ({
+                            id: marker.id,
+                            name: marker.bubbleBoxTitle || marker.name || marker.id,
+                            type: "point" as const,
+                            coordinates: { longitude: marker.longitude, latitude: marker.latitude },
+                            properties: marker,
+                            timestamp: marker.timestamp || Date.now()
+                        }));
+                    }
+
+                    // PolygonLayer - 面图层
+                    if (layer && layer instanceof PolygonLayer) {
+                        // 注意：需要根据实际的 PolygonLayer API 实现
+                        // 假设有 getAllPolygons 方法
+                        const polygons = (layer as any).getAllPolygons?.() || [];
+                        return polygons.map((polygon: any, index: number) => ({
+                            id: polygon.id || `polygon_${index}`,
+                            name: polygon.title || polygon.name || `面 ${index + 1}`,
+                            type: "polygon" as const,
+                            coordinates: polygon.points || polygon.coordinates,
+                            properties: polygon,
+                            timestamp: polygon.timestamp || Date.now()
+                        }));
+                    }
+
+                    // PolylineLayer - 线图层
+                    if (layer && layer instanceof PolylineLayer) {
+                        const polylines = (layer as any).getAllPolylines?.() || [];
+                        return polylines.map((polyline: any, index: number) => ({
+                            id: polyline.id || `polyline_${index}`,
+                            name: polyline.title || polyline.name || `线 ${index + 1}`,
+                            type: "line" as const,
+                            coordinates: polyline.points || polyline.coordinates,
+                            properties: polyline,
+                            timestamp: polyline.timestamp || Date.now()
+                        }));
+                    }
+
+                    // CircleLayer - 圆形图层
+                    if (layer && layer instanceof CircleLayer) {
+                        const circles = (layer as any).getAllCircles?.() || [];
+                        return circles.map((circle: any, index: number) => ({
+                            id: circle.id || `circle_${index}`,
+                            name: circle.title || circle.name || `圆 ${index + 1}`,
+                            type: "polygon" as const,  // 圆形作为面处理
+                            coordinates: { center: circle.center, radius: circle.radius },
+                            properties: circle,
+                            timestamp: circle.timestamp || Date.now()
+                        }));
+                    }
+
+                    // HeatmapLayer - 热力图图层（通常返回点数据）
+                    // EarthView.ts 第 500-510 行附近
+                    // 在 onGetLayerFeatures 回调中，修改 HeatmapLayer 的处理
+                    if (layer && layer instanceof HeatmapLayer) {
+                        const source = (layer as any).getLayer()?.getSource();
+                        const features = source?.getFeatures() || [];
+                        return features.map((feature: any, index: number) => {
+                            const geom = feature.getGeometry();
+                            let lng = feature.get('longitude');
+                            let lat = feature.get('latitude');
+
+                            // 如果 feature 上没有直接存储坐标，从 geometry 获取
+                            if ((lng === undefined || lat === undefined) && geom) {
+                                const coords = geom.getCoordinates();
+                                lng = coords[0];
+                                lat = coords[1];
+                            }
+
+                            return {
+                                id: feature.get('id') || `heat_${index}`,  // 使用 feature 上存储的 id
+                                name: `热力点 ${index + 1}`,
+                                type: "point" as const,
+                                coordinates: { longitude: lng, latitude: lat },
+                                properties: feature.getProperties(),
+                                timestamp: Date.now()
+                            };
+                        });
+                    }
+
+                    // ClusterLayer - 聚合图层
+                    if (layer && layer instanceof ClusterLayer) {
+                        const data = (layer as any).getData?.() || [];
+                        return data.map((item: any, index: number) => ({
+                            id: item.id || `cluster_${index}`,
+                            name: item.title || `聚合点 ${index + 1}`,
+                            type: "point" as const,
+                            coordinates: { longitude: item.longitude, latitude: item.latitude },
+                            properties: item,
+                            timestamp: item.timestamp || Date.now()
+                        }));
+                    }
+
+                    // BarChartLayer - 柱状图图层
+                    if (layer && layer instanceof BarChartLayer) {
+                        const data = (layer as any).getData?.() || [];
+                        return data.map((item: any, index: number) => ({
+                            id: item.id || `barchart_${index}`,
+                            name: item.title || `柱 ${index + 1}`,
+                            type: "point" as const,
+                            coordinates: { longitude: item.longitude, latitude: item.latitude },
+                            properties: item,
+                            timestamp: item.timestamp || Date.now()
+                        }));
+                    }
+
+                    // GeoJSONLayer - GeoJSON图层
+                    if (layer && layer instanceof GeoJSONLayer) {
+                        const features = layer.getAllFeatures();
+                        return features.map((feature: any, index: number) => {
+                            const geom = feature.getGeometry?.();
+                            let type: "point" | "line" | "polygon" = "point";
+                            let coordinates = null;
+
+                            if (geom) {
+                                const geomType = geom.getType();
+                                if (geomType === "Point") {
+                                    type = "point";
+                                    const coords = geom.getCoordinates();
+                                    coordinates = { longitude: coords[0], latitude: coords[1] };
+                                } else if (geomType === "LineString") {
+                                    type = "line";
+                                    coordinates = geom.getCoordinates().map((c: number[]) => ({ longitude: c[0], latitude: c[1] }));
+                                } else if (geomType === "Polygon") {
+                                    type = "polygon";
+                                    coordinates = geom.getCoordinates()[0].map((c: number[]) => ({ longitude: c[0], latitude: c[1] }));
+                                }
+                            }
+
+                            return {
+                                id: feature.getId?.() || `geojson_${index}`,
+                                name: feature.get("name") || feature.get("title") || `要素 ${index + 1}`,
+                                type,
+                                coordinates,
+                                properties: feature.getProperties?.(),
+                                timestamp: Date.now()
+                            };
+                        });
+                    }
+                    return [];
+                },
+                onLocateFeature: (layerId, featureId) => {
+                    const layer = this.layerManager.getLayer(layerId);
+                    const getCoordinatesFromFeature = (feature: any): { lng: number; lat: number } | null => {
+                        if (!feature) return null;
+                        if (feature.longitude !== undefined && feature.latitude !== undefined) {
+                            return { lng: feature.longitude, lat: feature.latitude };
+                        }
+                        if (feature.coordinates) {
+                            if (feature.coordinates.longitude !== undefined && feature.coordinates.latitude !== undefined) {
+                                return { lng: feature.coordinates.longitude, lat: feature.coordinates.latitude };
+                            }
+                            if (Array.isArray(feature.coordinates) && feature.coordinates.length >= 2) {
+                                return { lng: feature.coordinates[0], lat: feature.coordinates[1] };
+                            }
+                        }
+                        return null;
+                    };
+                    const getPointsFromFeature = (feature: any): Array<{ lng: number; lat: number }> | null => {
+                        if (!feature) return null;
+                        let points = feature.points || feature.coordinates;
+                        if (!points || !Array.isArray(points) || points.length === 0) return null;
+
+                        return points.map((p: any) => ({
+                            lng: p.longitude ?? p[0],
+                            lat: p.latitude ?? p[1]
+                        }));
+                    };
+                    const getFeatureById = (): any => {
+                        if (layer instanceof MarkerLayer) {
+                            return layer.getMarker(featureId);
+                        }
+                        if (layer instanceof PolygonLayer) {
+                            return (layer as any).getPolygon?.(featureId);
+                        }
+                        if (layer instanceof PolylineLayer) {
+                            return (layer as any).getPolyline?.(featureId);
+                        }
+                        if (layer instanceof CircleLayer) {
+                            return (layer as any).getCircle?.(featureId);
+                        }
+                        const features = (layer as any)?.getAllFeatures?.() || (layer as any)?.getData?.() || [];
+                        return features.find((f: any) => f.id === featureId);
+                    };
+                    const feature = getFeatureById();
+                    if (!feature) {
+                        this.showToast("未找到该要素");
+                        return;
+                    }
+                    let centerLng: number | undefined;
+                    let centerLat: number | undefined;
+                    let zoom = 16;
+                    if (layer instanceof MarkerLayer) {
+                        const coords = getCoordinatesFromFeature(feature);
+                        if (coords) {
+                            centerLng = coords.lng;
+                            centerLat = coords.lat;
+                            zoom = 18;
+                        }
+                    }
+                    else if (layer instanceof CircleLayer) {
+                        if (feature.center) {
+                            centerLng = feature.center[0];
+                            centerLat = feature.center[1];
+                        } else {
+                            const coords = getCoordinatesFromFeature(feature);
+                            if (coords) {
+                                centerLng = coords.lng;
+                                centerLat = coords.lat;
+                            }
+                        }
+                    }
+                    else if (layer instanceof PolygonLayer || layer instanceof PolylineLayer) {
+                        const pointsList = getPointsFromFeature(feature);
+                        if (pointsList && pointsList.length > 0) {
+                            const lons = pointsList.map(p => p.lng);
+                            const lats = pointsList.map(p => p.lat);
+                            centerLng = (Math.min(...lons) + Math.max(...lons)) / 2;
+                            centerLat = (Math.min(...lats) + Math.max(...lats)) / 2;
+                            const lonDiff = Math.max(...lons) - Math.min(...lons);
+                            zoom = lonDiff > 0.5 ? 10 : lonDiff > 0.1 ? 12 : lonDiff > 0.05 ? 14 : 16;
+                        }
+                    } // 在 onLocateFeature 回调中，修改 HeatmapLayer 的处理
+                    else if (layer instanceof HeatmapLayer) {
+                        // 直接从 layer 的 source 中查找 feature
+                        const source = (layer as any).getLayer()?.getSource();
+                        const features = source?.getFeatures() || [];
+
+                        // 直接通过 featureId 查找 feature
+                        const targetFeature = features.find((f: any) => f.get('id') === featureId);
+
+                        if (targetFeature) {
+                            const lng = targetFeature.get('longitude');
+                            const lat = targetFeature.get('latitude');
+                            const geom = targetFeature.getGeometry();
+
+                            if (lng !== undefined && lat !== undefined) {
+                                centerLng = lng;
+                                centerLat = lat;
+                                zoom = 16;
+                            } else if (geom) {
+                                const coords = geom.getCoordinates();
+                                centerLng = coords[0];
+                                centerLat = coords[1];
+                                zoom = 16;
+                            }
+                        }
+                    }
+                    else {
+                        const coords = getCoordinatesFromFeature(feature);
+                        if (coords) {
+                            centerLng = coords.lng;
+                            centerLat = coords.lat;
+                            zoom = 16;
+                        }
+                    }
+                    if (centerLng !== undefined && centerLat !== undefined) {
+                        this.setCenter([centerLng, centerLat]);
+                        this.setZoom(zoom);
+                        this.showToast(`${this.t.locatedToPoint}: ${centerLng.toFixed(6)}, ${centerLat.toFixed(6)}`);
+                    } else {
+                        this.showToast("无法定位该要素");
+                    }
+                },
+
+                // 复制要素坐标的回调
+                onCopyFeatureCoordinates: (layerId, featureId) => {
+                    const layer = this.layerManager.getLayer(layerId);
+                    let text = "";
+
+                    if (layer && layer instanceof MarkerLayer) {
+                        const marker = layer.getMarker(featureId);
+                        if (marker) {
+                            text = `${marker.longitude.toFixed(8)}, ${marker.latitude.toFixed(8)}`;
+                        }
+                    } else if (layer && layer instanceof HeatmapLayer) {
+                        const source = (layer as any).getLayer()?.getSource();
+                        const features = source?.getFeatures() || [];
+                        const targetFeature = features.find((f: any) => f.get('id') === featureId);
+                        if (targetFeature) {
+                            const lng = targetFeature.get('longitude');
+                            const lat = targetFeature.get('latitude');
+                            const geom = targetFeature.getGeometry();
+
+                            if (lng !== undefined && lat !== undefined) {
+                                text = `${Number(lng).toFixed(8)}, ${Number(lat).toFixed(8)}`;
+                            } else if (geom) {
+                                const coords = geom.getCoordinates();
+                                text = `${coords[0].toFixed(8)}, ${coords[1].toFixed(8)}`;
+                            }
+                        }
+                    } else if (layer && layer instanceof PolygonLayer) {
+                        const polygon = (layer as any).getPolygon?.(featureId);
+                        if (polygon && polygon.points) {
+                            text = polygon.points.map((p: any) => {
+                                const lng = p.longitude ?? p[0];
+                                const lat = p.latitude ?? p[1];
+                                return `${lng.toFixed(8)}, ${lat.toFixed(8)}`;
+                            }).join("\n");
+                        }
+                    } else if (layer && layer instanceof PolylineLayer) {
+                        const polyline = (layer as any).getPolyline?.(featureId);
+                        if (polyline && polyline.points) {
+                            text = polyline.points.map((p: any) => {
+                                const lng = p.longitude ?? p[0];
+                                const lat = p.latitude ?? p[1];
+                                return `${lng.toFixed(8)}, ${lat.toFixed(8)}`;
+                            }).join("\n");
+                        }
+                    } else if (layer && layer instanceof CircleLayer) {
+                        const circle = (layer as any).getCircle?.(featureId);
+                        if (circle && circle.center) {
+                            text = `Center: ${circle.center[0].toFixed(8)}, ${circle.center[1].toFixed(8)}\nRadius: ${circle.radius}m`;
+                        }
+                    } else {
+                        const features = (layer as any)?.getAllFeatures?.() || [];
+                        const feature = features.find((f: any) => f.id === featureId);
+                        if (feature && feature.longitude !== undefined && feature.latitude !== undefined) {
+                            text = `${feature.longitude.toFixed(8)}, ${feature.latitude.toFixed(8)}`;
+                        }
+                    }
+                    if (text) {
+                        navigator.clipboard.writeText(text);
+                        this.showToast(this.t.coordinatesCopied);
+                    } else {
+                        this.showToast("No coordinates to copy");
+                    }
+                },
             },
             () => this.getLayerList(),
             () => this.getBasemap()

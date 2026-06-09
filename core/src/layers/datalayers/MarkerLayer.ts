@@ -1039,9 +1039,11 @@ export class MarkerLayer extends BaseLayer {
         const feature = new Feature({
             geometry: new Point(fromLonLat([data.longitude, data.latitude])),
             id: data.id,
+            name: data.name || 'Marker',
             bubbleBoxTitle: data.bubbleBoxTitle,
             bubbleBoxDescription: data.bubbleBoxDescription,
             bubbleBoxCoverImage: data.bubbleBoxCoverImage,
+            timestamp: data.timestamp || Date.now(),
             _popupLayer: this.id,
         });
         if (data.pointHtml) {

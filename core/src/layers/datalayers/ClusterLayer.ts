@@ -128,4 +128,19 @@ export class ClusterLayer extends BaseLayer {
         this.clusterSource = null;
         super.destroy();
     }
+
+    public getData(): ClusterData[] {
+        const features: ClusterData[] = [];
+        this.source?.forEachFeature((feature: Feature) => {
+            const props = feature.getProperties();
+            features.push({
+                id: props.id,
+                longitude: props.geometry?.getCoordinates()[0],
+                latitude: props.geometry?.getCoordinates()[1],
+                title: props.title,
+                popupContent: props.popupContent
+            });
+        });
+        return features;
+    }
 }

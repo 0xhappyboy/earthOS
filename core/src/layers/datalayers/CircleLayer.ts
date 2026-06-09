@@ -87,4 +87,20 @@ export class CircleLayer extends BaseLayer {
             data.circles.forEach((circle) => this.addCircle(circle));
         }
     }
+
+    public getAllCircles(): CircleData[] {
+        const result: CircleData[] = [];
+        this.features.forEach((feature, id) => {
+            result.push(feature.getProperties() as CircleData);
+        });
+        return result;
+    }
+
+    public getCircle(id: string): CircleData | undefined {
+        const feature = this.features.get(id);
+        if (feature) {
+            return feature.getProperties() as CircleData;
+        }
+        return undefined;
+    }
 }

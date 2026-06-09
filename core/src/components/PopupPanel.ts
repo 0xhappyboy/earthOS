@@ -40,7 +40,7 @@ export class PopupPanel {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 8px 10px;
+            padding: 2px 10px;
             border-bottom: 1px solid ${isDark ? "#333" : "#e0e0e0"};
             background: ${isDark ? "#2d2d2d" : "#f5f5f5"};
         `;
@@ -52,18 +52,17 @@ export class PopupPanel {
 
         const closeBtn = document.createElement("button");
         closeBtn.style.cssText = `
-            background: none;
-            border: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2px;
-            color: ${isDark ? "#ccc" : "#666"};
-        `;
-        closeBtn.innerHTML = Icons.Close;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    color: ${isDark ? "#ccc" : "#666"};
+    font-size: 16px;
+`;
+        closeBtn.innerHTML = "✕";
         closeBtn.title = this.options.t.close;
         closeBtn.onclick = () => this.options.onClose();
+
         header.appendChild(closeBtn);
         panel.appendChild(header);
         this.contentContainer = document.createElement("div");

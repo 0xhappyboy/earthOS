@@ -55,13 +55,14 @@ export class HeatmapLayer extends BaseLayer {
     public setData(data: HeatmapData[]): void {
         this.data = data;
         this.clear();
-
         if (!this.source) return;
-
         data.forEach((item) => {
             const feature = new Feature({
                 geometry: new Point(fromLonLat([item.longitude, item.latitude])),
                 weight: item.value || 1,
+                id: item.id,
+                longitude: item.longitude,
+                latitude: item.latitude,
             });
             this.source?.addFeature(feature);
         });
@@ -73,5 +74,9 @@ export class HeatmapLayer extends BaseLayer {
 
     public getLayer(): Heatmap | null {
         return this.heatmapLayer;
+    }
+
+    public getData(): HeatmapData[] {
+        return this.data;
     }
 }
