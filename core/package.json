@@ -1,6 +1,6 @@
 {
   "name": "@earthview/core",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "A reliable geographic information graphics system developed based on OpenLayers.",
   "author": "happyboy",
   "license": "AGPL-3.0-only",

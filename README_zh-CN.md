@@ -299,4 +299,8 @@ export enum MarkerLayerAnimationTypeEnum {
 
 #### 标记图层演示
 
-<img src="./assets/marker_layer_demo.gif" width="100%">
+<img src="https://raw.githubusercontent.com/0xhappyboy/earthview/main/assets/marker_layer_demo.gif" width="100%">
+
+## 数据图层管理面板
+
+<img src="https://raw.githubusercontent.com/0xhappyboy/earthview/main/assets/data_layer_manager_demo.gif" width="100%">

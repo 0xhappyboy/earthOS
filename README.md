@@ -300,4 +300,8 @@ export enum MarkerLayerAnimationTypeEnum {
 
 #### MarkerLayer Demo
 
-<img src="./assets/marker_layer_demo.gif" width="100%">
+<img src="https://raw.githubusercontent.com/0xhappyboy/earthview/main/assets/marker_layer_demo.gif" width="100%">
+
+## Data Layer Management Panel
+
+<img src="https://raw.githubusercontent.com/0xhappyboy/earthview/main/assets/data_layer_manager_demo.gif" width="100%">
