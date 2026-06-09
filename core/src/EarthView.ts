@@ -314,12 +314,8 @@ export class EarthView {
                 onLocateLine: (points) => this.locateToLine(points),
                 onLocatePolygon: (points) => this.locateToPolygon(points),
                 onDrawImage: () => this.startDrawImage(),
-                // 新增：获取图层要素
-                // 获取图层要素的回调
                 onGetLayerFeatures: (layerId) => {
                     const layer = this.layerManager.getLayer(layerId);
-
-                    // MarkerLayer - 标记图层
                     if (layer && layer instanceof MarkerLayer) {
                         const markers = layer.getAllMarkers();
                         return markers.map(marker => ({
@@ -331,11 +327,7 @@ export class EarthView {
                             timestamp: marker.timestamp || Date.now()
                         }));
                     }
-
-                    // PolygonLayer - 面图层
                     if (layer && layer instanceof PolygonLayer) {
-                        // 注意：需要根据实际的 PolygonLayer API 实现
-                        // 假设有 getAllPolygons 方法
                         const polygons = (layer as any).getAllPolygons?.() || [];
                         return polygons.map((polygon: any, index: number) => ({
                             id: polygon.id || `polygon_${index}`,
@@ -346,8 +338,6 @@ export class EarthView {
                             timestamp: polygon.timestamp || Date.now()
                         }));
                     }
-
-                    // PolylineLayer - 线图层
                     if (layer && layer instanceof PolylineLayer) {
                         const polylines = (layer as any).getAllPolylines?.() || [];
                         return polylines.map((polyline: any, index: number) => ({
@@ -359,23 +349,17 @@ export class EarthView {
                             timestamp: polyline.timestamp || Date.now()
                         }));
                     }
-
-                    // CircleLayer - 圆形图层
                     if (layer && layer instanceof CircleLayer) {
                         const circles = (layer as any).getAllCircles?.() || [];
                         return circles.map((circle: any, index: number) => ({
                             id: circle.id || `circle_${index}`,
                             name: circle.title || circle.name || `圆 ${index + 1}`,
-                            type: "polygon" as const,  // 圆形作为面处理
+                            type: "polygon" as const,
                             coordinates: { center: circle.center, radius: circle.radius },
                             properties: circle,
                             timestamp: circle.timestamp || Date.now()
                         }));
                     }
-
-                    // HeatmapLayer - 热力图图层（通常返回点数据）
-                    // EarthView.ts 第 500-510 行附近
-                    // 在 onGetLayerFeatures 回调中，修改 HeatmapLayer 的处理
                     if (layer && layer instanceof HeatmapLayer) {
                         const source = (layer as any).getLayer()?.getSource();
                         const features = source?.getFeatures() || [];
@@ -383,17 +367,14 @@ export class EarthView {
                             const geom = feature.getGeometry();
                             let lng = feature.get('longitude');
                             let lat = feature.get('latitude');
-
-                            // 如果 feature 上没有直接存储坐标，从 geometry 获取
                             if ((lng === undefined || lat === undefined) && geom) {
                                 const coords = geom.getCoordinates();
                                 lng = coords[0];
                                 lat = coords[1];
                             }
-
                             return {
-                                id: feature.get('id') || `heat_${index}`,  // 使用 feature 上存储的 id
-                                name: `热力点 ${index + 1}`,
+                                id: feature.get('id') || `heat_${index}`,
+                                name: `HotPoint ${index + 1}`,
                                 type: "point" as const,
                                 coordinates: { longitude: lng, latitude: lat },
                                 properties: feature.getProperties(),
@@ -401,8 +382,6 @@ export class EarthView {
                             };
                         });
                     }
-
-                    // ClusterLayer - 聚合图层
                     if (layer && layer instanceof ClusterLayer) {
                         const data = (layer as any).getData?.() || [];
                         return data.map((item: any, index: number) => ({
@@ -414,8 +393,6 @@ export class EarthView {
                             timestamp: item.timestamp || Date.now()
                         }));
                     }
-
-                    // BarChartLayer - 柱状图图层
                     if (layer && layer instanceof BarChartLayer) {
                         const data = (layer as any).getData?.() || [];
                         return data.map((item: any, index: number) => ({
@@ -427,8 +404,6 @@ export class EarthView {
                             timestamp: item.timestamp || Date.now()
                         }));
                     }
-
-                    // GeoJSONLayer - GeoJSON图层
                     if (layer && layer instanceof GeoJSONLayer) {
                         const features = layer.getAllFeatures();
                         return features.map((feature: any, index: number) => {
@@ -450,10 +425,9 @@ export class EarthView {
                                     coordinates = geom.getCoordinates()[0].map((c: number[]) => ({ longitude: c[0], latitude: c[1] }));
                                 }
                             }
-
                             return {
                                 id: feature.getId?.() || `geojson_${index}`,
-                                name: feature.get("name") || feature.get("title") || `要素 ${index + 1}`,
+                                name: feature.get("name") || feature.get("title") || `Elements ${index + 1}`,
                                 type,
                                 coordinates,
                                 properties: feature.getProperties?.(),
@@ -508,7 +482,7 @@ export class EarthView {
                     };
                     const feature = getFeatureById();
                     if (!feature) {
-                        this.showToast("未找到该要素");
+                        this.showToast("The element was not found.");
                         return;
                     }
                     let centerLng: number | undefined;
@@ -544,15 +518,11 @@ export class EarthView {
                             const lonDiff = Math.max(...lons) - Math.min(...lons);
                             zoom = lonDiff > 0.5 ? 10 : lonDiff > 0.1 ? 12 : lonDiff > 0.05 ? 14 : 16;
                         }
-                    } // 在 onLocateFeature 回调中，修改 HeatmapLayer 的处理
+                    }
                     else if (layer instanceof HeatmapLayer) {
-                        // 直接从 layer 的 source 中查找 feature
                         const source = (layer as any).getLayer()?.getSource();
                         const features = source?.getFeatures() || [];
-
-                        // 直接通过 featureId 查找 feature
                         const targetFeature = features.find((f: any) => f.get('id') === featureId);
-
                         if (targetFeature) {
                             const lng = targetFeature.get('longitude');
                             const lat = targetFeature.get('latitude');
@@ -583,11 +553,9 @@ export class EarthView {
                         this.setZoom(zoom);
                         this.showToast(`${this.t.locatedToPoint}: ${centerLng.toFixed(6)}, ${centerLat.toFixed(6)}`);
                     } else {
-                        this.showToast("无法定位该要素");
+                        this.showToast("Unable to locate the element");
                     }
                 },
-
-                // 复制要素坐标的回调
                 onCopyFeatureCoordinates: (layerId, featureId) => {
                     const layer = this.layerManager.getLayer(layerId);
                     let text = "";
