@@ -12,6 +12,7 @@ import { BaseLayer } from "../BaseLayer";
 import { LayerTypeEnum } from "../../types";
 import { generateId, arrayToRgba } from "../../utils";
 import CircleStyle from "ol/style/Circle";
+import { Translations } from "../../i18n";
 
 export interface PointCoordinatePickData {
     id: string;
@@ -28,6 +29,7 @@ export class PointCoordinatePickLayer extends BaseLayer {
     private textColor: number[];
     private textSize: number;
     private features: Map<string, Feature> = new Map();
+    private t: Translations | null;
 
     constructor(
         id: string,
@@ -38,6 +40,7 @@ export class PointCoordinatePickLayer extends BaseLayer {
             visible?: boolean;
             opacity?: number;
             zIndex?: number;
+            t: Translations;
         }
     ) {
         super(id, name, LayerTypeEnum.POINT_COORDINATE_PICK, {
@@ -54,6 +57,7 @@ export class PointCoordinatePickLayer extends BaseLayer {
             opacity: this.opacity,
             zIndex: this.zIndex,
         });
+        this.t = options?.t || null;
     }
 
     public setView(view: any): void {
@@ -100,7 +104,7 @@ export class PointCoordinatePickLayer extends BaseLayer {
             labelFeature.set("type", "point_pick");
             labelFeature.setStyle(new Style({
                 text: new Text({
-                    text: "坐标拾取",
+                    text: this.t?.pointPick.label_text || 'Point Pick',
                     font: `${this.textSize}px sans-serif`,
                     fill: new Fill({ color: arrayToRgba(this.textColor) }),
                     stroke: new Stroke({ color: "#000000", width: 2 }),
@@ -163,7 +167,7 @@ export class PointCoordinatePickLayer extends BaseLayer {
             const isActive = fid === id;
             feature.setStyle(new Style({
                 text: new Text({
-                    text: "坐标拾取",
+                    text: this.t?.pointPick.label_text || 'Point Pick',
                     font: `${this.textSize}px sans-serif`,
                     fill: new Fill({ color: arrayToRgba(isActive ? [255, 170, 0, 1] : this.textColor) }),
                     stroke: new Stroke({ color: "#000000", width: 2 }),
@@ -180,7 +184,7 @@ export class PointCoordinatePickLayer extends BaseLayer {
         this.features.forEach((feature) => {
             feature.setStyle(new Style({
                 text: new Text({
-                    text: "坐标拾取",
+                    text: this.t?.pointPick.label_text || 'Point Pick',
                     font: `${this.textSize}px sans-serif`,
                     fill: new Fill({ color: arrayToRgba(this.textColor) }),
                     stroke: new Stroke({ color: "#000000", width: 2 }),

@@ -12,6 +12,7 @@ import { toLonLat } from "ol/proj";
 import { BaseLayer } from "../BaseLayer";
 import { LayerTypeEnum } from "../../types";
 import { generateId, arrayToRgba } from "../../utils";
+import { Translations } from "../../i18n";
 
 export interface PolygonCoordinatePickData {
     id: string;
@@ -32,6 +33,7 @@ export class PolygonCoordinatePickLayer extends BaseLayer {
     private textSize: number;
     private features: Map<string, Feature> = new Map();
     private labelFeatures: Map<string, Feature> = new Map();
+    private t: Translations | null;
 
     constructor(
         id: string,
@@ -45,6 +47,7 @@ export class PolygonCoordinatePickLayer extends BaseLayer {
             visible?: boolean;
             opacity?: number;
             zIndex?: number;
+            t: Translations;
         }
     ) {
         super(id, name, LayerTypeEnum.POLYGON_COORDINATE_PICK, {
@@ -64,6 +67,7 @@ export class PolygonCoordinatePickLayer extends BaseLayer {
             opacity: this.opacity,
             zIndex: this.zIndex,
         });
+        this.t = options?.t || null;
     }
 
     public setView(view: any): void {
@@ -108,7 +112,7 @@ export class PolygonCoordinatePickLayer extends BaseLayer {
                 id,
                 points,
                 timestamp,
-                name: `面拾取 ${new Date(timestamp).toLocaleTimeString()}`
+                name: `${this.t?.polygonPick.default_name || 'Polygon Pick'} ${new Date(timestamp).toLocaleTimeString()}`
             };
             this.polygons.set(id, PolygonCoordinatePickData);
             this.features.set(id, feature);
@@ -129,7 +133,7 @@ export class PolygonCoordinatePickLayer extends BaseLayer {
             labelFeature.set("type", "polygon_pick");
             labelFeature.setStyle(new Style({
                 text: new Text({
-                    text: `面 ${this.polygons.size}`,
+                    text: `${this.t?.polygonPick.label_prefix || 'Polygon'} ${this.polygons.size}`,
                     font: `${this.textSize}px sans-serif`,
                     fill: new Fill({ color: arrayToRgba(this.textColor) }),
                     stroke: new Stroke({ color: "#000000", width: 2 }),
@@ -204,7 +208,9 @@ export class PolygonCoordinatePickLayer extends BaseLayer {
             const isActive = fid === id;
             feature.setStyle(new Style({
                 text: new Text({
-                    text: isActive ? "● 面拾取 ●" : `面 ${this.polygons.size}`,
+                    text: isActive
+                        ? (this.t?.polygonPick.highlight_text || '● Polygon Pick ●')
+                        : `${this.t?.polygonPick.label_prefix || 'Polygon'} ${this.polygons.size}`,
                     font: `${this.textSize}px sans-serif`,
                     fill: new Fill({ color: arrayToRgba(isActive ? [255, 170, 0, 1] : this.textColor) }),
                     stroke: new Stroke({ color: "#000000", width: 2 }),
@@ -230,7 +236,7 @@ export class PolygonCoordinatePickLayer extends BaseLayer {
         this.labelFeatures.forEach((feature) => {
             feature.setStyle(new Style({
                 text: new Text({
-                    text: `面 ${this.polygons.size}`,
+                    text: `${this.t?.polygonPick.label_prefix || 'Polygon'} ${this.polygons.size}`,
                     font: `${this.textSize}px sans-serif`,
                     fill: new Fill({ color: arrayToRgba(this.textColor) }),
                     stroke: new Stroke({ color: "#000000", width: 2 }),

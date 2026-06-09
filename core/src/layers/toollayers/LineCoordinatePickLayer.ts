@@ -12,6 +12,7 @@ import { toLonLat } from "ol/proj";
 import { BaseLayer } from "../BaseLayer";
 import { LayerTypeEnum } from "../../types";
 import { generateId, arrayToRgba } from "../../utils";
+import { Translations } from "../../i18n";
 
 export interface LineCoordinatePickData {
     id: string;
@@ -31,6 +32,7 @@ export class LineCoordinatePickLayer extends BaseLayer {
     private textSize: number;
     private features: Map<string, Feature> = new Map();
     private labelFeatures: Map<string, Feature> = new Map();
+    private t: Translations | null;
 
     constructor(
         id: string,
@@ -43,6 +45,7 @@ export class LineCoordinatePickLayer extends BaseLayer {
             visible?: boolean;
             opacity?: number;
             zIndex?: number;
+            t: Translations;
         }
     ) {
         super(id, name, LayerTypeEnum.LINE_COORDINATE_PICK, {
@@ -61,6 +64,7 @@ export class LineCoordinatePickLayer extends BaseLayer {
             opacity: this.opacity,
             zIndex: this.zIndex,
         });
+        this.t = options?.t || null;
     }
 
     public setView(view: any): void {
@@ -100,7 +104,7 @@ export class LineCoordinatePickLayer extends BaseLayer {
                 id,
                 points,
                 timestamp,
-                name: `线拾取 ${new Date(timestamp).toLocaleTimeString()}`
+                name: `${this.t?.linePick.default_name || 'Line Pick'} ${new Date(timestamp).toLocaleTimeString()}`
             };
             this.lines.set(id, LineCoordinatePickData);
             this.features.set(id, feature);
@@ -120,7 +124,7 @@ export class LineCoordinatePickLayer extends BaseLayer {
             labelFeature.set("type", "line_pick");
             labelFeature.setStyle(new Style({
                 text: new Text({
-                    text: `线 ${this.lines.size}`,
+                    text: `${this.t?.linePick.label_prefix || 'Line'} ${this.lines.size}`,
                     font: `${this.textSize}px sans-serif`,
                     fill: new Fill({ color: arrayToRgba(this.textColor) }),
                     stroke: new Stroke({ color: "#000000", width: 2 }),
@@ -195,7 +199,9 @@ export class LineCoordinatePickLayer extends BaseLayer {
             const isActive = fid === id;
             feature.setStyle(new Style({
                 text: new Text({
-                    text: isActive ? "● 线拾取 ●" : `线 ${this.lines.size}`,
+                    text: isActive
+                        ? (this.t?.linePick.highlight_text || '● Line Pick ●')
+                        : `${this.t?.linePick.label_prefix || 'Line'} ${this.lines.size}`,
                     font: `${this.textSize}px sans-serif`,
                     fill: new Fill({ color: arrayToRgba(isActive ? [255, 170, 0, 1] : this.textColor) }),
                     stroke: new Stroke({ color: "#000000", width: 2 }),
@@ -221,7 +227,7 @@ export class LineCoordinatePickLayer extends BaseLayer {
         this.labelFeatures.forEach((feature) => {
             feature.setStyle(new Style({
                 text: new Text({
-                    text: `线 ${this.lines.size}`,
+                    text: `${this.t?.linePick.label_prefix || 'Line'} ${this.lines.size}`,
                     font: `${this.textSize}px sans-serif`,
                     fill: new Fill({ color: arrayToRgba(this.textColor) }),
                     stroke: new Stroke({ color: "#000000", width: 2 }),

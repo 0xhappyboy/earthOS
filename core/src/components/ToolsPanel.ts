@@ -60,21 +60,21 @@ export class ToolsPanel {
         this.element.appendChild(pickTitle);
         const pointPickRow = this.createPickRow(
             Icons.Point,
-            this.props.t.pointPick,
+            this.props.t.pointPick.default_name,
             "point",
             this.props.onPointCoordinatePick
         );
         this.element.appendChild(pointPickRow);
         const linePickRow = this.createPickRow(
-            Icons.Line,
-            this.props.t.linePick,
+            Icons.Line2,
+            this.props.t.linePick.default_name,
             "line",
             this.props.onLineCoordinatePick
         );
         this.element.appendChild(linePickRow);
         const polygonPickRow = this.createPickRow(
             Icons.Polygon,
-            this.props.t.polygonPick,
+            this.props.t.polygonPick.default_name,
             "polygon",
             this.props.onPolygonCoordinatePick
         );
@@ -130,7 +130,7 @@ export class ToolsPanel {
         row.onclick = onClick;
         const iconSpan = document.createElement("span");
         iconSpan.innerHTML = icon;
-        iconSpan.style.cssText = `font-size: 14px; color: ${isDark ? "#fff" : "#333"};`;  
+        iconSpan.style.cssText = `font-size: 14px; color: ${isDark ? "#fff" : "#333"};`;
         row.appendChild(iconSpan);
         const labelSpan = document.createElement("span");
         labelSpan.style.cssText = `color: ${isDark ? "#fff" : "#333"}; font-size: 12px; flex: 1;`;
@@ -197,7 +197,7 @@ export class ToolsPanel {
         row.onclick = onClick;
         const iconSpan = document.createElement("span");
         iconSpan.innerHTML = icon;
-        iconSpan.style.cssText = `font-size: 14px; color: ${isDark ? "#fff" : "#333"};`;  
+        iconSpan.style.cssText = `font-size: 14px; color: ${isDark ? "#fff" : "#333"};`;
         row.appendChild(iconSpan);
         const labelSpan = document.createElement("span");
         labelSpan.style.cssText = `color: ${isDark ? "#fff" : "#333"}; font-size: 12px; flex: 1;`;

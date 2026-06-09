@@ -174,9 +174,6 @@ export interface Translations {
     markerTool: string;
     textTool: string;
     imageTool: string;
-    pointPick: string;
-    linePick: string;
-    polygonPick: string;
     points: string;
     pointsCount: string;
     featureNotFound: string;
@@ -201,9 +198,37 @@ export interface Translations {
     polygonPickLayer: string;
     featureType: string;
     properties: string;
+    linePick: {
+        default_name: string,
+        label_prefix: string,
+        highlight_text: string
+    };
+    pointPick: {
+        default_name: string,
+        label_text: string
+    };
+    polygonPick: {
+        default_name: string,
+        label_prefix: string,
+        highlight_text: string
+    };
 }
 
 const zh: Translations = {
+    linePick: {
+        default_name: "线拾取",
+        label_prefix: "线",
+        highlight_text: "● 线拾取 ●"
+    },
+    pointPick: {
+        default_name: "点拾取",
+        label_text: "坐标拾取"
+    },
+    polygonPick: {
+        default_name: "面拾取",
+        label_prefix: "面",
+        highlight_text: "● 面拾取 ●"
+    },
     featureType: "要素类型",
     properties: "属性",
     freehandDrawLayer: "手绘线图层",
@@ -394,9 +419,6 @@ const zh: Translations = {
     markerTool: "标记点",
     textTool: "文字标注",
     imageTool: "图片标注",
-    pointPick: "点拾取",
-    linePick: "线拾取",
-    polygonPick: "面拾取",
     points: "个点",
     pointsCount: "个",
     featureNotFound: "未找到要素",
@@ -407,6 +429,20 @@ const zh: Translations = {
 };
 
 const en: Translations = {
+    linePick: {
+        default_name: "Line Pick",
+        label_prefix: "Line",
+        highlight_text: "● Line Pick ●"
+    },
+    pointPick: {
+        default_name: "Point Pick",
+        label_text: "Coordinate Pick"
+    },
+    polygonPick: {
+        default_name: "Polygon Pick",
+        label_prefix: "Polygon",
+        highlight_text: "● Polygon Pick ●"
+    },
     featureType: "Feature Type",
     properties: "Properties",
     freehandDrawLayer: "Freehand Draw Layer",
@@ -597,9 +633,6 @@ const en: Translations = {
     markerTool: "Marker",
     textTool: "Text",
     imageTool: "Image",
-    pointPick: "Point Pick",
-    linePick: "Line Pick",
-    polygonPick: "Polygon Pick",
     points: "points",
     pointsCount: "",
     featureNotFound: "Feature not found",
