@@ -27,7 +27,7 @@ export class PopupPanel {
             top: 10px;
             right: 60px;
             width: 200px;
-            max-height: 260px;
+            max-height: 328px;
             background: ${isDark ? "#1e1e1e" : "#ffffff"};
             border: 1px solid ${isDark ? "#333" : "#e0e0e0"};
             border-radius: 8px;
@@ -68,7 +68,7 @@ export class PopupPanel {
         panel.appendChild(header);
         this.contentContainer = document.createElement("div");
         this.contentContainer.style.cssText = `
-            max-height: 210px;
+            max-height: 288px;
             overflow-y: auto;
             padding: 4px 0;
         `;

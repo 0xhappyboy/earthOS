@@ -62,3 +62,11 @@ export enum LayerTypeEnum {
     LINE_COORDINATE_PICK = "line-coordinate-pick",
     POLYGON_COORDINATE_PICK = "polygon-coordinate-pick",
 }
+
+
+// layer classification
+export enum LayerClassification {
+    DATA_LAYER = "data_layer",
+    DRAW_LAYER = "draw_layer",
+    TOOL_LAYER = "tool_layer",
+}

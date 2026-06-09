@@ -128,17 +128,14 @@ export class ToolsPanel {
             }
         };
         row.onclick = onClick;
-
         const iconSpan = document.createElement("span");
         iconSpan.innerHTML = icon;
-        iconSpan.style.cssText = `font-size: 14px;`;
+        iconSpan.style.cssText = `font-size: 14px; color: ${isDark ? "#fff" : "#333"};`;  
         row.appendChild(iconSpan);
-
         const labelSpan = document.createElement("span");
         labelSpan.style.cssText = `color: ${isDark ? "#fff" : "#333"}; font-size: 12px; flex: 1;`;
         labelSpan.textContent = label;
         row.appendChild(labelSpan);
-
         if (isActive && this.props.measurePreview) {
             const preview = this.props.measurePreview;
             let previewText = "";
@@ -159,14 +156,12 @@ export class ToolsPanel {
                 row.appendChild(previewSpan);
             }
         }
-
         if (isActive) {
             const activeDot = document.createElement("span");
             activeDot.style.cssText = `color: #00aaff; font-size: 10px;`;
             activeDot.textContent = "●";
             row.appendChild(activeDot);
         }
-
         return row;
     }
 
@@ -178,7 +173,6 @@ export class ToolsPanel {
     ): HTMLDivElement {
         const isDark = this.props.theme === "dark";
         const isActive = this.props.currentPickType === type;
-
         const row = document.createElement("div");
         row.style.cssText = `
             display: flex;
@@ -190,7 +184,6 @@ export class ToolsPanel {
             background: ${isActive ? (isDark ? "#2a6a4a" : "#e8f5e9") : "transparent"};
             transition: all 0.2s;
         `;
-
         row.onmouseenter = () => {
             if (!isActive) {
                 row.style.background = isDark ? "#2a2a2a" : "#f5f5f5";
@@ -202,24 +195,20 @@ export class ToolsPanel {
             }
         };
         row.onclick = onClick;
-
         const iconSpan = document.createElement("span");
         iconSpan.innerHTML = icon;
-        iconSpan.style.cssText = `font-size: 14px;`;
+        iconSpan.style.cssText = `font-size: 14px; color: ${isDark ? "#fff" : "#333"};`;  
         row.appendChild(iconSpan);
-
         const labelSpan = document.createElement("span");
         labelSpan.style.cssText = `color: ${isDark ? "#fff" : "#333"}; font-size: 12px; flex: 1;`;
         labelSpan.textContent = label;
         row.appendChild(labelSpan);
-
         if (isActive) {
             const activeDot = document.createElement("span");
             activeDot.style.cssText = `color: #4caf50; font-size: 10px;`;
             activeDot.textContent = "●";
             row.appendChild(activeDot);
         }
-
         return row;
     }
 

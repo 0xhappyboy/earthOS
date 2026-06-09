@@ -79,19 +79,20 @@ export class DrawToolsPanel {
         const isDark = this.props.theme === "dark";
         const row = document.createElement("div");
         row.style.cssText = `
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 8px 12px;
-            cursor: pointer;
-            border-bottom: 1px solid ${isDark ? "#333" : "#eee"};
-            transition: all 0.2s;
-        `;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid ${isDark ? "#333" : "#eee"};
+        transition: all 0.2s;
+    `;
         row.onmouseenter = () => { row.style.background = isDark ? "#2a2a2a" : "#f5f5f5"; };
         row.onmouseleave = () => { row.style.background = "transparent"; };
         row.onclick = onClick;
         const iconSpan = document.createElement("span");
         iconSpan.innerHTML = iconHtml;
+        iconSpan.style.cssText = `font-size: 14px; color: ${isDark ? "#fff" : "#333"};`;
         row.appendChild(iconSpan);
         const textSpan = document.createElement("span");
         textSpan.style.cssText = `color: ${isDark ? "#fff" : "#333"}; font-size: 12px;`;

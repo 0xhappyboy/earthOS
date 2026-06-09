@@ -184,9 +184,39 @@ export interface Translations {
     cannotGetPixelFromCoordinate: string;
     bezierFeatureNotFound: string;
     noSourceAvailable: string;
+    dataLayers: string;
+    drawLayers: string;
+    toolLayers: string;
+    freehandDrawLayer: string;
+    ellipseDrawLayer: string;
+    markerDrawLayer: string;
+    textDrawLayer: string;
+    imageDrawLayer: string;
+    arrowDrawLayer: string;
+    lineDrawLayer: string;
+    bezierDrawLayer: string;
+    sectorDrawLayer: string;
+    pointPickLayer: string;
+    linePickLayer: string;
+    polygonPickLayer: string;
 }
 
 const zh: Translations = {
+    freehandDrawLayer: "手绘线图层",
+    ellipseDrawLayer: "椭圆绘制图层",
+    markerDrawLayer: "标记点图层",
+    textDrawLayer: "文字标注图层",
+    imageDrawLayer: "图片标注图层",
+    arrowDrawLayer: "箭头绘制图层",
+    lineDrawLayer: "线段绘制图层",
+    bezierDrawLayer: "贝塞尔曲线图层",
+    sectorDrawLayer: "扇形绘制图层",
+    pointPickLayer: "点坐标拾取图层",
+    linePickLayer: "线坐标拾取图层",
+    polygonPickLayer: "面坐标拾取图层",
+    dataLayers: "数据图层",
+    drawLayers: "绘图图层",
+    toolLayers: "工具图层",
     pleaseEnterText: "请输入文字",
     longitude: "经度",
     latitude: "纬度",
@@ -373,6 +403,21 @@ const zh: Translations = {
 };
 
 const en: Translations = {
+    freehandDrawLayer: "Freehand Draw Layer",
+    ellipseDrawLayer: "Ellipse Draw Layer",
+    markerDrawLayer: "Marker Draw Layer",
+    textDrawLayer: "Text Draw Layer",
+    imageDrawLayer: "Image Draw Layer",
+    arrowDrawLayer: "Arrow Draw Layer",
+    lineDrawLayer: "Line Draw Layer",
+    bezierDrawLayer: "Bezier Curve Layer",
+    sectorDrawLayer: "Sector Draw Layer",
+    pointPickLayer: "Point Pick Layer",
+    linePickLayer: "Line Pick Layer",
+    polygonPickLayer: "Polygon Pick Layer",
+    dataLayers: "Data Layers",
+    drawLayers: "Draw Layers",
+    toolLayers: "Tool Layers",
     pleaseEnterText: "Please enter text",
     longitude: "Longitude",
     latitude: "Latitude",
