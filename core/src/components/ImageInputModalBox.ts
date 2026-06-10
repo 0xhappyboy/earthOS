@@ -18,6 +18,7 @@ export interface ImageInputModalBoxOptions {
     onDelete?: () => void;
     theme: Theme;
     t: Translations;
+    container?: HTMLElement;
 }
 
 export class ImageInputModalBox {
@@ -38,15 +39,17 @@ export class ImageInputModalBox {
     private deleteBtn: HTMLButtonElement;
     private currentImageUrl: string;
     private currentImageData: string | undefined;
+    private containerEl: HTMLElement;
 
     constructor(options: ImageInputModalBoxOptions, position?: { x: number; y: number }) {
         this.options = options;
         this.currentImageUrl = options.initialImageUrl || "";
         this.currentImageData = options.initialImageData;
+        this.containerEl = options.container || document.body;
         this.overlay = this.createOverlay();
         this.element = this.createElement();
-        document.body.appendChild(this.overlay);
-        document.body.appendChild(this.element);
+        this.containerEl.appendChild(this.overlay);
+        this.containerEl.appendChild(this.element);
         if (position) {
             this.setPosition(position);
         } else {
@@ -103,14 +106,19 @@ export class ImageInputModalBox {
             overflow: hidden;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         `;
+
         const header = this.createHeader(isDark);
         div.appendChild(header);
+
         const previewArea = this.createPreviewArea(isDark);
         div.appendChild(previewArea);
+
         const formArea = this.createFormArea(isDark);
         div.appendChild(formArea);
+
         const footer = this.createFooter(isDark);
         div.appendChild(footer);
+
         return div;
     }
 
@@ -149,6 +157,7 @@ export class ImageInputModalBox {
         `;
         previewLabel.textContent = this.options.t.imagePreview;
         container.appendChild(previewLabel);
+
         this.imagePreview = document.createElement("div");
         this.imagePreview.className = "image-input-modal-preview";
         this.imagePreview.style.cssText = `
@@ -169,6 +178,7 @@ export class ImageInputModalBox {
             display: none;
         `;
         this.imagePreview.appendChild(this.previewImg);
+
         const noImageText = document.createElement("span");
         noImageText.id = "no-image-text";
         noImageText.style.cssText = `
@@ -182,35 +192,37 @@ export class ImageInputModalBox {
         noImageText.textContent = this.options.t.noImage;
         this.imagePreview.appendChild(noImageText);
         container.appendChild(this.imagePreview);
+
         return container;
     }
 
     private createFormArea(isDark: boolean): HTMLDivElement {
         const form = document.createElement("div");
         form.style.cssText = `padding: 8px 12px;`;
-        const urlRow = this.createInputRow(
-            this.options.t.imageUrl,
-            "text",
-            this.currentImageUrl,
-            isDark
-        );
+
+        const urlRow = this.createInputRow(this.options.t.imageUrl, "text", this.currentImageUrl, isDark);
         this.urlInput = urlRow.input as HTMLInputElement;
         this.urlInput.className = "image-input-modal-url";
         form.appendChild(urlRow.container);
+
         const uploadRow = this.createUploadRow(isDark);
         form.appendChild(uploadRow);
+
         const widthRow = this.createNumberRow(this.options.t.width, "width", this.options.initialWidth || 32, 16, 512, isDark);
         this.widthInput = widthRow.input as HTMLInputElement;
         this.widthInput.className = "image-input-modal-width";
         form.appendChild(widthRow.container);
+
         const heightRow = this.createNumberRow(this.options.t.height, "height", this.options.initialHeight || 32, 16, 512, isDark);
         this.heightInput = heightRow.input as HTMLInputElement;
         this.heightInput.className = "image-input-modal-height";
         form.appendChild(heightRow.container);
+
         const opacityRow = this.createOpacityRow(isDark);
         this.opacityInput = opacityRow.input as HTMLInputElement;
         this.opacityInput.className = "image-input-modal-opacity";
         form.appendChild(opacityRow.container);
+
         return form;
     }
 
@@ -221,9 +233,7 @@ export class ImageInputModalBox {
         isDark: boolean
     ): { container: HTMLDivElement; input: HTMLInputElement } {
         const container = document.createElement("div");
-        container.style.cssText = `
-            margin-bottom: 8px;
-        `;
+        container.style.cssText = `margin-bottom: 8px;`;
         const labelSpan = document.createElement("span");
         labelSpan.style.cssText = `
             display: block;
@@ -317,24 +327,28 @@ export class ImageInputModalBox {
             this.uploadBtn.style.background = isDark ? "#3d3d3d" : "#e8e8e8";
         };
         container.appendChild(this.uploadBtn);
+
         this.fileInput = document.createElement("input");
         this.fileInput.type = "file";
         this.fileInput.accept = "image/*";
         this.fileInput.className = "image-input-modal-file-input";
         this.fileInput.style.display = "none";
         container.appendChild(this.fileInput);
+
         this.uploadBtn.onclick = (e) => {
             e.stopPropagation();
             if (this.fileInput) {
                 this.fileInput.click();
             }
         };
+
         this.fileInput.onchange = (e) => {
             const target = e.target as HTMLInputElement;
             if (target.files && target.files[0]) {
                 this.uploadImage(target.files[0]);
             }
         };
+
         return container;
     }
 
@@ -354,6 +368,7 @@ export class ImageInputModalBox {
         `;
         labelSpan.textContent = this.options.t.opacity;
         container.appendChild(labelSpan);
+
         this.opacityInput = document.createElement("input");
         this.opacityInput.type = "range";
         this.opacityInput.min = "0";
@@ -373,6 +388,7 @@ export class ImageInputModalBox {
             }
         };
         container.appendChild(this.opacityInput);
+
         this.opacityValue = document.createElement("span");
         this.opacityValue.className = "image-input-modal-opacity-value";
         this.opacityValue.style.cssText = `
@@ -383,6 +399,7 @@ export class ImageInputModalBox {
         `;
         this.opacityValue.textContent = `${this.opacityInput.value}%`;
         container.appendChild(this.opacityValue);
+
         return { container, input: this.opacityInput };
     }
 
@@ -396,41 +413,25 @@ export class ImageInputModalBox {
             background: ${isDark ? "#252525" : "#fafafa"};
             border-top: 1px solid ${isDark ? "#3d3d3d" : "#eee"};
         `;
+
         if (this.options.onDelete) {
-            this.deleteBtn = this.createFooterButton(
-                this.options.t.delete,
-                isDark,
-                false,
-                true
-            );
+            this.deleteBtn = this.createFooterButton(this.options.t.delete, isDark, false, true);
             this.deleteBtn.className = "image-input-modal-delete";
             footer.appendChild(this.deleteBtn);
         }
-        this.cancelBtn = this.createFooterButton(
-            this.options.t.cancel,
-            isDark,
-            false,
-            false
-        );
+
+        this.cancelBtn = this.createFooterButton(this.options.t.cancel, isDark, false, false);
         this.cancelBtn.className = "image-input-modal-cancel";
         footer.appendChild(this.cancelBtn);
-        this.confirmBtn = this.createFooterButton(
-            this.options.t.confirm,
-            isDark,
-            true,
-            false
-        );
+
+        this.confirmBtn = this.createFooterButton(this.options.t.confirm, isDark, true, false);
         this.confirmBtn.className = "image-input-modal-confirm";
         footer.appendChild(this.confirmBtn);
+
         return footer;
     }
 
-    private createFooterButton(
-        text: string,
-        isDark: boolean,
-        isPrimary: boolean,
-        isDelete: boolean = false
-    ): HTMLButtonElement {
+    private createFooterButton(text: string, isDark: boolean, isPrimary: boolean, isDelete: boolean = false): HTMLButtonElement {
         const btn = document.createElement("button");
         btn.textContent = text;
         btn.style.cssText = `
@@ -453,6 +454,7 @@ export class ImageInputModalBox {
                 border: 1px solid ${isDark ? "#555" : "#ddd"};
             `}
         `;
+
         if (isDelete) {
             btn.onmouseenter = () => { btn.style.background = "#d32f2f"; };
             btn.onmouseleave = () => { btn.style.background = "#f44336"; };
@@ -547,6 +549,7 @@ export class ImageInputModalBox {
             this.currentImageData = undefined;
             this.updatePreview();
         });
+
         if (this.deleteBtn) {
             this.deleteBtn.addEventListener("click", (e) => {
                 e.stopPropagation();
@@ -556,6 +559,7 @@ export class ImageInputModalBox {
                 this.destroy();
             });
         }
+
         this.confirmBtn.addEventListener("click", (e) => {
             e.stopPropagation();
             const imageUrl = this.urlInput.value.trim();
@@ -572,30 +576,36 @@ export class ImageInputModalBox {
             }
             this.destroy();
         });
+
         this.cancelBtn.addEventListener("click", (e) => {
             e.stopPropagation();
             this.options.onCancel();
             this.destroy();
         });
+
         if (this.widthInput) {
             this.widthInput.addEventListener("input", () => {
                 this.updatePreviewSize();
             });
         }
+
         if (this.heightInput) {
             this.heightInput.addEventListener("input", () => {
                 this.updatePreviewSize();
             });
         }
+
         if (this.opacityInput && this.opacityValue) {
             this.opacityInput.addEventListener("input", () => {
                 this.opacityValue.textContent = `${this.opacityInput.value}%`;
                 this.updatePreviewOpacity();
             });
         }
+
         this.element.addEventListener("click", (e) => {
             e.stopPropagation();
         });
+
         document.addEventListener("keydown", (e) => {
             if (e.key === "Escape" && document.body.contains(this.element)) {
                 this.options.onCancel();

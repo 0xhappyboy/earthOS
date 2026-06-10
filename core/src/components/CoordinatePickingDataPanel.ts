@@ -337,37 +337,39 @@ export class CoordinatePickingDataPanel {
         return item;
     }
 
+
     private showDetailPanel(data: any, categoryId: string): void {
         this.hideDetailPanel();
-
         const isDark = this.options.theme === "dark";
         const mainPanelRect = this.element.getBoundingClientRect();
-
+        let mapContainer: HTMLElement = this.element.closest('.earthview-container') as HTMLElement;
+        if (!mapContainer) {
+            mapContainer = document.body;
+        }
+        const containerRect = mapContainer.getBoundingClientRect();
         this.detailPanel = document.createElement("div");
         this.detailPanel.style.cssText = `
-            position: fixed;
-            left: ${mainPanelRect.left - 305}px;
-            top: ${mainPanelRect.top}px;
-            width: 300px;
-            background: ${isDark ? "#1e1e1e" : "#ffffff"};
-            border: 1px solid ${isDark ? "#444" : "#ddd"};
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-            z-index: 1001;
-            overflow: hidden;
-        `;
-
+        position: absolute;
+        left: ${mainPanelRect.left - containerRect.left - 305}px;
+        top: ${mainPanelRect.top - containerRect.top}px;
+        width: 300px;
+        background: ${isDark ? "#1e1e1e" : "#ffffff"};
+        border: 1px solid ${isDark ? "#444" : "#ddd"};
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        z-index: 1001;
+        overflow: hidden;
+    `;
         const detailContent = document.createElement("div");
-
         const header = document.createElement("div");
         header.style.cssText = `
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 12px;
-            background: ${isDark ? "#2d2d2d" : "#f5f5f5"};
-            border-bottom: 1px solid ${isDark ? "#444" : "#ddd"};
-        `;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 12px;
+        background: ${isDark ? "#2d2d2d" : "#f5f5f5"};
+        border-bottom: 1px solid ${isDark ? "#444" : "#ddd"};
+    `;
 
         const title = document.createElement("span");
         title.style.cssText = `color: ${isDark ? "#fff" : "#333"}; font-size: 13px; font-weight: 600;`;
@@ -376,13 +378,13 @@ export class CoordinatePickingDataPanel {
 
         const closeBtn = document.createElement("button");
         closeBtn.style.cssText = `
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 4px;
-            color: ${isDark ? "#ccc" : "#666"};
-            font-size: 16px;
-        `;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px;
+        color: ${isDark ? "#ccc" : "#666"};
+        font-size: 16px;
+    `;
         closeBtn.innerHTML = "✕";
         closeBtn.onclick = () => this.hideDetailPanel();
         header.appendChild(closeBtn);
@@ -393,78 +395,78 @@ export class CoordinatePickingDataPanel {
         body.style.cssText = `padding: 12px;`;
 
         let bodyHtml = `
-            <div style="margin-bottom: 12px;">
-                <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.coordinateData}</div>
-                <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 14px; font-weight: 500;">${data.name}</div>
-            </div>
-        `;
+        <div style="margin-bottom: 12px;">
+            <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.coordinateData}</div>
+            <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 14px; font-weight: 500;">${data.name}</div>
+        </div>
+    `;
 
         if (categoryId === "point") {
             bodyHtml += `
-                <div style="margin-bottom: 12px;">
-                    <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.longitude}</div>
-                    <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 13px; font-family: monospace;">${data.longitude.toFixed(8)}</div>
-                </div>
-                <div style="margin-bottom: 12px;">
-                    <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.latitude}</div>
-                    <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 13px; font-family: monospace;">${data.latitude.toFixed(8)}</div>
-                </div>
-            `;
+            <div style="margin-bottom: 12px;">
+                <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.longitude}</div>
+                <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 13px; font-family: monospace;">${data.longitude.toFixed(8)}</div>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.latitude}</div>
+                <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 13px; font-family: monospace;">${data.latitude.toFixed(8)}</div>
+            </div>
+        `;
         } else if (categoryId === "line") {
             bodyHtml += `
-                <div style="margin-bottom: 12px;">
-                    <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.pointsCount}</div>
-                    <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 13px;">${data.points.length} ${this.options.t.points}</div>
-                </div>
-                <div style="margin-bottom: 12px;">
-                    <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.startPoint}</div>
-                    <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 12px; font-family: monospace;">${data.points[0]?.longitude.toFixed(6)}, ${data.points[0]?.latitude.toFixed(6)}</div>
-                </div>
-                <div style="margin-bottom: 12px;">
-                    <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.endPoint}</div>
-                    <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 12px; font-family: monospace;">${data.points[data.points.length - 1]?.longitude.toFixed(6)}, ${data.points[data.points.length - 1]?.latitude.toFixed(6)}</div>
-                </div>
-            `;
+            <div style="margin-bottom: 12px;">
+                <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.pointsCount}</div>
+                <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 13px;">${data.points.length} ${this.options.t.points}</div>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.startPoint}</div>
+                <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 12px; font-family: monospace;">${data.points[0]?.longitude.toFixed(6)}, ${data.points[0]?.latitude.toFixed(6)}</div>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.endPoint}</div>
+                <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 12px; font-family: monospace;">${data.points[data.points.length - 1]?.longitude.toFixed(6)}, ${data.points[data.points.length - 1]?.latitude.toFixed(6)}</div>
+            </div>
+        `;
         } else if (categoryId === "polygon") {
             bodyHtml += `
-                <div style="margin-bottom: 12px;">
-                    <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.vertexCount}</div>
-                    <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 13px;">${data.points.length} ${this.options.t.points}</div>
-                </div>
-            `;
+            <div style="margin-bottom: 12px;">
+                <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.vertexCount}</div>
+                <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 13px;">${data.points.length} ${this.options.t.points}</div>
+            </div>
+        `;
         }
 
         bodyHtml += `
-            <div style="margin-bottom: 12px;">
-                <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.createdTime}</div>
-                <div style="color: ${isDark ? "#ddd" : "#555"}; font-size: 11px;">${new Date(data.timestamp).toLocaleString()}</div>
-            </div>
-        `;
+        <div style="margin-bottom: 12px;">
+            <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.createdTime}</div>
+            <div style="color: ${isDark ? "#ddd" : "#555"}; font-size: 11px;">${new Date(data.timestamp).toLocaleString()}</div>
+        </div>
+    `;
 
         body.innerHTML = bodyHtml;
         detailContent.appendChild(body);
 
         const footer = document.createElement("div");
         footer.style.cssText = `
-            display: flex;
-            gap: 8px;
-            padding: 10px 12px;
-            border-top: 1px solid ${isDark ? "#444" : "#ddd"};
-            background: ${isDark ? "#252525" : "#fafafa"};
-        `;
+        display: flex;
+        gap: 8px;
+        padding: 10px 12px;
+        border-top: 1px solid ${isDark ? "#444" : "#ddd"};
+        background: ${isDark ? "#252525" : "#fafafa"};
+    `;
 
         const locateBtn = document.createElement("button");
         locateBtn.style.cssText = `
-            flex: 1;
-            background: #00aaff;
-            border: none;
-            cursor: pointer;
-            padding: 6px;
-            border-radius: 4px;
-            color: white;
-            font-size: 12px;
-            transition: all 0.2s;
-        `;
+        flex: 1;
+        background: #00aaff;
+        border: none;
+        cursor: pointer;
+        padding: 6px;
+        border-radius: 4px;
+        color: white;
+        font-size: 12px;
+        transition: all 0.2s;
+    `;
         locateBtn.textContent = this.options.t.locateOnMap;
         locateBtn.onmouseenter = () => {
             locateBtn.style.background = "#0088cc";
@@ -485,16 +487,16 @@ export class CoordinatePickingDataPanel {
 
         const copyBtn = document.createElement("button");
         copyBtn.style.cssText = `
-            flex: 1;
-            background: ${isDark ? "#444" : "#e0e0e0"};
-            border: none;
-            cursor: pointer;
-            padding: 6px;
-            border-radius: 4px;
-            color: ${isDark ? "#fff" : "#333"};
-            font-size: 12px;
-            transition: all 0.2s;
-        `;
+        flex: 1;
+        background: ${isDark ? "#444" : "#e0e0e0"};
+        border: none;
+        cursor: pointer;
+        padding: 6px;
+        border-radius: 4px;
+        color: ${isDark ? "#fff" : "#333"};
+        font-size: 12px;
+        transition: all 0.2s;
+    `;
         copyBtn.textContent = this.options.t.copyCoordinates;
         copyBtn.onmouseenter = () => {
             copyBtn.style.background = isDark ? "#555" : "#d0d0d0";
@@ -514,14 +516,11 @@ export class CoordinatePickingDataPanel {
             navigator.clipboard.writeText(text);
             this.showToast(this.options.t.coordinatesCopied);
         };
-
         footer.appendChild(locateBtn);
         footer.appendChild(copyBtn);
         detailContent.appendChild(footer);
-
         this.detailPanel.appendChild(detailContent);
-        document.body.appendChild(this.detailPanel);
-
+        mapContainer.appendChild(this.detailPanel);
         const closeOnOutsideClick = (e: MouseEvent) => {
             if (this.detailPanel && !this.detailPanel.contains(e.target as Node) && !this.element.contains(e.target as Node)) {
                 this.hideDetailPanel();
@@ -533,6 +532,7 @@ export class CoordinatePickingDataPanel {
         }, 100);
     }
 
+
     private hideDetailPanel(): void {
         if (this.detailPanel) {
             this.detailPanel.remove();
@@ -540,22 +540,23 @@ export class CoordinatePickingDataPanel {
         }
     }
 
+
     private showToast(message: string): void {
         const toast = document.createElement("div");
         toast.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 12px;
-            z-index: 10000;
-            pointer-events: none;
-            white-space: nowrap;
-        `;
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0,0,0,0.8);
+        color: white;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        z-index: 10000;
+        pointer-events: none;
+        white-space: nowrap;
+    `;
         toast.textContent = message;
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 2000);

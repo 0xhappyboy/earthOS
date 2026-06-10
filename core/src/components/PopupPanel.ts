@@ -78,17 +78,43 @@ export class PopupPanel {
     }
 
     private injectScrollbarStyles(isDark: boolean): void {
-        if (document.getElementById("earthview-popup-scroll-styles")) {
-            const styleEl = document.getElementById("earthview-popup-scroll-styles") as HTMLStyleElement;
-            if (styleEl) {
-                styleEl.textContent = this.getScrollbarStyles(isDark);
-            }
+        const styleId = "earthview-popup-scroll-styles";
+        const container = this.element.parentElement;
+        if (container && container.querySelector(`#${styleId}`)) {
             return;
         }
+        const thumbColor = isDark ? "#555" : "#ccc";
+        const trackColor = isDark ? "#2d2d2d" : "#f0f0f0";
+        const thumbHoverColor = isDark ? "#777" : "#aaa";
+
+        const css = `
+        .earthview-popup-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: ${thumbColor} ${trackColor};
+        }
+        .earthview-popup-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .earthview-popup-scroll::-webkit-scrollbar-track {
+            background: ${trackColor};
+            border-radius: 4px;
+        }
+        .earthview-popup-scroll::-webkit-scrollbar-thumb {
+            background: ${thumbColor};
+            border-radius: 4px;
+        }
+        .earthview-popup-scroll::-webkit-scrollbar-thumb:hover {
+            background: ${thumbHoverColor};
+        }
+    `;
         const style = document.createElement("style");
-        style.id = "earthview-popup-scroll-styles";
-        style.textContent = this.getScrollbarStyles(isDark);
-        document.head.appendChild(style);
+        style.id = styleId;
+        style.textContent = css;
+        if (container) {
+            container.appendChild(style);
+        } else {
+            document.head.appendChild(style);
+        }
     }
 
     private getScrollbarStyles(isDark: boolean): string {

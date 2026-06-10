@@ -4,6 +4,7 @@ export class EventManager {
     private drawingManager: DrawingManager | null = null;
     private mapView: any = null;
     private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
+    private container: HTMLElement | null = null;
 
     constructor() {}
 
@@ -15,18 +16,27 @@ export class EventManager {
         this.mapView = mapView;
     }
 
-    public bindEvents(): void {
-        if (this.keydownHandler) {
-            document.removeEventListener("keydown", this.keydownHandler);
+    public bindEvents(container?: HTMLElement): void {
+        if (container) {
+            this.container = container;
         }
-        
+        if (this.keydownHandler) {
+            if (this.container) {
+                this.container.removeEventListener("keydown", this.keydownHandler);
+            } else {
+                document.removeEventListener("keydown", this.keydownHandler);
+            }
+        }
         this.keydownHandler = (e: KeyboardEvent) => {
             if (e.key === "Escape") {
                 this.handleEscCancel();
             }
         };
-        
-        document.addEventListener("keydown", this.keydownHandler);
+        if (this.container) {
+            this.container.addEventListener("keydown", this.keydownHandler);
+        } else {
+            document.addEventListener("keydown", this.keydownHandler);
+        }
     }
 
     private handleEscCancel(): void {
@@ -37,7 +47,11 @@ export class EventManager {
 
     public unbindEvents(): void {
         if (this.keydownHandler) {
-            document.removeEventListener("keydown", this.keydownHandler);
+            if (this.container) {
+                this.container.removeEventListener("keydown", this.keydownHandler);
+            } else {
+                document.removeEventListener("keydown", this.keydownHandler);
+            }
             this.keydownHandler = null;
         }
     }
@@ -46,5 +60,6 @@ export class EventManager {
         this.unbindEvents();
         this.drawingManager = null;
         this.mapView = null;
+        this.container = null;
     }
 }

@@ -155,6 +155,7 @@ export class EarthView {
     private selectedPointPickId: string | null = null;
     private selectedLinePickId: string | null = null;
     private selectedPolygonPickId: string | null = null;
+    private static globalStylesInjected: boolean = false;
 
     constructor(options: EarthViewOptions) {
         const {
@@ -194,8 +195,8 @@ export class EarthView {
         this.onCircleDrawnCallback = onCircleDrawn;
         this.enableDrawing = enableDrawing;
         this.container.setAttribute("data-theme", theme);
-        document.body.setAttribute("data-theme", theme);
         this.container.style.cssText = 'position:relative;width:100%;height:100%;margin:0;padding:0;overflow:hidden;box-sizing:border-box;';
+        this.injectGlobalStyles();
         this.mapManager = new MapManager(
             this.container,
             basemap,
@@ -220,10 +221,32 @@ export class EarthView {
         setTimeout(() => this.hideLoading(), 500);
     }
 
+    private injectGlobalStyles(): void {
+        if (EarthView.globalStylesInjected) return;
+        EarthView.globalStylesInjected = true;
+
+        const styleId = "earthview-global-styles";
+        if (!document.getElementById(styleId)) {
+            const style = document.createElement("style");
+            style.id = styleId;
+            style.textContent = `
+                @keyframes earthview-spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+                @keyframes earthview-pulse {
+                    0%, 100% { opacity: 1; transform: scale(1); }
+                    50% { opacity: 0.5; transform: scale(1.2); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+
     private initEventManager(): void {
         this.eventManager.setDrawingManager(this.drawingManager);
         this.eventManager.setMapView(this.mapManager.getMap());
-        this.eventManager.bindEvents();
+        this.eventManager.bindEvents(this.container);
     }
 
     private resolveContainer(options: {
@@ -639,19 +662,19 @@ export class EarthView {
     private showToast(message: string): void {
         const toast = document.createElement("div");
         toast.style.cssText = `
-        position: absolute;
-        bottom: 80px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(0,0,0,0.8);
-        color: white;
-        padding: 8px 16px;
-        border-radius: 8px;
-        font-size: 12px;
-        z-index: 10000;
-        pointer-events: none;
-        white-space: nowrap;
-    `;
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 10000;
+            pointer-events: none;
+            white-space: nowrap;
+        `;
         toast.textContent = message;
         this.container.appendChild(toast);
         setTimeout(() => toast.remove(), 2000);
@@ -747,7 +770,7 @@ export class EarthView {
             display: none;
         `;
         const spinner = document.createElement("div");
-        spinner.style.cssText = `width:16px;height:16px;border:2px solid ${isDark ? "#555" : "#ccc"};border-top:2px solid #00aaff;border-radius:50%;animation:spin 0.8s linear infinite;`;
+        spinner.style.cssText = `width:16px;height:16px;border:2px solid ${isDark ? "#555" : "#ccc"};border-top:2px solid #00aaff;border-radius:50%;animation:earthview-spin 0.8s linear infinite;`;
         this.drawingStatusDiv.appendChild(spinner);
         const statusText = document.createElement("span");
         statusText.style.cssText = `color:${isDark ? "#fff" : "#333"};font-size:12px;`;
@@ -765,17 +788,13 @@ export class EarthView {
             display: none;
         `;
         const dot = document.createElement("div");
-        dot.style.cssText = `width:8px;height:8px;background:#00aaff;border-radius:50%;animation:pulse 1s infinite;`;
+        dot.style.cssText = `width:8px;height:8px;background:#00aaff;border-radius:50%;animation:earthview-pulse 1s infinite;`;
         this.measureStatusDiv.appendChild(dot);
         const measureText = document.createElement("span");
         measureText.style.cssText = `color:${isDark ? "#fff" : "#333"};font-size:12px;`;
         measureText.id = "measure-status-text";
         this.measureStatusDiv.appendChild(measureText);
         this.container.appendChild(this.measureStatusDiv);
-
-        const style = document.createElement("style");
-        style.textContent = `@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(1.2)}}`;
-        document.head.appendChild(style);
     }
 
     private initLayers(): void {
@@ -2014,7 +2033,6 @@ export class EarthView {
     public setTheme(theme: "light" | "dark"): void {
         this.theme = theme;
         this.container.setAttribute("data-theme", theme);
-        document.body.setAttribute("data-theme", theme);
         this.uiManager.updateTheme(theme);
         this.textDrawLayer?.setTheme(theme, this.t);
     }

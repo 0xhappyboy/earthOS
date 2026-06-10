@@ -340,36 +340,36 @@ export class FloatingToolbar {
 
     private injectStrokeWidthScrollbarStyles(isDark: boolean): void {
         const styleId = "earthview-stroke-width-scroll-styles";
+        if (this.options.containerRef.querySelector(`#${styleId}`)) {
+            return;
+        }
         const thumbColor = isDark ? "#555" : "#ccc";
         const trackColor = isDark ? "#2d2d2d" : "#f0f0f0";
         const thumbHoverColor = isDark ? "#777" : "#aaa";
         const css = `
-            .earthview-stroke-width-scroll {
-                scrollbar-width: thin;
-                scrollbar-color: ${thumbColor} ${trackColor};
-            }
-            .earthview-stroke-width-scroll::-webkit-scrollbar {
-                width: 4px;
-            }
-            .earthview-stroke-width-scroll::-webkit-scrollbar-track {
-                background: ${trackColor};
-                border-radius: 4px;
-            }
-            .earthview-stroke-width-scroll::-webkit-scrollbar-thumb {
-                background: ${thumbColor};
-                border-radius: 4px;
-            }
-            .earthview-stroke-width-scroll::-webkit-scrollbar-thumb:hover {
-                background: ${thumbHoverColor};
-            }
-        `;
-        let styleEl = document.getElementById(styleId) as HTMLStyleElement;
-        if (!styleEl) {
-            styleEl = document.createElement("style");
-            styleEl.id = styleId;
-            document.head.appendChild(styleEl);
+        .earthview-stroke-width-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: ${thumbColor} ${trackColor};
         }
-        styleEl.textContent = css;
+        .earthview-stroke-width-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .earthview-stroke-width-scroll::-webkit-scrollbar-track {
+            background: ${trackColor};
+            border-radius: 4px;
+        }
+        .earthview-stroke-width-scroll::-webkit-scrollbar-thumb {
+            background: ${thumbColor};
+            border-radius: 4px;
+        }
+        .earthview-stroke-width-scroll::-webkit-scrollbar-thumb:hover {
+            background: ${thumbHoverColor};
+        }
+    `;
+        const style = document.createElement("style");
+        style.id = styleId;
+        style.textContent = css;
+        this.options.containerRef.appendChild(style);
     }
 
     private createStrokeStylePicker(): HTMLDivElement {

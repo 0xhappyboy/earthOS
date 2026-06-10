@@ -18,6 +18,7 @@ export interface TextInputModalBoxOptions {
     onDelete?: () => void;
     theme: Theme;
     t: Translations;
+    container?: HTMLElement;
 }
 
 export class TextInputModalBox {
@@ -39,6 +40,7 @@ export class TextInputModalBox {
     private header: HTMLDivElement;
     private toolbar: HTMLDivElement;
     private footer: HTMLDivElement;
+    private containerEl: HTMLElement;
 
     private readonly PRESET_FONT_SIZES = [12, 14, 16, 18, 20, 24, 28, 32, 36, 42];
 
@@ -47,18 +49,16 @@ export class TextInputModalBox {
         this.currentColor = options.initialColor || [255, 255, 255, 1];
         this.isBold = options.initialFontWeight === "bold";
         this.isItalic = options.initialFontStyle === "italic";
+        this.containerEl = options.container || document.body;
         this.overlay = this.createOverlay();
         this.element = this.createElement();
-
-        document.body.appendChild(this.overlay);
-        document.body.appendChild(this.element);
-
+        this.containerEl.appendChild(this.overlay);
+        this.containerEl.appendChild(this.element);
         if (position) {
             this.setPosition(position);
         } else {
             this.centerModal();
         }
-
         this.textarea = this.element.querySelector(".text-input-modal-textarea") as HTMLTextAreaElement;
         this.fontSizeSelect = this.element.querySelector(".text-input-modal-font-size") as HTMLSelectElement;
         this.colorPreview = this.element.querySelector(".text-input-modal-color-preview") as HTMLDivElement;
@@ -71,7 +71,6 @@ export class TextInputModalBox {
         this.header = this.element.querySelector(".text-input-modal-header") as HTMLDivElement;
         this.toolbar = this.element.querySelector(".text-input-modal-toolbar") as HTMLDivElement;
         this.footer = this.element.querySelector(".text-input-modal-footer") as HTMLDivElement;
-
         this.bindEvents();
         this.updateColorPreview();
         this.updateStyleButtons();
@@ -141,7 +140,6 @@ export class TextInputModalBox {
             border-bottom: 1px solid ${isDark ? "#3d3d3d" : "#eee"};
             background: ${isDark ? "#252525" : "#f5f5f5"};
         `;
-
         const title = document.createElement("span");
         title.style.cssText = `
             color: ${isDark ? "#fff" : "#333"};
@@ -150,7 +148,6 @@ export class TextInputModalBox {
         `;
         title.textContent = this.options.t.editText;
         header.appendChild(title);
-
         return header;
     }
 
@@ -418,7 +415,6 @@ export class TextInputModalBox {
                 btn.style.background = isDark ? "#3d3d3d" : "#e8e8e8";
             };
         }
-
         return btn;
     }
 

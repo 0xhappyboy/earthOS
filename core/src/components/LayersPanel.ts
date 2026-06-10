@@ -340,17 +340,24 @@ export class LayersPanel {
         return emptyDiv;
     }
 
+
     private showFeatureListPanel(layerId: string, layerName: string): void {
         this.hideFeatureListPanel();
         this.hideFeatureDetailPanel();
         this.currentFeatureListLayerId = layerId;
         const isDark = this.options.theme === "dark";
         const mainPanelRect = this.element.getBoundingClientRect();
+        let mapContainer: HTMLElement = this.element.closest('.earthview-container') as HTMLElement;
+        if (!mapContainer) {
+            mapContainer = document.body;
+        }
+        const containerRect = mapContainer.getBoundingClientRect();
+
         this.featureListPanel = document.createElement("div");
         this.featureListPanel.style.cssText = `
-        position: fixed;
-        left: ${mainPanelRect.left - 267}px;
-        top: ${mainPanelRect.top - 38}px;
+        position: absolute;
+        left: ${mainPanelRect.left - containerRect.left - 267}px;
+        top: ${mainPanelRect.top - containerRect.top - 38}px;
         width: 260px;
         max-height: 330px;
         background: ${isDark ? "#1e1e1e" : "#ffffff"};
@@ -422,7 +429,7 @@ export class LayersPanel {
             });
         }
         this.featureListPanel.appendChild(content);
-        document.body.appendChild(this.featureListPanel);
+        mapContainer.appendChild(this.featureListPanel);
         const closeOnOutsideClick = (e: MouseEvent) => {
             if (this.featureListPanel && !this.featureListPanel.contains(e.target as Node) &&
                 !this.element.contains(e.target as Node)) {
@@ -434,6 +441,7 @@ export class LayersPanel {
             document.addEventListener("click", closeOnOutsideClick);
         }, 100);
     }
+
 
     private createFeatureItem(feature: LayerFeature, index: number, layerId: string, isDark: boolean): HTMLDivElement {
         const item = document.createElement("div");
@@ -535,51 +543,56 @@ export class LayersPanel {
         }
     }
 
+
     private showFeatureDetailPanel(feature: LayerFeature, layerId: string): void {
         this.hideFeatureDetailPanel();
         this.currentFeatureId = feature.id;
         const isDark = this.options.theme === "dark";
         const mainPanelRect = this.element.getBoundingClientRect();
         const featureListRect = this.featureListPanel?.getBoundingClientRect();
-        let left = mainPanelRect.left - 560 + 4;
-        if (featureListRect) {
-            left = featureListRect.left - 270 + 4;
+        let mapContainer: HTMLElement = this.element.closest('.earthview-container') as HTMLElement;
+        if (!mapContainer) {
+            mapContainer = document.body;
         }
-
+        const containerRect = mapContainer.getBoundingClientRect();
+        let left = mainPanelRect.left - containerRect.left - 560 + 4;
+        if (featureListRect) {
+            left = featureListRect.left - containerRect.left - 270 + 4;
+        }
         this.featureDetailPanel = document.createElement("div");
         this.featureDetailPanel.style.cssText = `
-    position: fixed;
-    left: ${left}px;
-    top: ${mainPanelRect.top - 38}px;
-    width: 260px;
-    background: ${isDark ? "#1e1e1e" : "#ffffff"};
-    border: 1px solid ${isDark ? "#333" : "#e0e0e0"};
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    z-index: 1002;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-`;
+        position: absolute;
+        left: ${left}px;
+        top: ${mainPanelRect.top - containerRect.top - 38}px;
+        width: 260px;
+        background: ${isDark ? "#1e1e1e" : "#ffffff"};
+        border: 1px solid ${isDark ? "#333" : "#e0e0e0"};
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 1002;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    `;
 
         const detailContent = document.createElement("div");
         detailContent.style.cssText = `
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    max-height: 330px;
-`;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        max-height: 330px;
+    `;
 
         const header = document.createElement("div");
         header.style.cssText = `
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 2px 12px;
-    background: ${isDark ? "#2d2d2d" : "#f5f5f5"};
-    border-bottom: 1px solid ${isDark ? "#444" : "#ddd"};
-    flex-shrink: 0;
-`;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 2px 12px;
+        background: ${isDark ? "#2d2d2d" : "#f5f5f5"};
+        border-bottom: 1px solid ${isDark ? "#444" : "#ddd"};
+        flex-shrink: 0;
+    `;
 
         const title = document.createElement("span");
         title.style.cssText = `color: ${isDark ? "#fff" : "#333"}; font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;`;
@@ -589,13 +602,13 @@ export class LayersPanel {
 
         const closeBtn = document.createElement("button");
         closeBtn.style.cssText = `
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 4px;
-    color: ${isDark ? "#ccc" : "#666"};
-    font-size: 16px;
-`;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px;
+        color: ${isDark ? "#ccc" : "#666"};
+        font-size: 16px;
+    `;
         closeBtn.innerHTML = "✕";
         closeBtn.onclick = () => this.hideFeatureDetailPanel();
         header.appendChild(closeBtn);
@@ -607,94 +620,94 @@ export class LayersPanel {
         body.className = "earthview-popup-scroll";
 
         let bodyHtml = `
-    <div style="margin-bottom: 12px;">
-        <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.coordinateData || "Coordinate Data"}</div>
-        <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 14px; font-weight: 500;">${feature.name || feature.id}</div>
-    </div>
-    <div style="margin-bottom: 12px;">
-        <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.featureType || "Feature Type"}</div>
-        <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 12px;">${this.getFeatureTypeLabel(feature.type)}</div>
-    </div>
-`;
+        <div style="margin-bottom: 12px;">
+            <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.coordinateData || "Coordinate Data"}</div>
+            <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 14px; font-weight: 500;">${feature.name || feature.id}</div>
+        </div>
+        <div style="margin-bottom: 12px;">
+            <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.featureType || "Feature Type"}</div>
+            <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 12px;">${this.getFeatureTypeLabel(feature.type)}</div>
+        </div>
+    `;
 
         if (feature.type === "point" && feature.coordinates) {
             bodyHtml += `
-        <div style="margin-bottom: 12px;">
-            <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.longitude || "longitude"}</div>
-            <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 12px; font-family: monospace;">${feature.coordinates.longitude?.toFixed(8) || feature.coordinates[0]?.toFixed(8) || "-"}</div>
-        </div>
-        <div style="margin-bottom: 12px;">
-            <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.latitude || "latitude"}</div>
-            <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 12px; font-family: monospace;">${feature.coordinates.latitude?.toFixed(8) || feature.coordinates[1]?.toFixed(8) || "-"}</div>
-        </div>
-    `;
+            <div style="margin-bottom: 12px;">
+                <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.longitude || "longitude"}</div>
+                <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 12px; font-family: monospace;">${feature.coordinates.longitude?.toFixed(8) || feature.coordinates[0]?.toFixed(8) || "-"}</div>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.latitude || "latitude"}</div>
+                <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 12px; font-family: monospace;">${feature.coordinates.latitude?.toFixed(8) || feature.coordinates[1]?.toFixed(8) || "-"}</div>
+            </div>
+        `;
         } else if (feature.type === "line" && feature.coordinates) {
             const points = feature.coordinates.points || feature.coordinates;
             bodyHtml += `
-        <div style="margin-bottom: 12px;">
-            <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.pointsCount || "Points Count"}</div>
-            <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 12px;">${points?.length || 0} ${this.options.t.points || "Points"}</div>
-        </div>
-        <div style="margin-bottom: 12px;">
-            <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.startPoint || "Start Point"}</div>
-            <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 11px; font-family: monospace;">${points?.[0]?.longitude?.toFixed(6) || points?.[0]?.[0]?.toFixed(6) || "-"}, ${points?.[0]?.latitude?.toFixed(6) || points?.[0]?.[1]?.toFixed(6) || "-"}</div>
-        </div>
-        <div style="margin-bottom: 12px;">
-            <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.endPoint || "End Point"}</div>
-            <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 11px; font-family: monospace;">${points?.[points.length - 1]?.longitude?.toFixed(6) || points?.[points.length - 1]?.[0]?.toFixed(6) || "-"}, ${points?.[points.length - 1]?.latitude?.toFixed(6) || points?.[points.length - 1]?.[1]?.toFixed(6) || "-"}</div>
-        </div>
-    `;
+            <div style="margin-bottom: 12px;">
+                <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.pointsCount || "Points Count"}</div>
+                <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 12px;">${points?.length || 0} ${this.options.t.points || "Points"}</div>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.startPoint || "Start Point"}</div>
+                <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 11px; font-family: monospace;">${points?.[0]?.longitude?.toFixed(6) || points?.[0]?.[0]?.toFixed(6) || "-"}, ${points?.[0]?.latitude?.toFixed(6) || points?.[0]?.[1]?.toFixed(6) || "-"}</div>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.endPoint || "End Point"}</div>
+                <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 11px; font-family: monospace;">${points?.[points.length - 1]?.longitude?.toFixed(6) || points?.[points.length - 1]?.[0]?.toFixed(6) || "-"}, ${points?.[points.length - 1]?.latitude?.toFixed(6) || points?.[points.length - 1]?.[1]?.toFixed(6) || "-"}</div>
+            </div>
+        `;
         } else if (feature.type === "polygon" && feature.coordinates) {
             const points = feature.coordinates.points || feature.coordinates;
             bodyHtml += `
-        <div style="margin-bottom: 12px;">
-            <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.vertexCount || "Vertex Count"}</div>
-            <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 12px;">${points?.length || 0} ${this.options.t.points || "Points"}</div>
-        </div>
-    `;
+            <div style="margin-bottom: 12px;">
+                <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.vertexCount || "Vertex Count"}</div>
+                <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 12px;">${points?.length || 0} ${this.options.t.points || "Points"}</div>
+            </div>
+        `;
         }
 
         if (feature.properties) {
             bodyHtml += `
-        <div style="margin-bottom: 12px;">
-            <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.properties || "Properties"}</div>
-            <div style="color: ${isDark ? "#ddd" : "#555"}; font-size: 11px; word-break: break-word;">${JSON.stringify(feature.properties, null, 2)}</div>
-        </div>
-    `;
+            <div style="margin-bottom: 12px;">
+                <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.properties || "Properties"}</div>
+                <div style="color: ${isDark ? "#ddd" : "#555"}; font-size: 11px; word-break: break-word;">${JSON.stringify(feature.properties, null, 2)}</div>
+            </div>
+        `;
         }
         if (feature.timestamp) {
             bodyHtml += `
-        <div style="margin-bottom: 12px;">
-            <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.createdTime || "Created Time"}</div>
-            <div style="color: ${isDark ? "#ddd" : "#555"}; font-size: 11px;">${new Date(feature.timestamp).toLocaleString()}</div>
-        </div>
-    `;
+            <div style="margin-bottom: 12px;">
+                <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.createdTime || "Created Time"}</div>
+                <div style="color: ${isDark ? "#ddd" : "#555"}; font-size: 11px;">${new Date(feature.timestamp).toLocaleString()}</div>
+            </div>
+        `;
         }
         body.innerHTML = bodyHtml;
         detailContent.appendChild(body);
 
         const footer = document.createElement("div");
         footer.style.cssText = `
-    display: flex;
-    gap: 8px;
-    padding: 10px 12px;
-    border-top: 1px solid ${isDark ? "#444" : "#ddd"};
-    background: ${isDark ? "#252525" : "#fafafa"};
-    flex-shrink: 0;
-`;
+        display: flex;
+        gap: 8px;
+        padding: 10px 12px;
+        border-top: 1px solid ${isDark ? "#444" : "#ddd"};
+        background: ${isDark ? "#252525" : "#fafafa"};
+        flex-shrink: 0;
+    `;
 
         const locateBtn = document.createElement("button");
         locateBtn.style.cssText = `
-    flex: 1;
-    background: #00aaff;
-    border: none;
-    cursor: pointer;
-    padding: 6px;
-    border-radius: 4px;
-    color: white;
-    font-size: 12px;
-    transition: all 0.2s;
-`;
+        flex: 1;
+        background: #00aaff;
+        border: none;
+        cursor: pointer;
+        padding: 6px;
+        border-radius: 4px;
+        color: white;
+        font-size: 12px;
+        transition: all 0.2s;
+    `;
         locateBtn.textContent = this.options.t.locateOnMap || "Locate Map";
         locateBtn.onmouseenter = () => { locateBtn.style.background = "#0088cc"; };
         locateBtn.onmouseleave = () => { locateBtn.style.background = "#00aaff"; };
@@ -707,16 +720,16 @@ export class LayersPanel {
 
         const copyBtn = document.createElement("button");
         copyBtn.style.cssText = `
-    flex: 1;
-    background: ${isDark ? "#444" : "#e0e0e0"};
-    border: none;
-    cursor: pointer;
-    padding: 6px;
-    border-radius: 4px;
-    color: ${isDark ? "#fff" : "#333"};
-    font-size: 12px;
-    transition: all 0.2s;
-`;
+        flex: 1;
+        background: ${isDark ? "#444" : "#e0e0e0"};
+        border: none;
+        cursor: pointer;
+        padding: 6px;
+        border-radius: 4px;
+        color: ${isDark ? "#fff" : "#333"};
+        font-size: 12px;
+        transition: all 0.2s;
+    `;
         copyBtn.textContent = this.options.t.copyCoordinates || "Copy Coordinates";
         copyBtn.onmouseenter = () => { copyBtn.style.background = isDark ? "#555" : "#d0d0d0"; };
         copyBtn.onmouseleave = () => { copyBtn.style.background = isDark ? "#444" : "#e0e0e0"; };
@@ -738,13 +751,11 @@ export class LayersPanel {
                 this.showToast(this.options.t.coordinatesCopied || "Coordinates Copied");
             }
         };
-
         footer.appendChild(locateBtn);
         footer.appendChild(copyBtn);
         detailContent.appendChild(footer);
         this.featureDetailPanel.appendChild(detailContent);
-        document.body.appendChild(this.featureDetailPanel);
-
+        mapContainer.appendChild(this.featureDetailPanel);
         const closeOnOutsideClick = (e: MouseEvent) => {
             if (this.featureDetailPanel && !this.featureDetailPanel.contains(e.target as Node) &&
                 this.featureListPanel && !this.featureListPanel.contains(e.target as Node) &&
@@ -757,7 +768,6 @@ export class LayersPanel {
             document.addEventListener("click", closeOnOutsideClick);
         }, 100);
     }
-
 
     private hideFeatureListPanel(): void {
         if (this.featureListPanel) {
