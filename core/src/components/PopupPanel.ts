@@ -22,19 +22,43 @@ export class PopupPanel {
     private createElement(): HTMLDivElement {
         const isDark = this.options.theme === "dark";
         const panel = document.createElement("div");
+        const defaultMaxHeight = 328;
         panel.style.cssText = `
-            position: absolute;
-            top: 10px;
-            right: 60px;
-            width: 200px;
-            max-height: 328px;
-            background: ${isDark ? "#1e1e1e" : "#ffffff"};
-            border: 1px solid ${isDark ? "#333" : "#e0e0e0"};
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            z-index: 200;
-            overflow: hidden;
-        `;
+        position: absolute;
+        top: 10px;
+        right: 60px;
+        width: 200px;
+        max-height: ${defaultMaxHeight}px;
+        background: ${isDark ? "#1e1e1e" : "#ffffff"};
+        border: 1px solid ${isDark ? "#333" : "#e0e0e0"};
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 200;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    `;
+        let maxHeight = 328;
+        if (this.element?.parentElement) {
+            const containerRect = this.element.parentElement.getBoundingClientRect();
+            maxHeight = Math.min(328, containerRect.height - 80);
+        }
+        panel.style.cssText = `
+        position: absolute;
+        top: 10px;
+        right: 60px;
+        width: 200px;
+        max-height: ${Math.max(150, maxHeight)}px;
+        background: ${isDark ? "#1e1e1e" : "#ffffff"};
+        border: 1px solid ${isDark ? "#333" : "#e0e0e0"};
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 200;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    `;
+
         const header = document.createElement("div");
         header.style.cssText = `
             display: flex;
@@ -67,10 +91,11 @@ export class PopupPanel {
         panel.appendChild(header);
         this.contentContainer = document.createElement("div");
         this.contentContainer.style.cssText = `
-            max-height: 288px;
-            overflow-y: auto;
-            padding: 4px 0;
-        `;
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 0;
+    min-height: 0;
+`;
         this.contentContainer.className = "earthview-popup-scroll";
         panel.appendChild(this.contentContainer);
         return panel;
@@ -79,10 +104,10 @@ export class PopupPanel {
     private injectScrollbarStyles(isDark: boolean): void {
         const container = this.element.parentElement;
         if (!container) return;
-        
+
         const styleId = "earthview-popup-scroll-styles";
         if (container.querySelector(`#${styleId}`)) return;
-        
+
         const thumbColor = isDark ? "#555" : "#ccc";
         const trackColor = isDark ? "#2d2d2d" : "#f0f0f0";
         const thumbHoverColor = isDark ? "#777" : "#aaa";

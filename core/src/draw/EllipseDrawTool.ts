@@ -4,7 +4,7 @@ import { Translations } from "../i18n";
 
 export class EllipseDrawTool implements DrawTool {
     id = "ellipse-draw";
-    name = "椭圆绘制";
+    name = "Ellipse Draw";
     icon = "⚪";
     private ellipseDrawLayer: EllipseDrawLayer;
     private onDrawComplete?: (data: EllipseDrawData) => void;
@@ -12,7 +12,7 @@ export class EllipseDrawTool implements DrawTool {
 
     constructor(ellipseDrawLayer: EllipseDrawLayer, t: Translations) {
         this.ellipseDrawLayer = ellipseDrawLayer;
-        this.name = t.drawEllipse || "椭圆绘制";
+        this.name = t.drawEllipse || "Ellipse Draw";
     }
 
     activate(): void {

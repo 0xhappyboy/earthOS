@@ -5,14 +5,14 @@ import { Translations } from "../i18n";
 
 export class CircleDrawTool implements DrawTool {
     id = "circle-draw";
-    name = "圆形绘制";
+    name = "Circle Draw";
     icon = "⭕";
     private circleDrawLayer: CircleDrawLayer;
     private onDrawComplete?: (data: CircleDrawData) => void;
     private onEditComplete?: (data: CircleDrawData) => void;
     constructor(circleDrawLayer: CircleDrawLayer, t: Translations) {
         this.circleDrawLayer = circleDrawLayer;
-        this.name = t.drawCircle || "圆形绘制";
+        this.name = t.drawCircle || "Circle Draw";
     }
     activate(): void {
         this.circleDrawLayer.setEditable(true);

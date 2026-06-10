@@ -4,7 +4,7 @@ import { Translations } from "../i18n";
 
 export class TextDrawTool implements DrawTool {
     id = "text-draw";
-    name = "文字标注";
+    name = "Text Annotation";
     icon = "📝";
     private textDrawLayer: TextDrawLayer;
     private onDrawComplete?: (data: TextDrawData) => void;
@@ -12,7 +12,7 @@ export class TextDrawTool implements DrawTool {
 
     constructor(textDrawLayer: TextDrawLayer, t: Translations) {
         this.textDrawLayer = textDrawLayer;
-        this.name = t.drawText || "文字标注";
+        this.name = t.drawText || "Text Annotation";
     }
 
     activate(): void {

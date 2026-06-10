@@ -4,7 +4,7 @@ import { Translations } from "../i18n";
 
 export class ImageDrawTool implements DrawTool {
     id = "image-draw";
-    name = "图片标注";
+    name = "Image Annotation";
     icon = "🖼️";
     private imageDrawLayer: ImageDrawLayer;
     private onDrawComplete?: (data: ImageDrawData) => void;
@@ -12,7 +12,7 @@ export class ImageDrawTool implements DrawTool {
 
     constructor(imageDrawLayer: ImageDrawLayer, t: Translations) {
         this.imageDrawLayer = imageDrawLayer;
-        this.name = t.drawImage || "图片标注";
+        this.name = t.drawImage || "Image Annotation";
     }
 
     activate(): void {

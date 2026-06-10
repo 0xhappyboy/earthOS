@@ -4,7 +4,7 @@ import { Translations } from "../i18n";
 
 export class MarkerDrawTool implements DrawTool {
     id = "marker-draw";
-    name = "标记点绘制";
+    name = "Marker Draw";
     icon = "📍";
     private markerDrawLayer: MarkerDrawLayer;
     private onDrawComplete?: (data: MarkerDrawData) => void;
@@ -12,7 +12,7 @@ export class MarkerDrawTool implements DrawTool {
 
     constructor(markerDrawLayer: MarkerDrawLayer, t: Translations) {
         this.markerDrawLayer = markerDrawLayer;
-        this.name = t.drawMarker || "标记点绘制";
+        this.name = t.drawMarker || "Marker Draw";
     }
 
     activate(): void {

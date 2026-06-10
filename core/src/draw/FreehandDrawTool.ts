@@ -4,7 +4,7 @@ import { Translations } from "../i18n";
 
 export class FreehandDrawTool implements DrawTool {
     id = "freehand-draw";
-    name = "手绘线";
+    name = "Freehand Line";
     icon = "✏️";
     private isPolygonMode: boolean = false;
     private freehandDrawLayer: FreehandDrawLayer;
@@ -14,7 +14,7 @@ export class FreehandDrawTool implements DrawTool {
     constructor(freehandDrawLayer: FreehandDrawLayer, t: Translations, isPolygon: boolean = false) {
         this.freehandDrawLayer = freehandDrawLayer;
         this.isPolygonMode = isPolygon;
-        this.name = isPolygon ? (t.drawFreehandPolygon || "手绘多边形") : (t.drawFreehandLine || "手绘线");
+        this.name = isPolygon ? (t.drawFreehandPolygon || "Freehand Polygon") : (t.drawFreehandLine || "Freehand Line");
     }
 
     activate(): void {
@@ -31,7 +31,7 @@ export class FreehandDrawTool implements DrawTool {
     }
 
     startDraw(isPolygon: boolean = false): void {
-        this.name = isPolygon ? "手绘多边形" : "手绘线";
+        this.name = isPolygon ? "Freehand Polygon" : "Freehand Line";
         this.freehandDrawLayer.startDraw(isPolygon, (data) => {
             if (this.onDrawComplete) {
                 this.onDrawComplete(data);

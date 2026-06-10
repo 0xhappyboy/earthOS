@@ -4,7 +4,7 @@ import { Translations } from "../i18n";
 
 export class LineDrawTool implements DrawTool {
     id = "line-draw";
-    name = "线段";
+    name = "Line";
     icon = "━━";
     private lineDrawLayer: LineDrawLayer;
     private onDrawComplete?: (data: LineDrawData) => void;
@@ -12,7 +12,7 @@ export class LineDrawTool implements DrawTool {
 
     constructor(lineDrawLayer: LineDrawLayer, t: Translations) {
         this.lineDrawLayer = lineDrawLayer;
-        this.name = t.drawLine || "线段";
+        this.name = t.drawLine || "Line";
     }
 
     activate(): void {

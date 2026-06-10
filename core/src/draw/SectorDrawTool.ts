@@ -4,7 +4,7 @@ import { Translations } from "../i18n";
 
 export class SectorDrawTool implements DrawTool {
     id = "sector-draw";
-    name = "扇形";
+    name = "Sector";
     icon = "🥧";
     private sectorDrawLayer: SectorDrawLayer;
     private onDrawComplete?: (data: SectorDrawData) => void;
@@ -12,7 +12,7 @@ export class SectorDrawTool implements DrawTool {
 
     constructor(sectorDrawLayer: SectorDrawLayer, t: Translations) {
         this.sectorDrawLayer = sectorDrawLayer;
-        this.name = t.drawSector || "扇形";
+        this.name = t.drawSector || "Sector";
     }
 
     activate(): void {

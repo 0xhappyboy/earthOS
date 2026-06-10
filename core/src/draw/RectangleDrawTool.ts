@@ -5,7 +5,7 @@ import { RectangleDrawData } from "../types";
 
 export class RectangleDrawTool implements DrawTool {
     id = "rectangle-draw";
-    name = "矩形绘制";
+    name = "Rectangle Draw";
     icon = "◻️";
     private rectangleDrawLayer: RectangleDrawLayer;
     private onDrawComplete?: (data: RectangleDrawData) => void;
@@ -13,7 +13,7 @@ export class RectangleDrawTool implements DrawTool {
 
     constructor(rectangleDrawLayer: RectangleDrawLayer, t: Translations) {
         this.rectangleDrawLayer = rectangleDrawLayer;
-        this.name = t.drawRectangle || "矩形绘制";
+        this.name = t.drawRectangle || "Rectangle Draw";
     }
 
     activate(): void {

@@ -340,7 +340,6 @@ export class LayersPanel {
         return emptyDiv;
     }
 
-
     private showFeatureListPanel(layerId: string, layerName: string): void {
         this.hideFeatureListPanel();
         this.hideFeatureDetailPanel();
@@ -352,14 +351,32 @@ export class LayersPanel {
             mapContainer = document.body;
         }
         const containerRect = mapContainer.getBoundingClientRect();
-
+        let top = mainPanelRect.top - containerRect.top - 38;
+        let maxHeight = 330;
+        const panelBottom = top + maxHeight + 38;
+        if (panelBottom > containerRect.height) {
+            const availableHeight = containerRect.height - top - 48;
+            if (availableHeight > 100) {
+                maxHeight = availableHeight;
+            } else {
+                const topSpace = mainPanelRect.top - containerRect.top - 10;
+                if (topSpace > 200) {
+                    top = topSpace - maxHeight - 10;
+                } else {
+                    maxHeight = Math.max(100, availableHeight);
+                }
+            }
+        }
+        if (top < 5) {
+            top = 5;
+        }
         this.featureListPanel = document.createElement("div");
         this.featureListPanel.style.cssText = `
         position: absolute;
         left: ${mainPanelRect.left - containerRect.left - 267}px;
-        top: ${mainPanelRect.top - containerRect.top - 38}px;
+        top: ${top}px;
         width: 260px;
-        max-height: 330px;
+        max-height: ${maxHeight}px;
         background: ${isDark ? "#1e1e1e" : "#ffffff"};
         border: 1px solid ${isDark ? "#333" : "#e0e0e0"};
         border-radius: 8px;
@@ -369,7 +386,6 @@ export class LayersPanel {
         display: flex;
         flex-direction: column;
     `;
-
         const header = document.createElement("div");
         header.style.cssText = `
         display: flex;
@@ -430,6 +446,7 @@ export class LayersPanel {
         }
         this.featureListPanel.appendChild(content);
         mapContainer.appendChild(this.featureListPanel);
+
         const closeOnOutsideClick = (e: MouseEvent) => {
             if (this.featureListPanel && !this.featureListPanel.contains(e.target as Node) &&
                 !this.element.contains(e.target as Node)) {
@@ -441,7 +458,6 @@ export class LayersPanel {
             document.addEventListener("click", closeOnOutsideClick);
         }, 100);
     }
-
 
     private createFeatureItem(feature: LayerFeature, index: number, layerId: string, isDark: boolean): HTMLDivElement {
         const item = document.createElement("div");
@@ -543,7 +559,6 @@ export class LayersPanel {
         }
     }
 
-
     private showFeatureDetailPanel(feature: LayerFeature, layerId: string): void {
         this.hideFeatureDetailPanel();
         this.currentFeatureId = feature.id;
@@ -559,12 +574,35 @@ export class LayersPanel {
         if (featureListRect) {
             left = featureListRect.left - containerRect.left - 270 + 4;
         }
+        if (left < 5) {
+            left = 5;
+        }
+        let top = mainPanelRect.top - containerRect.top - 38;
+        let maxHeight = 330;
+        const panelBottom = top + maxHeight + 38;
+        if (panelBottom > containerRect.height) {
+            const availableHeight = containerRect.height - top - 48;
+            if (availableHeight > 100) {
+                maxHeight = availableHeight;
+            } else {
+                const topSpace = mainPanelRect.top - containerRect.top - 10;
+                if (topSpace > 200) {
+                    top = topSpace - maxHeight - 10;
+                } else {
+                    maxHeight = Math.max(100, availableHeight);
+                }
+            }
+        }
+        if (top < 5) {
+            top = 5;
+        }
         this.featureDetailPanel = document.createElement("div");
         this.featureDetailPanel.style.cssText = `
         position: absolute;
         left: ${left}px;
-        top: ${mainPanelRect.top - containerRect.top - 38}px;
+        top: ${top}px;
         width: 260px;
+        max-height: ${maxHeight}px;
         background: ${isDark ? "#1e1e1e" : "#ffffff"};
         border: 1px solid ${isDark ? "#333" : "#e0e0e0"};
         border-radius: 8px;
@@ -580,7 +618,7 @@ export class LayersPanel {
         display: flex;
         flex-direction: column;
         height: 100%;
-        max-height: 330px;
+        max-height: ${maxHeight}px;
     `;
 
         const header = document.createElement("div");
@@ -751,11 +789,13 @@ export class LayersPanel {
                 this.showToast(this.options.t.coordinatesCopied || "Coordinates Copied");
             }
         };
+
         footer.appendChild(locateBtn);
         footer.appendChild(copyBtn);
         detailContent.appendChild(footer);
         this.featureDetailPanel.appendChild(detailContent);
         mapContainer.appendChild(this.featureDetailPanel);
+
         const closeOnOutsideClick = (e: MouseEvent) => {
             if (this.featureDetailPanel && !this.featureDetailPanel.contains(e.target as Node) &&
                 this.featureListPanel && !this.featureListPanel.contains(e.target as Node) &&

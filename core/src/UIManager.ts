@@ -171,6 +171,7 @@ export class UIManager {
                 this.activePopupPanel = panel;
                 this.container.appendChild(panel.getElement());
                 panel.onAttached();
+                this.adjustPopupPosition(panel);
                 break;
             case "basemap":
                 panel = new PopupPanel({
@@ -195,6 +196,7 @@ export class UIManager {
                 this.activePopupPanel = panel;
                 this.container.appendChild(panel.getElement());
                 panel.onAttached();
+                this.adjustPopupPosition(panel);
                 break;
             case "draw":
                 panel = new PopupPanel({
@@ -225,6 +227,7 @@ export class UIManager {
                 this.activePopupPanel = panel;
                 this.container.appendChild(panel.getElement());
                 panel.onAttached();
+                this.adjustPopupPosition(panel);
                 break;
             case "tools":
                 panel = new PopupPanel({
@@ -255,8 +258,28 @@ export class UIManager {
                 this.activePopupPanel = panel;
                 this.container.appendChild(panel.getElement());
                 panel.onAttached();
+                this.adjustPopupPosition(panel);
                 break;
         }
+    }
+
+    private adjustPopupPosition(panel: PopupPanel): void {
+        setTimeout(() => {
+            const panelElement = panel.getElement();
+            if (!panelElement) return;
+            const containerRect = this.container.getBoundingClientRect();
+            const panelRect = panelElement.getBoundingClientRect();
+            const panelBottom = panelRect.bottom;
+            const containerBottom = containerRect.bottom;
+            if (panelBottom > containerBottom) {
+                const availableHeight = containerBottom - panelRect.top - 10;
+                if (availableHeight > 100) {
+                    panelElement.style.maxHeight = `${availableHeight}px`;
+                } else {
+                    panelElement.style.maxHeight = `100px`;
+                }
+            }
+        }, 10);
     }
 
     public updateCurrentBasemap(basemap: BasemapTypeEnum | null): void {
@@ -335,21 +358,18 @@ export class UIManager {
         }
     }
 
-
     private showCoordinatePickingDataPanel(): void {
         if (this.coordinatePickingDataPanel) {
             this.coordinatePickingDataPanel.destroy();
             this.coordinatePickingDataPanel = null;
             return;
         }
-
         if (this.activePopupPanel) {
             this.activePopupPanel.destroy();
             this.activePopupPanel = null;
         }
         this.activePopupType = null;
         this.toolbar?.updateActivePopup(null);
-
         const dataPanel = new CoordinatePickingDataPanel({
             onClose: () => {
                 if (this.coordinatePickingDataPanel) {
@@ -358,7 +378,6 @@ export class UIManager {
                 }
             },
             onSelectCategory: (category: string) => {
-                console.log("选中分类:", category);
             },
             onLocatePoint: (longitude, latitude) => {
                 if (this.callbacks.onLocateCoordinate) {

@@ -5,7 +5,7 @@ import { TriangleDrawData } from "../types";
 
 export class TriangleDrawTool implements DrawTool {
     id = "triangle-draw";
-    name = "三角形绘制";
+    name = "Triangle Draw";
     icon = "▲";
     private triangleDrawLayer: TriangleDrawLayer;
     private onDrawComplete?: (data: TriangleDrawData) => void;
@@ -13,7 +13,7 @@ export class TriangleDrawTool implements DrawTool {
 
     constructor(triangleDrawLayer: TriangleDrawLayer, t: Translations) {
         this.triangleDrawLayer = triangleDrawLayer;
-        this.name = t.drawTriangle || "三角形绘制";
+        this.name = t.drawTriangle || "Triangle Draw";
     }
 
     activate(): void {

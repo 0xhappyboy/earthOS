@@ -4,7 +4,7 @@ import { Translations } from "../i18n";
 
 export class BezierDrawTool implements DrawTool {
     id = "bezier-draw";
-    name = "贝塞尔曲线";
+    name = "Bezier Curve";
     icon = "〰️";
     private bezierDrawLayer: BezierDrawLayer;
     private onDrawComplete?: (data: BezierDrawData) => void;
@@ -12,7 +12,7 @@ export class BezierDrawTool implements DrawTool {
 
     constructor(bezierDrawLayer: BezierDrawLayer, t: Translations) {
         this.bezierDrawLayer = bezierDrawLayer;
-        this.name = t.drawBezier || "贝塞尔曲线";
+        this.name = t.drawBezier || "Bezier Curve";
     }
 
     activate(): void {

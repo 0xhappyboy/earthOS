@@ -204,22 +204,18 @@ export class CoordinatePickingDataPanel {
             this.render();
             this.options.onSelectCategory(this.activeCategory || "");
         };
-
         const iconSpan = document.createElement("span");
         iconSpan.style.cssText = `font-size: 14px;`;
         iconSpan.textContent = category.icon;
         menuItem.appendChild(iconSpan);
-
         const labelSpan = document.createElement("span");
         labelSpan.style.cssText = `color: ${isDark ? "#fff" : "#333"}; font-size: 12px; flex: 1;`;
         labelSpan.textContent = `${category.label} (${dataCount})`;
         menuItem.appendChild(labelSpan);
-
         const arrowSpan = document.createElement("span");
         arrowSpan.style.cssText = `color: ${isDark ? "#888" : "#999"}; font-size: 10px;`;
         arrowSpan.textContent = isActive ? "▼" : "▶";
         menuItem.appendChild(arrowSpan);
-
         return menuItem;
     }
 
@@ -232,7 +228,6 @@ export class CoordinatePickingDataPanel {
             max-height: 300px;
             overflow-y: auto;
         `;
-
         if (data.length === 0) {
             const emptyState = document.createElement("div");
             emptyState.style.cssText = `
@@ -249,7 +244,6 @@ export class CoordinatePickingDataPanel {
                 subMenuContainer.appendChild(dataItem);
             });
         }
-
         return subMenuContainer;
     }
 
@@ -302,9 +296,7 @@ export class CoordinatePickingDataPanel {
         `;
         coordText.textContent = infoText;
         content.appendChild(coordText);
-
         item.appendChild(content);
-
         const detailBtn = document.createElement("button");
         detailBtn.style.cssText = `
             background: none;
@@ -329,14 +321,11 @@ export class CoordinatePickingDataPanel {
             this.showDetailPanel(data, categoryId);
         };
         item.appendChild(detailBtn);
-
         item.onclick = () => {
             this.showDetailPanel(data, categoryId);
         };
-
         return item;
     }
-
 
     private showDetailPanel(data: any, categoryId: string): void {
         this.hideDetailPanel();
@@ -347,20 +336,57 @@ export class CoordinatePickingDataPanel {
             mapContainer = document.body;
         }
         const containerRect = mapContainer.getBoundingClientRect();
+        let left = mainPanelRect.left - containerRect.left - 305;
+        let top = mainPanelRect.top - containerRect.top;
+        let maxHeight = 400;
+        let panelWidth = 300;
+        if (left + panelWidth > containerRect.width) {
+            left = mainPanelRect.right - containerRect.left + 10;
+        }
+        if (left < 5) {
+            left = 5;
+        }
+        if (left + panelWidth > containerRect.width) {
+            left = containerRect.width - panelWidth - 5;
+        }
+        const panelBottom = top + maxHeight;
+        if (panelBottom > containerRect.height) {
+            const availableHeight = containerRect.height - top - 20;
+            if (availableHeight > 100) {
+                maxHeight = availableHeight;
+            } else {
+                top = Math.max(5, mainPanelRect.top - containerRect.top - maxHeight + 50);
+                maxHeight = Math.min(maxHeight, containerRect.height - top - 20);
+            }
+        }
+        if (top < 5) {
+            top = 5;
+            maxHeight = Math.min(maxHeight, containerRect.height - top - 20);
+        }
         this.detailPanel = document.createElement("div");
         this.detailPanel.style.cssText = `
         position: absolute;
-        left: ${mainPanelRect.left - containerRect.left - 305}px;
-        top: ${mainPanelRect.top - containerRect.top}px;
-        width: 300px;
+        left: ${left}px;
+        top: ${top}px;
+        width: ${panelWidth}px;
+        max-height: ${maxHeight}px;
         background: ${isDark ? "#1e1e1e" : "#ffffff"};
         border: 1px solid ${isDark ? "#444" : "#ddd"};
         border-radius: 8px;
         box-shadow: 0 4px 20px rgba(0,0,0,0.4);
         z-index: 1001;
         overflow: hidden;
+        display: flex;
+        flex-direction: column;
     `;
+        this.injectScrollbarStylesForDetail(isDark);
         const detailContent = document.createElement("div");
+        detailContent.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        max-height: ${maxHeight}px;
+    `;
         const header = document.createElement("div");
         header.style.cssText = `
         display: flex;
@@ -369,13 +395,12 @@ export class CoordinatePickingDataPanel {
         padding: 10px 12px;
         background: ${isDark ? "#2d2d2d" : "#f5f5f5"};
         border-bottom: 1px solid ${isDark ? "#444" : "#ddd"};
+        flex-shrink: 0;
     `;
-
         const title = document.createElement("span");
         title.style.cssText = `color: ${isDark ? "#fff" : "#333"}; font-size: 13px; font-weight: 600;`;
         title.textContent = this.options.t.details;
         header.appendChild(title);
-
         const closeBtn = document.createElement("button");
         closeBtn.style.cssText = `
         background: none;
@@ -388,19 +413,16 @@ export class CoordinatePickingDataPanel {
         closeBtn.innerHTML = "✕";
         closeBtn.onclick = () => this.hideDetailPanel();
         header.appendChild(closeBtn);
-
         detailContent.appendChild(header);
-
         const body = document.createElement("div");
-        body.style.cssText = `padding: 12px;`;
-
+        body.style.cssText = `padding: 12px; overflow-y: auto; flex: 1; min-height: 0;`;
+        body.className = "earthview-detail-scroll";
         let bodyHtml = `
         <div style="margin-bottom: 12px;">
             <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.coordinateData}</div>
             <div style="color: ${isDark ? "#fff" : "#333"}; font-size: 14px; font-weight: 500;">${data.name}</div>
         </div>
     `;
-
         if (categoryId === "point") {
             bodyHtml += `
             <div style="margin-bottom: 12px;">
@@ -435,17 +457,14 @@ export class CoordinatePickingDataPanel {
             </div>
         `;
         }
-
         bodyHtml += `
         <div style="margin-bottom: 12px;">
             <div style="color: ${isDark ? "#888" : "#666"}; font-size: 11px; margin-bottom: 4px;">${this.options.t.createdTime}</div>
             <div style="color: ${isDark ? "#ddd" : "#555"}; font-size: 11px;">${new Date(data.timestamp).toLocaleString()}</div>
         </div>
     `;
-
         body.innerHTML = bodyHtml;
         detailContent.appendChild(body);
-
         const footer = document.createElement("div");
         footer.style.cssText = `
         display: flex;
@@ -453,8 +472,8 @@ export class CoordinatePickingDataPanel {
         padding: 10px 12px;
         border-top: 1px solid ${isDark ? "#444" : "#ddd"};
         background: ${isDark ? "#252525" : "#fafafa"};
+        flex-shrink: 0;
     `;
-
         const locateBtn = document.createElement("button");
         locateBtn.style.cssText = `
         flex: 1;
@@ -484,7 +503,6 @@ export class CoordinatePickingDataPanel {
             }
             this.hideDetailPanel();
         };
-
         const copyBtn = document.createElement("button");
         copyBtn.style.cssText = `
         flex: 1;
@@ -532,6 +550,39 @@ export class CoordinatePickingDataPanel {
         }, 100);
     }
 
+    private injectScrollbarStylesForDetail(isDark: boolean): void {
+        const styleId = "earthview-detail-scroll-styles";
+        if (document.getElementById(styleId)) return;
+
+        const thumbColor = isDark ? "#555" : "#ccc";
+        const trackColor = isDark ? "#2d2d2d" : "#f0f0f0";
+        const thumbHoverColor = isDark ? "#777" : "#aaa";
+
+        const css = `
+        .earthview-detail-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: ${thumbColor} ${trackColor};
+        }
+        .earthview-detail-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .earthview-detail-scroll::-webkit-scrollbar-track {
+            background: ${trackColor};
+            border-radius: 3px;
+        }
+        .earthview-detail-scroll::-webkit-scrollbar-thumb {
+            background: ${thumbColor};
+            border-radius: 3px;
+        }
+        .earthview-detail-scroll::-webkit-scrollbar-thumb:hover {
+            background: ${thumbHoverColor};
+        }
+    `;
+        const style = document.createElement("style");
+        style.id = styleId;
+        style.textContent = css;
+        document.head.appendChild(style);
+    }
 
     private hideDetailPanel(): void {
         if (this.detailPanel) {
@@ -539,7 +590,6 @@ export class CoordinatePickingDataPanel {
             this.detailPanel = null;
         }
     }
-
 
     private showToast(message: string): void {
         const toast = document.createElement("div");

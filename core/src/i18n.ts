@@ -1,6 +1,8 @@
 export type Locale = "en" | "zh";
 
 export interface Translations {
+    topScroll: string;
+    bottomScroll: string;
     pleaseEnterText: string;
     longitude: string;
     latitude: string;
@@ -215,6 +217,8 @@ export interface Translations {
 }
 
 const zh: Translations = {
+    topScroll: "Top Scroll",
+    bottomScroll: "Bottom Scroll",
     linePick: {
         default_name: "线拾取",
         label_prefix: "线",
@@ -429,6 +433,8 @@ const zh: Translations = {
 };
 
 const en: Translations = {
+    topScroll: "向上滚动",
+    bottomScroll: "向下滚动",
     linePick: {
         default_name: "Line Pick",
         label_prefix: "Line",

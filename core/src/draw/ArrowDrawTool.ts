@@ -4,14 +4,14 @@ import { Translations } from "../i18n";
 
 export class ArrowDrawTool implements DrawTool {
     id = "arrow-draw";
-    name = "箭头绘制";
+    name = "Arrow Draw";
     icon = "➡️";
     private arrowDrawLayer: ArrowDrawLayer;
     private onDrawComplete?: (data: ArrowDrawData) => void;
     private onEditComplete?: (data: ArrowDrawData) => void;
     constructor(arrowDrawLayer: ArrowDrawLayer, t: Translations) {
         this.arrowDrawLayer = arrowDrawLayer;
-        this.name = t.drawArrow || "箭头绘制";
+        this.name = t.drawArrow || "Arrow Draw";
     }
 
     activate(): void {
