@@ -128,17 +128,21 @@ export class ThreeDMapManager {
         const canvas = document.createElement('canvas');
         canvas.width = 4096;
         canvas.height = 2048;
+
         const ctx = canvas.getContext('2d')!;
         ctx.fillStyle = '#1a4d8c';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+
         this.tileTexture = new THREE.CanvasTexture(canvas);
         this.tileTexture.wrapS = THREE.RepeatWrapping;
         this.tileTexture.wrapT = THREE.ClampToEdgeWrapping;
+
         const material = new THREE.MeshStandardMaterial({
             map: this.tileTexture,
             roughness: 0.5,
             metalness: 0.1,
         });
+
         const geometry = new THREE.SphereGeometry(5, 512, 512);
         this.earthMesh = new THREE.Mesh(geometry, material);
         this.scene.add(this.earthMesh);
@@ -172,10 +176,7 @@ export class ThreeDMapManager {
         const tileCount = Math.pow(2, zoom);
         const tileW = canvas.width / tileCount;
         const tileH = canvas.height / tileCount;
-
         console.log(`Loading zoom ${zoom}, ${tileCount}x${tileCount} tiles...`);
-
-
         for (let x = 0; x < tileCount; x++) {
             for (let y = 0; y < tileCount; y++) {
                 const url = this.getTileUrl(x, y, zoom);
@@ -186,20 +187,15 @@ export class ThreeDMapManager {
                     const sy = y * tileH;
                     ctx.drawImage(img, sx, sy, tileW, tileH);
                 } else {
-
                     ctx.fillStyle = '#2a6b4a';
                     ctx.fillRect(x * tileW, y * tileH, tileW, tileH);
                 }
             }
-
             this.tileTexture!.needsUpdate = true;
             await this.delay(10);
         }
-
         console.log(`Zoom ${zoom} loaded`);
         this.tileTexture!.needsUpdate = true;
-
-
         if (zoom < 8) {
             await this.delay(500);
             this.loadTilesForZoom(zoom + 1);
