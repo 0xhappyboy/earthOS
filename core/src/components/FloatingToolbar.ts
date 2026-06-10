@@ -339,8 +339,9 @@ export class FloatingToolbar {
     }
 
     private injectStrokeWidthScrollbarStyles(isDark: boolean): void {
+        const container = this.options.containerRef;
         const styleId = "earthview-stroke-width-scroll-styles";
-        if (this.options.containerRef.querySelector(`#${styleId}`)) {
+        if (container.querySelector(`#${styleId}`)) {
             return;
         }
         const thumbColor = isDark ? "#555" : "#ccc";
@@ -369,7 +370,7 @@ export class FloatingToolbar {
         const style = document.createElement("style");
         style.id = styleId;
         style.textContent = css;
-        this.options.containerRef.appendChild(style);
+        container.appendChild(style);
     }
 
     private createStrokeStylePicker(): HTMLDivElement {

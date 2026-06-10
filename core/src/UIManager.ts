@@ -170,6 +170,7 @@ export class UIManager {
                 panel.appendChild(this.layersPanelInstance.getElement());
                 this.activePopupPanel = panel;
                 this.container.appendChild(panel.getElement());
+                panel.onAttached();
                 break;
             case "basemap":
                 panel = new PopupPanel({
@@ -193,6 +194,7 @@ export class UIManager {
                 panel.appendChild(this.basemapOptionsInstance.getElement());
                 this.activePopupPanel = panel;
                 this.container.appendChild(panel.getElement());
+                panel.onAttached();
                 break;
             case "draw":
                 panel = new PopupPanel({
@@ -222,6 +224,7 @@ export class UIManager {
                 panel.appendChild(drawPanel.getElement());
                 this.activePopupPanel = panel;
                 this.container.appendChild(panel.getElement());
+                panel.onAttached();
                 break;
             case "tools":
                 panel = new PopupPanel({
@@ -251,6 +254,7 @@ export class UIManager {
                 panel.appendChild(toolsPanel.getElement());
                 this.activePopupPanel = panel;
                 this.container.appendChild(panel.getElement());
+                panel.onAttached();
                 break;
         }
     }
