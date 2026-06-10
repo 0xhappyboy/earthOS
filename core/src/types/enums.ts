@@ -70,3 +70,8 @@ export enum LayerClassification {
     DRAW_LAYER = "draw_layer",
     TOOL_LAYER = "tool_layer",
 }
+
+export enum MapType {
+    TWO_D = "2D",
+    THREE_D = "3D",
+}

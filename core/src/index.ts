@@ -6,7 +6,8 @@ export {
     BasemapTypeEnum,
     LayerTypeEnum,
     MarkerLayerPointTypeEnum,
-    MarkerLayerAnimationTypeEnum
+    MarkerLayerAnimationTypeEnum,
+    MapType,
 } from "./types";
 
 export type {
