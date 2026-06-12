@@ -34,6 +34,7 @@ export class LoadingOverlay {
             flex-direction: column;
             gap: 12px;
             display: none;
+            user-select: none;
         `;
 
         this.spinner = document.createElement("div");

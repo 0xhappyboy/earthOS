@@ -139,6 +139,7 @@ export class TextInputModalBox {
             padding: 8px 12px;
             border-bottom: 1px solid ${isDark ? "#3d3d3d" : "#eee"};
             background: ${isDark ? "#252525" : "#f5f5f5"};
+            user-select: none;
         `;
         const title = document.createElement("span");
         title.style.cssText = `

@@ -50,6 +50,7 @@ export class LayersPanel {
         div.style.cssText = `
             width: 100%;
             height: 100%;
+            user-select: none; 
         `;
         return div;
     }
@@ -215,6 +216,7 @@ export class LayersPanel {
             border-left: ${isActive ? "3px solid #00aaff" : "3px solid transparent"};
             transition: all 0.2s;
             border-bottom: 1px solid ${isDark ? "#333" : "#eee"};
+            user-select: none;
         `;
 
         header.onmouseenter = () => {
@@ -395,6 +397,7 @@ export class LayersPanel {
         background: ${isDark ? "#2d2d2d" : "#f5f5f5"};
         border-bottom: 1px solid ${isDark ? "#333" : "#e0e0e0"};
         flex-shrink: 0;
+        user-select: none;
     `;
 
         const title = document.createElement("span");
@@ -630,6 +633,7 @@ export class LayersPanel {
         background: ${isDark ? "#2d2d2d" : "#f5f5f5"};
         border-bottom: 1px solid ${isDark ? "#444" : "#ddd"};
         flex-shrink: 0;
+        user-select: none;
     `;
 
         const title = document.createElement("span");

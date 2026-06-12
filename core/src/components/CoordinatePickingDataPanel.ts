@@ -143,6 +143,7 @@ export class CoordinatePickingDataPanel {
             border-bottom: 1px solid ${isDark ? "#333" : "#e0e0e0"};
             background: ${isDark ? "#2d2d2d" : "#f5f5f5"};
             flex-shrink: 0;
+            user-select: none;
         `;
 
         const title = document.createElement("span");
@@ -397,6 +398,7 @@ export class CoordinatePickingDataPanel {
         background: ${isDark ? "#2d2d2d" : "#f5f5f5"};
         border-bottom: 1px solid ${isDark ? "#444" : "#ddd"};
         flex-shrink: 0;
+        user-select: none;
     `;
         const title = document.createElement("span");
         title.style.cssText = `color: ${isDark ? "#fff" : "#333"}; font-size: 13px; font-weight: 600;`;

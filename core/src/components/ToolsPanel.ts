@@ -33,6 +33,7 @@ export class ToolsPanel {
         div.style.cssText = `
             width: 100%;
             height: 100%;
+            user-select: none; 
         `;
         return div;
     }

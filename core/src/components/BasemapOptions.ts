@@ -26,6 +26,7 @@ export class BasemapOptions {
         div.style.cssText = `
             width: 100%;
             height: 100%;
+            user-select: none;
         `;
         return div;
     }
@@ -33,11 +34,9 @@ export class BasemapOptions {
     private render(): void {
         this.element.innerHTML = "";
         const isDark = this.props.theme === "dark";
-
         for (const option of this.props.options) {
             const row = document.createElement("div");
             const isSelected = this.props.currentBasemap === option.value;
-
             row.style.cssText = `
                 display: flex;
                 align-items: center;
@@ -48,7 +47,6 @@ export class BasemapOptions {
                 border-left: ${isSelected ? "3px solid #00aaff" : "3px solid transparent"};
                 transition: all 0.2s;
             `;
-
             row.onmouseenter = () => {
                 if (!isSelected) {
                     row.style.background = isDark ? "#2a2a2a" : "#f5f5f5";

@@ -68,6 +68,7 @@ export class PopupPanel {
             padding: 2px 10px;
             border-bottom: 1px solid ${isDark ? "#333" : "#e0e0e0"};
             background: ${isDark ? "#2d2d2d" : "#f5f5f5"};
+            user-select: none;
         `;
 
         const titleSpan = document.createElement("span");
