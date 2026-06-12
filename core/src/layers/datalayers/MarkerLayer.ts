@@ -1139,7 +1139,7 @@ export class MarkerLayer extends BaseLayer {
         const titleColor = isDark ? "#fff" : "#333";
         const descColor = isDark ? "#aaa" : "#666";
         const popupDiv = document.createElement("div");
-        popupDiv.style.position = "absolute";
+        popupDiv.style.position = "fixed";
         popupDiv.style.zIndex = "10000";
         popupDiv.style.background = bgColor;
         popupDiv.style.border = `1px solid ${borderColor}`;
@@ -1151,52 +1151,44 @@ export class MarkerLayer extends BaseLayer {
         let html = "";
         if (hasCover) {
             html += `<div style="height: ${this.coverImageHeight}px; overflow: hidden;">
-                    <img src="${attrs.bubbleBoxCoverImage}" style="width: 100%; height: 100%; object-fit: cover;" />
-                </div>`;
+                <img src="${attrs.bubbleBoxCoverImage}" style="width: 100%; height: 100%; object-fit: cover;" />
+            </div>`;
         }
         html += `<div style="padding: 12px;">`;
         if (hasTitle) {
-            html += `<div style="font-size: 14px; font-weight: 600; color: ${titleColor}; margin-bottom: 8px;">${attrs.bubbleBoxTitle}</div>`;
+            html += `<div style="font-size: 14px; font-weight: 600; color: ${titleColor}; margin-bottom: 8px;">${this.escapeHtml(attrs.bubbleBoxTitle)}</div>`;
         }
         if (hasDesc) {
-            html += `<div style="font-size: 12px; color: ${descColor}; line-height: 1.5;">${attrs.bubbleBoxDescription}</div>`;
+            html += `<div style="font-size: 12px; color: ${descColor}; line-height: 1.5;">${this.escapeHtml(attrs.bubbleBoxDescription)}</div>`;
         }
         html += `</div>`;
         popupDiv.innerHTML = html;
-
-        const container = this.view.getTargetElement();
-        if (getComputedStyle(container).position === 'static') {
-            container.style.position = 'relative';
-        }
-        container.appendChild(popupDiv);
         const geom = feature.getGeometry() as Point;
         const screen = this.view.getPixelFromCoordinate(geom.getCoordinates());
-        const containerRect = container.getBoundingClientRect();
+        const container = this.view.getTargetElement();
         const popupWidth = popupDiv.offsetWidth;
         const popupHeight = popupDiv.offsetHeight;
-        const isInViewport = screen[0] >= 0 && screen[0] <= containerRect.width &&
-            screen[1] >= 0 && screen[1] <= containerRect.height;
-        if (!isInViewport) {
-            popupDiv.style.display = 'none';
-            this.currentPopup = popupDiv;
-            return;
-        }
-        let left = screen[0] - containerRect.left - popupWidth / 2;
-        let top = screen[1] - containerRect.top - popupHeight - 15;
-        if (top < 5) {
-            top = screen[1] - containerRect.top + 15;
-        }
-        left = Math.max(5, Math.min(left, containerRect.width - popupWidth - 5));
-        top = Math.max(5, Math.min(top, containerRect.height - popupHeight - 5));
+        let left = screen[0] - popupWidth / 2;
+        let top = screen[1] - popupHeight - 15;
+        left = Math.max(10, Math.min(left, window.innerWidth - popupWidth - 10));
+        top = Math.max(10, Math.min(top, window.innerHeight - popupHeight - 10));
         popupDiv.style.left = `${left}px`;
         popupDiv.style.top = `${top}px`;
-        popupDiv.style.display = 'block';
+        container.appendChild(popupDiv);
         this.currentPopup = popupDiv;
+    }
+
+    private escapeHtml(text: string): string {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     private hidePopup(): void {
         if (this.currentPopup) {
-            this.currentPopup.remove();
+            if (this.currentPopup.parentNode) {
+                this.currentPopup.parentNode.removeChild(this.currentPopup);
+            }
             this.currentPopup = null;
         }
         this.currentFeature = null;
@@ -1238,21 +1230,19 @@ export class MarkerLayer extends BaseLayer {
             if (!this.currentPopup || !this.currentFeature) return;
             const geom = this.currentFeature.getGeometry() as Point;
             const screen = this.view.getPixelFromCoordinate(geom.getCoordinates());
-            const container = this.view.getTargetElement();
-            const containerRect = container.getBoundingClientRect();
             const popupWidth = this.currentPopup.offsetWidth;
             const popupHeight = this.currentPopup.offsetHeight;
-            const isInViewport = screen[0] >= 0 && screen[0] <= containerRect.width &&
-                screen[1] >= 0 && screen[1] <= containerRect.height;
+            let left = screen[0] - popupWidth / 2;
+            let top = screen[1] - popupHeight - 15;
+            left = Math.max(10, Math.min(left, window.innerWidth - popupWidth - 10));
+            top = Math.max(10, Math.min(top, window.innerHeight - popupHeight - 10));
+            const isInViewport = screen[0] >= 0 && screen[0] <= window.innerWidth &&
+                screen[1] >= 0 && screen[1] <= window.innerHeight;
             if (!isInViewport) {
                 this.currentPopup.style.display = 'none';
                 return;
             }
             this.currentPopup.style.display = 'block';
-            let left = screen[0] - containerRect.left - popupWidth / 2;
-            let top = screen[1] - containerRect.top - popupHeight - 15;
-            left = Math.max(5, Math.min(left, containerRect.width - popupWidth - 5));
-            top = Math.max(5, Math.min(top, containerRect.height - popupHeight - 5));
             this.currentPopup.style.left = `${left}px`;
             this.currentPopup.style.top = `${top}px`;
         });

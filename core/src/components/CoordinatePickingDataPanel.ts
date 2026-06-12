@@ -65,6 +65,7 @@ export class CoordinatePickingDataPanel {
             overflow: hidden;
             display: flex;
             flex-direction: column;
+            user-select: none; 
         `;
         return panel;
     }

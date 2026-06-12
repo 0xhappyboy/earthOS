@@ -283,9 +283,11 @@ export class TextDrawLayer extends BaseLayer {
                 onDelete: onDelete,
                 theme: this.currentTheme,
                 t: simpleT,
+                container: this.mapView?.getTargetElement(),
             },
             { x: left, y: top }
         );
+        this.textInputModal.getElement().style.userSelect = 'none';
     }
 
     private hideTextInputModal(): void {

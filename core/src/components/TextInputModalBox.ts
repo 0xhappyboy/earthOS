@@ -41,9 +41,7 @@ export class TextInputModalBox {
     private toolbar: HTMLDivElement;
     private footer: HTMLDivElement;
     private containerEl: HTMLElement;
-
     private readonly PRESET_FONT_SIZES = [12, 14, 16, 18, 20, 24, 28, 32, 36, 42];
-
     constructor(options: TextInputModalBoxOptions, position?: { x: number; y: number }) {
         this.options = options;
         this.currentColor = options.initialColor || [255, 255, 255, 1];
@@ -89,6 +87,7 @@ export class TextInputModalBox {
             bottom: 0;
             background: transparent;
             z-index: 10000;
+            pointer-events: auto;
         `;
         overlay.onclick = (e) => {
             e.stopPropagation();
@@ -101,6 +100,7 @@ export class TextInputModalBox {
     private createElement(): HTMLDivElement {
         const isDark = this.options.theme === "dark";
         const div = document.createElement("div");
+        div.style.userSelect = 'none';
         div.className = "text-input-modal-container";
         div.style.cssText = `
             position: fixed;

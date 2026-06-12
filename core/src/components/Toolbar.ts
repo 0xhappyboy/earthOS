@@ -49,6 +49,7 @@ export class Toolbar {
         border-radius: 8px;
         padding: 4px;
         backdrop-filter: blur(4px);
+        user-select: none;
     `;
         this.scrollUpBtn = this.createScrollButton("▲", this.options.t.topScroll || "Top Scroll");
         div.appendChild(this.scrollUpBtn);

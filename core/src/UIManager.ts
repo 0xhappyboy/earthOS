@@ -236,7 +236,6 @@ export class UIManager {
                     t: this.t,
                     onClose: () => {
                         this.handleTogglePopup(null);
-                        this.callbacks.onClearMeasurements();
                     },
                 });
                 const toolsPanel = new ToolsPanel({

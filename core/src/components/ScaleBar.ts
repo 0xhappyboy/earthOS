@@ -27,6 +27,7 @@ export class ScaleBar {
             color: ${isDark ? "#fff" : "#333"};
             pointer-events: none;
             border: 1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"};
+            user-select: none;
         `;
         div.textContent = "";
         return div;

@@ -95,6 +95,7 @@ export class ImageInputModalBox {
         const isDark = this.options.theme === "dark";
         const div = document.createElement("div");
         div.className = "image-input-modal-container";
+        div.style.userSelect = 'none';
         div.style.cssText = `
             position: fixed;
             z-index: 10001;

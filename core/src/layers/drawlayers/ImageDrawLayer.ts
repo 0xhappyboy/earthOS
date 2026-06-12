@@ -214,9 +214,11 @@ export class ImageDrawLayer extends BaseLayer {
                 onDelete: onDelete,
                 theme: this.currentTheme,
                 t: simpleT,
+                container: this.mapView?.getTargetElement(),
             },
             { x: left, y: top }
         );
+        this.imageInputModal.getElement().style.userSelect = 'none';
     }
 
     private hideImageInputModal(): void {
@@ -326,7 +328,7 @@ export class ImageDrawLayer extends BaseLayer {
         this.transformInteraction = new Transform({
             features: tempFeatures as any,
             translate: true,
-            scale: true,      
+            scale: true,
             rotate: false,
             keepAspectRatio: (event: any) => {
                 return event.shiftKey;
@@ -341,7 +343,7 @@ export class ImageDrawLayer extends BaseLayer {
             const newHeight = Math.max(10, currentHeight * scale);
             targetFeature.set("width", newWidth);
             targetFeature.set("height", newHeight);
-            targetFeature.set("scale", 1);  
+            targetFeature.set("scale", 1);
             targetFeature.changed();
             const position = targetFeature.get("position");
             const featureId = targetFeature.get("id");
@@ -477,7 +479,7 @@ export class ImageDrawLayer extends BaseLayer {
         feature.set("height", data.height || this.defaultHeight);
         feature.set("opacity", data.opacity || this.defaultOpacity);
         feature.set("rotation", data.rotation || 0);
-        feature.set("scale", 1); 
+        feature.set("scale", 1);
         this.source?.addFeature(feature);
         this.features.set(data.id, feature);
     }

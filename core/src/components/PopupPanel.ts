@@ -37,6 +37,7 @@ export class PopupPanel {
         overflow: hidden;
         display: flex;
         flex-direction: column;
+        user-select: none; 
     `;
         let maxHeight = 328;
         if (this.element?.parentElement) {
